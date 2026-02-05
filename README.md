@@ -1,118 +1,84 @@
-# fis_boilerplate
-## Descripción de cada directorio y archivos
-```bash
-project-name/
-├── .github/
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── bug_report.md
-│   │   ├── feature_request.md
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── workflows/
-│       ├── ci.yml
-│       └── cd.yml
-├── conf/
-│   ├── config.yaml
-│   └── settings.json
-├── docs/
-│   ├── api/
-│   ├── architecture/
-│   └── user_guide/
-├── jupyter/
-│   ├── notebooks/
-│   │   ├── exploration.ipynb
-│   │   └── analysis.ipynb
-│   └── datasets/
-│       ├── data1.csv
-│       └── data2.csv
-├── scripts/
-│   ├── setup.sh
-│   ├── deploy.sh
-│   └── test.sh
-├── src/
-│   ├── main/
-│   │   ├── java/ (o python/, etc. según el lenguaje)
-│   │   └── resources/
-│   ├── test/
-│   │   ├── java/ (o python/, etc. según el lenguaje)
-│   │   └── resources/
-├── temp/
-│   ├── temp_file.txt
-│   └── temp_data/
-│       ├── temp1.tmp
-│       └── temp2.tmp
-├── .gitignore
-├── README.md
-├── LICENSE
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── Dockerfile
-├── docker-compose.yml
-└── Makefile
-```
+# MedTrackm🩺
 
+¿El seguimiento de medicamentos se está realizando de forma clara y confiable?
 
-### .github/
-Contiene configuraciones específicas para GitHub, como plantillas para problemas (issues) y solicitudes de extracción (pull requests), y flujos de trabajo de GitHub Actions para integración continua (CI) y despliegue continuo (CD).
+En muchos contextos de cuidado, el control de medicamentos depende de notas, alarmas genéricas o la memoria, lo que puede generar errores y falta de información útil.
 
-- `ISSUE_TEMPLATE/`: Plantillas para reportar bugs y solicitar nuevas características.
-- `workflows/`: Archivos YAML para definir los flujos de trabajo de CI/CD.
+**MedTrack** es un proyecto orientado a mejorar la gestión y el seguimiento de medicamentos en procesos de cuidado, proporcionando información organizada y accesible para apoyar la toma de decisiones en el tratamiento de un paciente.
 
-### docs/
-Documentación del proyecto.
+---
 
-- `api/`: Documentación de la API.
-- `architecture/`: Diagramas y documentación de la arquitectura.
-- `user_guide/`: Guías para usuarios.
+## 💭 Idea del proyecto
 
-### src/
-Código fuente del proyecto.
+La administración de medicamentos es una tarea crítica dentro del cuidado de pacientes.  
+Sin embargo, cuando no existe un seguimiento estructurado, se dificulta saber si un tratamiento se está cumpliendo correctamente.
 
-- `main/`: Código fuente principal.
-  - `java/` (o `python/`, etc.): Código fuente del proyecto según el lenguaje utilizado.
-  - `resources/`: Archivos de recursos como configuraciones y otros archivos necesarios.
-- `test/`: Código de pruebas.
-  - `java/` (o `python/`, etc.): Código de pruebas unitarias y de integración.
-  - `resources/`: Archivos de recursos para las pruebas.
+MedTrack surge como una iniciativa para apoyar este proceso, centralizando la información relevante del tratamiento y facilitando su seguimiento.
 
-### scripts/
-Scripts útiles para tareas comunes como configuración, despliegue y pruebas.
+---
 
-- `setup.sh`: Script para configurar el entorno de desarrollo.
-- `deploy.sh`: Script para despliegue.
-- `test.sh`: Script para ejecutar pruebas.
+## ❓ ¿Qué problema resuelve?
 
-### conf/
-Carpeta para archivos de configuración.
+- Falta de control y seguimiento en la toma de medicamentos.  
+- Información dispersa o inexistente sobre dosis y horarios.  
+- Dificultad para analizar si un tratamiento es efectivo o requiere ajustes.  
+- Riesgo de errores humanos en la administración de medicamentos.
 
-- `config.yaml`: Archivo de configuración en formato YAML.
-- `settings.json`: Archivo de configuración en formato JSON.
+---
 
-### jupyter/
-Carpeta para los notebooks de Jupyter y datasets utilizados.
+## 👥 ¿A quién afecta?
 
-- `notebooks/`: Carpeta para los notebooks de Jupyter.
-  - `exploration.ipynb`: Notebook para la exploración de datos.
-  - `analysis.ipynb`: Notebook para el análisis de datos.
-- `datasets/`: Carpeta para los datasets utilizados en los notebooks.
-  - `data1.csv`: Ejemplo de dataset en formato CSV.
-  - `data2.csv`: Otro ejemplo de dataset en formato CSV.
+Este problema impacta principalmente a:
 
-### temp/
-Carpeta para archivos temporales.
+- Enfermeras.
+- Médicos.
+- Personas cuidadoras.
+- Pacientes.
 
-- `temp_file.txt`: Archivo temporal de ejemplo.
-- `temp_data/`: Subcarpeta para datos temporales.
-  - `temp1.tmp`: Archivo temporal de ejemplo.
-  - `temp2.tmp`: Otro archivo temporal de ejemplo.
+---
 
-### Archivos en la raíz del proyecto
+## 🎯 Propuesta de valor
 
-- `.gitignore`: Archivo para especificar qué archivos y directorios deben ser ignorados por Git.
-- `README.md`: Descripción general del proyecto, instrucciones de instalación, uso, contribución, etc.
-- `LICENSE`: Información sobre la licencia del proyecto.
-- `CHANGELOG.md`: Registro de cambios en el proyecto.
-- `CONTRIBUTING.md`: Guía para contribuir al proyecto.
-- `Dockerfile`: Archivo para construir la imagen Docker del proyecto.
-- `docker-compose.yml`: Archivo de configuración para Docker Compose.
-- `Makefile`: Archivo para automatizar tareas mediante comandos `make`.
+- Organización clara del control de medicamentos.  
+- Reducción de errores humanos en la administración.  
+- Seguimiento de medicamentos, dosis e información relevante.  
+- Información confiable que apoya el análisis y la toma de decisiones médicas.  
+- Disponibilidad de datos clave en situaciones de emergencia.
 
+Llevarás un seguimiento organizado de la medicación para un mejor análisis y control del tratamiento.
+
+---
+
+## 🧩 ¿Qué lo hace diferente?
+
+A diferencia de alarmas genéricas o registros manuales, MedTrack se enfoca en el **seguimiento estructurado del tratamiento**, construye un historial trazable del tratamiento que puede ser analizado a lo largo del tiempo. MedTrack se diferencia al transformar el seguimiento de medicamentos en información útil para evaluar la adherencia y la efectividad del tratamiento.
+
+---
+
+## 🤝 Equipo
+
+Este proyecto es desarrollado por **CareSync**, un equipo enfocado en la creación de soluciones de software para mejorar procesos de cuidado y salud.
+
+**Integrantes:**
+- Natalia Quiñonez  
+- Vanesa Ramos  
+- Andrés Felipe Díaz  
+- Sofía Sierra  
+- Valentina Cano  
+- Karol Torres  
+
+---
+
+## 🚀 Enfoque del proyecto
+
+-Iniciativa basada en un problema real de gestión de medicamentos.
+
+-Coherencia entre el problema identificado, la solución propuesta y el valor ofrecido.
+
+-Solución pensada para ser funcional y técnicamente viable.
+
+-Proyecto evolutivo que puede ajustarse a lo largo del curso.
+
+---
+
+📌 *MedTrack busca aportar claridad, organización y confianza al proceso de cuidado mediante un mejor seguimiento de medicamentos.*

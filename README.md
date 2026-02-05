@@ -81,4 +81,4 @@ Este proyecto es desarrollado por **CareSync**, un equipo enfocado en la creaci�
 
 ---
 
-📌 *MedTrack busca aportar claridad, organización y confianza al proceso de cuidado mediante un mejor seguimiento de medicamentos.*
+📌 MedTrack busca aportar claridad, organización y confianza al proceso de cuidado mediante un mejor seguimiento de medicamentos.

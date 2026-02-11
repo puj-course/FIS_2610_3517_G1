@@ -94,6 +94,27 @@ Docente: Luis Gabriel Moreno Sandoval, PhD
 
 Institución: Pontificia Universidad Javeriana
 
+## Contacto del equipo
+1. Natalia Quiñonez Zaia
+  Estudiante Ing. sistemas
+  nataliaa-quinonez@javeriana.edu.co
+3. Sofia Sierra
+   Estudiante Ing. sistemas
+   sofia-sierra@javeriana.edu.co
+5. Valentina Cano
+   Estudiante Ing. sistemas
+   dvalentina-cano@javeriana.edu.co
+7. Vanesa Ramos
+   Estudiante Ing. sistemas
+   vanesaa_ramos@javeriana.edu.co
+9. Andrés Felipe Díaz
+   Estudiante Ing. sistemas
+   Diaz.afelipe@javeriana.edu.co
+11. Karol Torres
+    Estudiante Ing. sistemas
+    torres_kdayan@javeriana.edu.co 
+
+
 📄 Licencia
 
 Proyecto desarrollado con fines académicos.

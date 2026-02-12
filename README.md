@@ -59,15 +59,19 @@ A diferencia de alarmas genéricas o aplicaciones ya existentes enfocadas en usu
 La aplicación no solo recuerda qué medicamento tomar, sino que construye un historial comprensible del tratamiento, permitiendo identificar patrones de cumplimiento y facilitando la comunicación futura con profesionales de la salud si es necesario.
 
 ## 🤝 Equipo del proyecto
+## Equipo del Proyecto
 
-| Nombre completo        | Rol en el proyecto              |
-|------------------------|----------------------------------|
-| Natalia Quiñonez       | Scrum Master                     |
-| Sofía Sierra           | Product Owner                    |
-| Valentina Cano         | Sprint Planner                   |
-| Vanesa Ramos           | Configuration Manager            |
-| Andrés Felipe Díaz     | Quality Assurance Lead (QA Lead) |
-| Karol Torres           | DevOps Engineer                  |
+| Nombre completo        | Rol en el proyecto                              | GitHub / Perfil |
+|------------------------|-------------------------------------------------|-----------------------------------------|
+| Natalia Quiñonez       | Scrum Master                                    | https://github.com/Naqz05               |
+| Sofía Sierra           | Propietario del producto                        | https://github.com/sofia-sierra2        |
+| Valentina Cano         | Planificador de sprints                         | https://github.com/Valentina866         |
+| Vanesa Ramos           | Administrador de configuración                  | https://github.com/vanexalram           |
+| Andrés Felipe Díaz     | Responsable de control de calidad (QA Lead)     | https://github.com/rodríguezdiazandres8 |
+| Karol Torres           | Ingeniero de DevOps                             | https://github.com/TorresVides          |
+
+
+
 
 ### Roles y responsabilidades
 

@@ -1,1 +1,0 @@
-# Subissue - Encriptar contraseñas

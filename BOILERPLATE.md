@@ -30,12 +30,17 @@ MedTrack/
 │   └── test.sh
 ├── src/
 │   ├── main/
-│   │   ├── java/ (o python/, etc. según el lenguaje)
-│   │   └── resources/
-│   ├── test/
-│   │   ├── java/ (o python/, etc. según el lenguaje)
-│   │   └── resources/
-├── temp/
+│   │   ├── python/          //BACKEND
+│   │   │   ├── models.py
+│   │   │   ├── auth.py
+│   │   │   ├── app.py
+│   │   │   └── seed.py
+│   │   └── resources/       //FRONTEND
+│   │       ├── login.html
+│   │       └── dashboard.html
+│   └── test/
+│       └── python/          //PRUEBAS
+│           └── test_auth.py
 │   ├── temp_file.txt
 │   └── temp_data/
 │       ├── temp1.tmp

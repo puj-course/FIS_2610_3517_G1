@@ -4,7 +4,7 @@ DB_PATH = "database.db"
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # permite acceder por nombre de columna
+    conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
@@ -25,6 +25,6 @@ def init_db():
     conn.close()
     print("Base de datos inicializada correctamente.")
 
-# Ejecutar solo para inicializar
-if _name_ == "_main_":
+if __name__ == "__main__":
     init_db()
+

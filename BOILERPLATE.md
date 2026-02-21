@@ -30,16 +30,16 @@ MedTrack/
 │   └── test.sh
 ├── src/
 │   ├── main/
-│   │   ├── python/          //BACKEND
+│   │   ├── backend/          //BACKEND
 │   │   │   ├── models.py
 │   │   │   ├── auth.py
-│   │   │   ├── app.py
+│   │   │   ├── requirements.txt
 │   │   │   └── seed.py
-│   │   └── resources/       //FRONTEND
+│   │   └── frontend/       //FRONTEND
 │   │       ├── login.html
 │   │       └── dashboard.html
 │   └── test/
-│       └── python/          //PRUEBAS
+│       └── tests/          //PRUEBAS
 │           └── test_auth.py
 │   ├── temp_file.txt
 │   └── temp_data/

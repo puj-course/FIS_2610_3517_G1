@@ -101,7 +101,63 @@ La aplicación no solo recuerda qué medicamento tomar, sino que construye un hi
 ---
 
 ## Estructura del Proyecto
-
+```bash
+MedTrack/
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   ├── feature_request.md
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── workflows/
+│       ├── ci.yml
+│       └── cd.yml
+├── conf/
+│   ├── config.yaml
+│   └── settings.json
+├── docs/
+│   ├── api/
+│   ├── architecture/
+│   └── user_guide/
+├── jupyter/
+│   ├── notebooks/
+│   │   ├── exploration.ipynb
+│   │   └── analysis.ipynb
+│   └── datasets/
+│       ├── data1.csv
+│       └── data2.csv
+├── scripts/
+│   ├── setup.sh
+│   ├── deploy.sh
+│   └── test.sh
+├── src/
+│   ├── main/
+│   │   ├── backend/   //BACKEND
+│   │   │   ├── models.py
+│   │   │   ├── auth.py
+│   │   │   ├── database.db
+│   │   │   ├── requirements.txt
+│   │   │   ├── routes/
+│   │   │   |   ├── auth_route.py
+│   │   └── frontend/       //FRONTEND
+│   │       ├── login.html
+│   │       └── dashboard.html
+│   └── test/
+│       └── tests/          //PRUEBAS
+│           └── test_auth.py
+│   ├── temp_file.txt
+│   └── temp_data/
+│       ├── temp1.tmp
+│       └── temp2.tmp
+├── .gitignore
+├── README.md
+├── LICENSE
+├── requirements.txt
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── Dockerfile
+├── docker-compose.yml
+└── Makefile
+```
 
 ## Instalación y Ejecución
 ### Requisitos

@@ -92,81 +92,52 @@ La aplicación no solo recuerda qué medicamento tomar, sino que construye un hi
 
 
 ## Tecnologías Utilizadas
+- **Frontend:** HTML, CSS, Bootstrap
+- **Backend:** Python , Flask
+- **Base de Datos:** SQLite
+- **Control de versiones:** Git / GitHub
+- **DevOps / CI:** GitHub Actions (si aplica)
 
-
-
+---
 
 ## Estructura del Proyecto
-```bash
-MedTrack/
-├── .github/
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── bug_report.md
-│   │   ├── feature_request.md
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── workflows/
-│       ├── ci.yml
-│       └── cd.yml
-├── conf/
-│   ├── config.yaml
-│   └── settings.json
-├── docs/
-│   ├── api/
-│   ├── architecture/
-│   └── user_guide/
-├── jupyter/
-│   ├── notebooks/
-│   │   ├── exploration.ipynb
-│   │   └── analysis.ipynb
-│   └── datasets/
-│       ├── data1.csv
-│       └── data2.csv
-├── scripts/
-│   ├── setup.sh
-│   ├── deploy.sh
-│   └── test.sh
-├── src/
-│   ├── main/
-│   │   ├── backend/   //BACKEND
-│   │   │   ├── models.py
-│   │   │   ├── auth.py
-│   │   │   ├── database.db
-│   │   │   ├── requirements.txt
-│   │   │   ├── routes/
-│   │   │   |   ├── auth_route.py
-│   │   └── frontend/       //FRONTEND
-│   │       ├── login.html
-│   │       └── dashboard.html
-│   └── test/
-│       └── tests/          //PRUEBAS
-│           └── test_auth.py
-│   ├── temp_file.txt
-│   └── temp_data/
-│       ├── temp1.tmp
-│       └── temp2.tmp
-├── .gitignore
-├── README.md
-├── LICENSE
-├── requirements.txt
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── Dockerfile
-├── docker-compose.yml
-└── Makefile
-```
+
 
 ## Instalación y Ejecución
+### Requisitos
+- Git
+- Python 3.10+
 
+---
 
+### Clonar el repositorio
 
-## Clonar el repositorio
+```bash
+git clone https://github.com/puj-course/FIS_2610_3517_G1.git
+cd FIS_2610_3517_G1 
+```
 
-## Instalar dependencias
+### Instalar dependencias
+
+```bash
+python -m pip install -r src/main/backend/requirements.txt
+```
 
 ## Ejecución del proyecto
 
+
+```bash
+cd src/main/backend
+pyton models.py
+pyton app.py
+```
 ## Ejecución de pruebas
 
+
+```bash
+cd src/test/tests
+pytest test_auth.py
+```
 
 ## 📌 Contexto académico
 

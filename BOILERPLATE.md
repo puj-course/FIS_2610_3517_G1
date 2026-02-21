@@ -30,11 +30,13 @@ MedTrack/
 │   └── test.sh
 ├── src/
 │   ├── main/
-│   │   ├── backend/          //BACKEND
+│   │   ├── backend/   //BACKEND
 │   │   │   ├── models.py
 │   │   │   ├── auth.py
+│   │   │   ├── database.db
 │   │   │   ├── requirements.txt
-│   │   │   └── seed.py
+│   │   │   ├── routes/
+│   │   │   |   ├── auth_route.py
 │   │   └── frontend/       //FRONTEND
 │   │       ├── login.html
 │   │       └── dashboard.html
@@ -48,6 +50,7 @@ MedTrack/
 ├── .gitignore
 ├── README.md
 ├── LICENSE
+├── requirements.txt
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── Dockerfile

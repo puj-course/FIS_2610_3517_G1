@@ -1,4 +1,4 @@
-# fis_boilerplate
+# MedTrack_boilerplate
 ## Descripción de cada directorio y archivos
 ```bash
 MedTrack/

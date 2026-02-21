@@ -154,8 +154,6 @@ MedTrack/
 ├── requirements.txt
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
-├── Dockerfile
-├── docker-compose.yml
 └── Makefile
 ```
 

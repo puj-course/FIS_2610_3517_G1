@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # 🩺 MedTrack
 ## Descripción
 
@@ -123,6 +123,7 @@ Institución: Pontificia Universidad Javeriana
 📄 Licencia
 
 Proyecto desarrollado con fines académicos.
+
 =======
 # 🩺 MedTrack
 ## Descripción

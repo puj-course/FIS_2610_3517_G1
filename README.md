@@ -90,6 +90,32 @@ La aplicación no solo recuerda qué medicamento tomar, sino que construye un hi
 - Uso de GitHub para la gestión del proyecto, issues, sprints y seguimiento.
 - Proyecto evolutivo, susceptible a ajustes durante el curso.
 
+
+## Tecnologías Utilizadas
+
+
+
+
+## Estructura del Proyecto
+
+
+
+
+
+
+## Instalación y Ejecución
+
+
+
+## Clonar el repositorio
+
+## Instalar dependencias
+
+## Ejecución del proyecto
+
+## Ejecución de pruebas
+
+
 ## 📌 Contexto académico
 
 Asignatura: Fundamentos de Ingeniería de Software

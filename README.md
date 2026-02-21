@@ -118,7 +118,8 @@ Institución: Pontificia Universidad Javeriana
     Estudiante Ing. sistemas
     torres_kdayan@javeriana.edu.co 
 
-
+- Valentina Cano
+- https://github.com/Valentina866
 📄 Licencia
 
 Proyecto desarrollado con fines académicos.

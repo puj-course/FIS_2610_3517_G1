@@ -4,6 +4,11 @@ import hashlib
 import jwt
 from datetime import datetime, timedelta, timezone
 
+"""
+Módulo de autenticación para la aplicación
+
+Proporciona funciones para el hash de contraseñas, generación y verificación de JWTs.
+"""
 
 # Global variables
 SECRET_KEY="PLACEHOLDER"

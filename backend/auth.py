@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+# Subissue - Encriptar contraseñas
+#import section 
+import cryptography
+=======
 # Subissue - Encriptar contraseñas
 #import section 
 import hashlib
@@ -59,3 +64,4 @@ def verify_jwt(token):
         print("Invalid token")
         return None
     
+>>>>>>> develop

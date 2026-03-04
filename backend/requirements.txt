@@ -1,4 +1,5 @@
 fastapi
 uvicorn
-bcrypt
-pyjybt
+pyjwt
+pytest
+httpx

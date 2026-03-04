@@ -119,5 +119,4 @@ Institución: Pontificia Universidad Javeriana
     torres_kdayan@javeriana.edu.co 
 
 📄 Licencia
-
 Proyecto desarrollado con fines académicos.

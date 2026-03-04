@@ -22,7 +22,16 @@ def init_db():
             rol TEXT NOT NULL CHECK(rol IN ('cuidador', 'administrador'))
         )
     """)
-
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pacientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre_completo TEXT NOT NULL,
+            edad INTEGER NOT NULL CHECK(edad >= 0 AND edad <= 130),
+            documento TEXT NOT NULL UNIQUE,
+            contacto_emergencia TEXT,
+            tratamiento TEXT
+        )
+    """)
     conn.commit()
     conn.close()
     print("Base de datos inicializada correctamente.")
@@ -30,3 +39,4 @@ def init_db():
 if __name__ == "__main__":
     init_db()
 
+    

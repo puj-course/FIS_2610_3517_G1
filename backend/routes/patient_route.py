@@ -3,7 +3,12 @@
 from fastapi import APIRouter, HTTPException, status
 from backend.models import get_connection
 from backend.validaciones import validar_paciente, verificar_duplicado
+<<<<<<< HEAD
 # .....
+=======
+
+# .
+>>>>>>> features-Karol
 router = APIRouter()
 
 @router.post("/pacientes", status_code=status.HTTP_201_CREATED)

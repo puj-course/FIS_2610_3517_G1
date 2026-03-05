@@ -1,23 +1,22 @@
 import os
-#Esta es una libreria de datos liviana que guarda todo en un .db
+# libreia liviana que estamos usando
 import sqlite3
 
 # Esto asegura que la BD siempre quede en backend/database.db
 DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
 
-#Funcion para abrir una conexi'on con la BD
+# Funcion para abrir una conexión con la BD
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
-    #Para poder acceder a columnas por nombre
     conn.row_factory = sqlite3.Row
     return conn
-#Funcion para inicializar la BD
+
+# Funcion para inicializar la BD
 def init_db():
     conn = get_connection()
-    #cursor es el objeto que ejecuta sentencias de SQL, ej: CREATE, INSERT, SELECT
     cursor = conn.cursor()
 
-    #Se crea la tabla si no existe con atributos, tambien se especifica la llave primaria
+    # Tabla de usuarios
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,13 +26,30 @@ def init_db():
             rol TEXT NOT NULL CHECK(rol IN ('cuidador', 'administrador'))
         )
     """)
-    #Se guardan los cambios con un commit
+
+    # Tabla de pacientes
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pacientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombres TEXT NOT NULL,
+            apellidos TEXT NOT NULL,
+            fecha_nacimiento TEXT NOT NULL,
+            genero TEXT NOT NULL,
+            tipo_documento TEXT NOT NULL,
+            numero_documento TEXT NOT NULL,
+            telefono_contacto TEXT NOT NULL,
+            eps_aseguradora TEXT NOT NULL,
+            diagnostico_principal TEXT NOT NULL,
+            alergias_conocidas TEXT DEFAULT '',
+            observaciones_adicionales TEXT DEFAULT '',
+            UNIQUE(tipo_documento, numero_documento)
+        )
+    """)
+
     conn.commit()
-    #Liberar recursos
     conn.close()
-    #Se imprime por pantalla una confirmacion
     print("Base de datos inicializada correctamente.")
-#Para ejecutar solo si se corre el archivo directamente
+
 if __name__ == "__main__":
     init_db()
 

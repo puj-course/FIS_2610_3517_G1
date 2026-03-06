@@ -1,5 +1,5 @@
-flask
-flask-cors
-bcrypt
+fastapi
+uvicorn
 pyjwt
 pytest
+httpx

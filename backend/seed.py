@@ -1,6 +1,6 @@
 # backend/seed.py  ← correr una sola vez para crear usuario de prueba
 from models import get_connection, init_db
-from auth import encriptar_contrasena
+from backend.auth import hash_password
 
 init_db()
 

@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MedTrack — Registro de Paciente</title>
 
-  <!-- Importamos Bootstrap para la cuadrícula y estilos base -->
+  <!-- Importamos Bootstrap para la cuadricula y estilos base -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
-  <!-- Importamos las fuentes tipográficas del proyecto -->
+  <!-- Importamos las fuentes del texto del proyecto -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
   <style>
@@ -259,7 +259,7 @@
 
     /*
       Aparece en la esquina superior derecha para confirmar acciones
-      Desaparece sola después de unos segundos
+      Desaparece sola despues de unos segundos
     */
     .contenedor-notificacion {
       position: fixed;
@@ -307,7 +307,7 @@
   <div class="encabezado">
     <div class="marca">
       <div class="marca-icono">
-        <!-- Ícono SVG de alerta médica -->
+        <!-- Icono de alerta medica -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
         </svg>
@@ -513,8 +513,8 @@
     const notificacion = document.createElement('div');
     notificacion.className = `notificacion${tipo === 'error' ? ' error' : ''}`;
 
-    // Elegimos el ícono según el tipo
-    const icono = tipo === 'exito' ? '✅' : '⚠️';
+    // Elegimos el mensaje según el tipo
+    const icono = tipo === 'exito' ? 'bien' : '¡alerta!';
     notificacion.innerHTML = `<span class="icono">${icono}</span><span>${mensaje}</span>`;
 
     contenedorNotificacion.appendChild(notificacion);

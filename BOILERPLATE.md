@@ -31,16 +31,18 @@ MedTrack/
 │   └── test.sh
 ├── src/
 │   ├── main/
-│   │   ├── python/          //BACKEND
+│   │   ├── backend/   //BACKEND
 │   │   │   ├── models.py
 │   │   │   ├── auth.py
-│   │   │   ├── app.py
-│   │   │   └── seed.py
-│   │   └── resources/       //FRONTEND
+│   │   │   ├── database.db
+│   │   │   ├── requirements.txt
+│   │   │   ├── routes/
+│   │   │   |   ├── auth_route.py
+│   │   └── frontend/       //FRONTEND
 │   │       ├── login.html
 │   │       └── dashboard.html
 │   └── test/
-│       └── python/          //PRUEBAS
+│       └── tests/          //PRUEBAS
 │           └── test_auth.py
 │   ├── temp_file.txt
 │   └── temp_data/
@@ -49,6 +51,7 @@ MedTrack/
 ├── .gitignore
 ├── README.md
 ├── LICENSE
+├── requirements.txt
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── Dockerfile

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Registro de Paciente</title>
+
+  <!-- Importamos Bootstrap para la cuadricula y estilos base -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Importamos las fuentes del texto del proyecto -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    /*
+      Aqui se define los colores que usamos en toda la pagina
+    */
+    :root {
+      --color-menta:         #2DD4BF;  /* color principal, botones y acentos */
+      --color-menta-oscuro:  #0F9D8A;  /* menta más oscuro para el hover */
+      --color-fondo:         #0F1B2D;  /* fondo general de la página */
+      --color-campo:         #1E2D3D;  /* fondo de los inputs */
+      --color-tarjeta:       #162030;  /* fondo de la tarjeta del formulario */
+      --color-borde:         #243447;  /* color de los bordes */
+      --color-texto:         #E2EAF4;  /* texto principal */
+      --color-texto-suave:   #7A95B0;  /* texto secundario o placeholders */
+      --color-error:         #F4726A;  /* rojo para errores de validación */
+      --color-exito:         #4ADE80;  /* verde para campos correctos */
+    }
+
+    /* Todos los elementos respetan el modelo de caja (evita desbordamientos) */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /*
+     cuerpo de la pagina:
+      Centramos el formulario tanto vertical como horizontalmente.
+      definimos el fondo
+    */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    /*
+      Es el contenedor principal con fondo oscuro, bordes redondeados y sombra para darle profundidad.
+      La animacion "aparecer" hace que suba al cargar.
+    */
+    .tarjeta-formulario {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 640px;
+      padding: 2.5rem 2.5rem 2rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: aparecer .5s ease both;
+    }
+
+    /* Animacion: la tarjeta aparece subiendo desde abajo */
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /*
+      La fila con el ícono y el nombre "MedTrack"
+    */
+    .encabezado { margin-bottom: 2rem; }
+
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Cuadro verde con el ícono de la aplicación */
+    .marca-icono {
+      width: 36px;
+      height: 36px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .marca-icono svg { width: 20px; height: 20px; color: var(--color-fondo); }
+
+    .marca-nombre {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+      color: var(--color-texto);
+    }
+
+    .encabezado h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.75rem;
+      margin: 0 0 .3rem;
+      line-height: 1.2;
+    }
+
+    .encabezado p {
+      font-size: .9rem;
+      color: var(--color-texto-suave);
+      margin: 0;
+    }
+
+    /*
+      Linea horizontal con texto en el centro,
+      se usa para separar los datos personales de los médicos
+    */
+    .separador {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin: 1.5rem 0 1.25rem;
+      color: var(--color-texto-suave);
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    /* Las líneas a los lados del texto del separador */
+    .separador::before,
+    .separador::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-borde);
+    }
+
+    /*
+      Texto pequeño que aparece encima de cada input.
+    */
+    .etiqueta-campo {
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--color-texto-suave);
+      margin-bottom: .4rem;
+      letter-spacing: .03em;
+    }
+    /* El asterisco rojo que indica campo obligatorio */
+    .etiqueta-campo .obligatorio { color: var(--color-menta); margin-left: 2px; }
+
+    /*
+      campos de texto y selectores
+      Fondo oscuro
+      Al hacer clic el borde se vuelve de otro color
+    */
+    .form-control,
+    .form-select {
+      background: var(--color-campo);
+      border: 1.5px solid var(--color-borde);
+      color: var(--color-texto);
+      border-radius: 10px;
+      padding: .65rem .9rem;
+      font-size: .92rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    /* Cuando el usuario hace clic en el campo */
+    .form-control:focus,
+    .form-select:focus {
+      background: var(--color-campo);
+      border-color: var(--color-menta);
+      color: var(--color-texto);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.18);
+      outline: none;
+    }
+
+    .form-control::placeholder { color: #4A6278; }
+    .form-select option { background: var(--color-campo); }
+
+    /* Borde rojo cuando el campo tiene un error */
+    .form-control.campo-invalido,
+    .form-select.campo-invalido {
+      border-color: var(--color-error);
+      box-shadow: none;
+    }
+
+    /* Borde verde cuando el campo está correcto */
+    .form-control.campo-valido,
+    .form-select.campo-valido {
+      border-color: var(--color-exito);
+      box-shadow: none;
+    }
+
+    /* Mensaje de error que aparece debajo del campo */
+    .mensaje-error {
+      font-size: .78rem;
+      color: var(--color-error);
+      margin-top: .3rem;
+    }
+
+    /*
+      Muestra cuántos caracteres se han escrito en "Observaciones".
+    */
+    .contador-caracteres {
+      font-size: .75rem;
+      color: var(--color-texto-suave);
+      text-align: right;
+      margin-top: .2rem;
+    }
+
+    /*
+      boton guardar:
+      Verde, ancho completo
+      Al pasar el mouse encima se oscurece
+    */
+    .boton-guardar {
+      background: var(--color-menta);
+      color: var(--color-fondo);
+      border: none;
+      border-radius: 12px;
+      padding: .75rem 2rem;
+      font-size: .95rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      width: 100%;
+      cursor: pointer;
+      transition: background .2s, transform .1s, box-shadow .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      margin-top: 1.5rem;
+    }
+    .boton-guardar:hover  { background: var(--color-menta-oscuro); box-shadow: 0 8px 24px rgba(45,212,191,.3); }
+    .boton-guardar:active { transform: scale(.98); } /* pequeño clic al presionar */
+    .boton-guardar svg { width: 18px; height: 18px; }
+
+    /*
+    boton de limpiar todos los campos
+      Transparente con borde, para no competir visualmente con el botón principal
+    */
+    .boton-limpiar {
+      background: transparent;
+      color: var(--color-texto-suave);
+      border: 1.5px solid var(--color-borde);
+      border-radius: 12px;
+      padding: .65rem 1.5rem;
+      font-size: .88rem;
+      font-family: 'DM Sans', sans-serif;
+      width: 100%;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+      margin-top: .75rem;
+    }
+    .boton-limpiar:hover { border-color: var(--color-texto-suave); color: var(--color-texto); }
+
+    /*
+      Aparece en la esquina superior derecha para confirmar acciones
+      Desaparece sola despues de unos segundos
+    */
+    .contenedor-notificacion {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+    }
+    .notificacion {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-exito);
+      border-radius: 12px;
+      padding: .9rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      animation: deslizar .35s ease both;
+      font-size: .88rem;
+    }
+    /* Variante roja para notificaciones de error */
+    .notificacion.error { border-color: var(--color-error); }
+    .notificacion .icono { font-size: 1.2rem; }
+
+    /* La notificacion entra deslizándose desde la derecha */
+    @keyframes deslizar {
+      from { opacity: 0; transform: translateX(40px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* En pantallas pequeñas reducimos el padding de la tarjeta */
+    @media (max-width: 480px) {
+      .tarjeta-formulario { padding: 1.75rem 1.25rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Aqui aparecerán las notificaciones flotantes -->
+<div class="contenedor-notificacion" id="contenedorNotificacion"></div>
+
+<!-- Tarjeta principal del formulario -->
+<div class="tarjeta-formulario">
+
+  <!-- Encabezado con logo y título -->
+  <div class="encabezado">
+    <div class="marca">
+      <div class="marca-icono">
+        <!-- Icono de alerta medica -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+        </svg>
+      </div>
+      <span class="marca-nombre">MedTrack</span>
+    </div>
+    <h1>Registro de Paciente</h1>
+    <p>Completa la información para comenzar el seguimiento del tratamiento.</p>
+  </div>
+
+  <!-- Formulario principal -->
+  <form id="formularioPaciente" novalidate>
+
+    <!-- ── seccion de los datos personales ── -->
+    <div class="separador">Datos personales</div>
+
+    <div class="row g-3">
+
+      <!-- Nombres -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="nombres">
+          Nombres <span class="obligatorio">*</span>
+        </label>
+        <input type="text" class="form-control" id="nombres" name="nombres"
+               placeholder="Ej. María Elena" maxlength="60" autocomplete="off" required/>
+        <div class="mensaje-error" id="errorNombres">Ingresa el nombre del paciente.</div>
+      </div>
+
+      <!-- Apellidos -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="apellidos">
+          Apellidos <span class="obligatorio">*</span>
+        </label>
+        <input type="text" class="form-control" id="apellidos" name="apellidos"
+               placeholder="Ej. Gómez Torres" maxlength="60" autocomplete="off" required/>
+        <div class="mensaje-error" id="errorApellidos">Ingresa los apellidos del paciente.</div>
+      </div>
+
+      <!-- Fecha de nacimiento -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="fechaNacimiento">
+          Fecha de nacimiento <span class="obligatorio">*</span>
+        </label>
+        <input type="date" class="form-control" id="fechaNacimiento" name="fecha_nacimiento" required/>
+        <div class="mensaje-error" id="errorFecha">Selecciona una fecha válida.</div>
+      </div>
+
+      <!-- Genero -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="genero">
+          Género <span class="obligatorio">*</span>
+        </label>
+        <select class="form-select" id="genero" name="genero" required>
+          <option value="" disabled selected>Selecciona…</option>
+          <option value="femenino">Femenino</option>
+          <option value="masculino">Masculino</option>
+          <option value="otro">Otro</option>
+          <option value="no_especifica">Prefiero no decirlo</option>
+        </select>
+        <div class="mensaje-error" id="errorGenero">Selecciona una opción.</div>
+      </div>
+
+      <!-- Tipo de documento -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="tipoDocumento">
+          Tipo de documento <span class="obligatorio">*</span>
+        </label>
+        <select class="form-select" id="tipoDocumento" name="tipo_documento" required>
+          <option value="" disabled selected>Selecciona…</option>
+          <option value="cc">Cédula de ciudadanía</option>
+          <option value="ti">Tarjeta de identidad</option>
+          <option value="pasaporte">Pasaporte</option>
+          <option value="ce">Cédula de extranjería</option>
+          <option value="rc">Registro civil</option>
+        </select>
+        <div class="mensaje-error" id="errorTipoDoc">Selecciona el tipo de documento.</div>
+      </div>
+
+      <!-- Número de documento -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="numeroDocumento">
+          Número de documento <span class="obligatorio">*</span>
+        </label>
+        <input type="text" class="form-control" id="numeroDocumento" name="numero_documento"
+               placeholder="Ej. 1020304050" maxlength="20" autocomplete="off" required
+               pattern="[A-Za-z0-9\-]+" inputmode="numeric"/>
+        <div class="mensaje-error" id="errorNumDoc">Ingresa un número de documento válido.</div>
+      </div>
+
+    </div>
+
+    <!--datos medicos y de contacto -->
+    <div class="separador">Información médica y contacto</div>
+
+    <div class="row g-3">
+
+      <!-- Telefono -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="telefono">Teléfono de contacto</label>
+        <input type="tel" class="form-control" id="telefono" name="telefono"
+               placeholder="Ej. 3001234567" maxlength="15" inputmode="tel"
+               pattern="[0-9+\-\s()]{7,15}"/>
+        <div class="mensaje-error" id="errorTelefono">Ingresa un teléfono válido (mínimo 7 dígitos).</div>
+      </div>
+
+      <!-- EPS -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="eps">EPS / Aseguradora</label>
+        <input type="text" class="form-control" id="eps" name="eps"
+               placeholder="Ej. Sura, Sanitas…" maxlength="60"/>
+      </div>
+
+      <!-- Diagnostico -->
+      <div class="col-12">
+        <label class="etiqueta-campo" for="diagnostico">Diagnóstico principal</label>
+        <input type="text" class="form-control" id="diagnostico" name="diagnostico"
+               placeholder="Ej. Hipertensión arterial" maxlength="120"/>
+      </div>
+
+      <!-- Alergias -->
+      <div class="col-12">
+        <label class="etiqueta-campo" for="alergias">Alergias conocidas</label>
+        <input type="text" class="form-control" id="alergias" name="alergias"
+               placeholder="Ej. Penicilina, aspirina… o 'Ninguna'" maxlength="200"/>
+      </div>
+
+      <!-- Observaciones con contador de caracteres -->
+      <div class="col-12">
+        <label class="etiqueta-campo" for="observaciones">Observaciones adicionales</label>
+        <textarea class="form-control" id="observaciones" name="observaciones"
+                  rows="3" maxlength="400"
+                  placeholder="Notas relevantes para el cuidado del paciente…"></textarea>
+        <!-- Muestra cuántos caracteres se llevan escritos de 400 -->
+        <div class="contador-caracteres">
+          <span id="contadorObservaciones">0</span> / 400
+        </div>
+      </div>
+
+    </div>
+
+    <!-- botones -->
+
+    <!-- Botón principal: guarda el paciente -->
+    <button type="submit" class="boton-guardar" id="botonGuardar">
+      <!-- Ícono de disquete (guardar) -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/>
+        <polyline points="7 3 7 8 15 8"/>
+      </svg>
+      Guardar paciente
+    </button>
+
+    <!-- Botón secundario: limpia todos los campos -->
+    <button type="button" class="boton-limpiar" id="botonLimpiar">
+      Limpiar formulario
+    </button>
+
+  </form>
+</div>
+
+<script>
+  /*
+    referencias a los elementos html
+    Guardamos en variables los elementos que vamos a usar frecuentemente,
+    así no tenemos que buscalos con getElementById cada vez.
+  */
+  const formulario              = document.getElementById('formularioPaciente');
+  const campoNombres            = document.getElementById('nombres');
+  const campoApellidos          = document.getElementById('apellidos');
+  const campoFecha              = document.getElementById('fechaNacimiento');
+  const campoGenero             = document.getElementById('genero');
+  const campoTipoDoc            = document.getElementById('tipoDocumento');
+  const campoNumDoc             = document.getElementById('numeroDocumento');
+  const campoTelefono           = document.getElementById('telefono');
+  const campoObservaciones      = document.getElementById('observaciones');
+  const contadorObservaciones   = document.getElementById('contadorObservaciones');
+  const contenedorNotificacion  = document.getElementById('contenedorNotificacion');
+
+  /*
+    fecha maxima = hoy
+    Evitamos que el usuario pueda poner una fecha de nacimiento en el futuro.
+  */
+  const fechaHoy = new Date().toISOString().split('T')[0]; // formato: "2025-03-04"
+  campoFecha.max = fechaHoy;
+
+  /*
+    Cada vez que el usuario escribe en el textarea,
+    actualizamos el número de caracteres escritos.
+  */
+  campoObservaciones.addEventListener('input', function () {
+    contadorObservaciones.textContent = this.value.length;
+  });
+
+  /*
+    mostrar notificacion 
+    Crea una cajita en la esquina con un mensaje y desaparece sola.
+    Parámetros:
+      - mensaje: texto a mostrar
+      - tipo: 'exito' (verde) o 'error' (rojo)
+  */
+  function mostrarNotificacion(mensaje, tipo = 'exito') {
+    const notificacion = document.createElement('div');
+    notificacion.className = `notificacion${tipo === 'error' ? ' error' : ''}`;
+
+    // Elegimos el mensaje según el tipo
+    const icono = tipo === 'exito' ? 'bien' : '¡alerta!';
+    notificacion.innerHTML = `<span class="icono">${icono}</span><span>${mensaje}</span>`;
+
+    contenedorNotificacion.appendChild(notificacion);
+
+    // La notificación desaparece despues de 3.5 segundos
+    setTimeout(() => notificacion.remove(), 3500);
+  }
+
+  /*
+    validar un campo
+    Revisa si el campo cumple las reglas y le pone borde verde o rojo.
+    Retorna true si está bien, false si tiene error.
+    Parámetro:
+      - campo: el elemento HTML del input o select a validar
+  */
+  function validarCampo(campo) {
+    // Primero quitamos cualquier estado visual previo
+    campo.classList.remove('campo-invalido', 'campo-valido');
+    const valor = campo.value.trim();
+
+    /* Regla 1: Si el campo es obligatorio y está vacío entonces sale error */
+    if (campo.required && !valor) {
+      campo.classList.add('campo-invalido');
+      return false;
+    }
+
+    /* Regla 2: Validacion especial para la fecha de nacimiento */
+    if (campo.id === 'fechaNacimiento' && valor) {
+      const fechaIngresada = new Date(valor);
+
+      // La fecha no puede ser inválida ni estar en el futuro
+      if (isNaN(fechaIngresada) || fechaIngresada > new Date()) {
+        campo.classList.add('campo-invalido');
+        document.getElementById('errorFecha').textContent = 'La fecha no puede ser futura.';
+        return false;
+      }
+
+      // Tampoco puede representar una edad mayor a 130 años
+      const edadEnAnios = (new Date() - fechaIngresada) / (1000 * 60 * 60 * 24 * 365.25);
+      if (edadEnAnios > 130) {
+        campo.classList.add('campo-invalido');
+        document.getElementById('errorFecha').textContent = 'Ingresa una fecha de nacimiento válida.';
+        return false;
+      }
+    }
+
+    /* Regla 3: El telefono solo acepta dígitos, espacios, +, - y parentesis */
+    if (campo.id === 'telefono' && valor) {
+      const formatoTelefono = /^[0-9+\-\s()]{7,15}$/;
+      if (!formatoTelefono.test(valor)) {
+        campo.classList.add('campo-invalido');
+        return false;
+      }
+    }
+
+    /* Regla 4: El número de documento solo acepta letras, números y guiones */
+    if (campo.id === 'numeroDocumento' && valor) {
+      const formatoDocumento = /^[A-Za-z0-9\-]+$/;
+      if (!formatoDocumento.test(valor)) {
+        campo.classList.add('campo-invalido');
+        return false;
+      }
+    }
+
+    // Si llegamos aqui sin errores, el campo es válido
+    if (valor) campo.classList.add('campo-valido');
+    return true;
+  }
+
+  /*
+    validacion
+    Recorremos todos los campos del formulario y les agregamos dos eventos:
+    1. "blur" (al salir del campo): validamos 
+    2. "input" (mientras escribe): solo revalidamos si ya tenía error, para quitar el rojo
+  */
+  document.querySelectorAll('.form-control, .form-select').forEach(function (campo) {
+    campo.addEventListener('blur', function () {
+      validarCampo(campo);
+    });
+    campo.addEventListener('input', function () {
+      if (campo.classList.contains('campo-invalido')) {
+        validarCampo(campo);
+      }
+    });
+  });
+
+  /*
+    envio del formulario:
+    Cuando el usuario hace clic en "Guardar paciente":
+    1. Prevenimos el envío normal del navegador
+    2. Validamos todos los campos
+    3. Si hay errores, mostramos la notificación de error y hacemos scroll al primer campo rojo
+    4. Si todo está bien, recogemos los datos y los enviamos al backend
+  */
+  formulario.addEventListener('submit', function (evento) {
+    evento.preventDefault(); // evitamos que la página se recargue
+
+    const todosCampos = this.querySelectorAll('.form-control, .form-select');
+    let formularioValido = true;
+
+    // Validamos campo por campo
+    todosCampos.forEach(function (campo) {
+      if (!validarCampo(campo)) {
+        formularioValido = false;
+      }
+    });
+
+    // Si algún campo falló, avisamos y paramos aquí
+    if (!formularioValido) {
+      mostrarNotificacion('Revisa los campos marcados en rojo.', 'error');
+
+      // Hacemos scroll automático hasta el primer campo con error
+      const primerCampoConError = this.querySelector('.campo-invalido');
+      if (primerCampoConError) {
+        primerCampoConError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    /*
+      Recolectamos todos los datos del formulario en un objeto.
+      FormData recoge automáticamente todos los campos con su "name"
+      Object.fromEntries lo convierte a un objeto normal 
+    */
+    const datosPaciente = Object.fromEntries(new FormData(this).entries());
+
+    /*
+      Aquí es donde se conecta con Flask.
+      Por ahora mostramos los datos en consola.
+    */
+    console.log('Datos del paciente a guardar:', datosPaciente);
+
+    // Notificación de éxito
+    mostrarNotificacion(`Paciente "${datosPaciente.nombres} ${datosPaciente.apellidos}" registrado correctamente.`);
+
+    // Limpiamos el formulario después de guardar
+    this.reset();
+    todosCampos.forEach(function (campo) {
+      campo.classList.remove('campo-valido', 'campo-invalido');
+    });
+    contadorObservaciones.textContent = '0';
+  });
+
+  /*
+    boton de limpiar
+    Resetea el formulario a su estado inicial:
+    borra todos los valores y quita los colores de validación
+  */
+  document.getElementById('botonLimpiar').addEventListener('click', function () {
+    formulario.reset();
+    formulario.querySelectorAll('.form-control, .form-select').forEach(function (campo) {
+      campo.classList.remove('campo-valido', 'campo-invalido');
+    });
+    contadorObservaciones.textContent = '0';
+  });
+</script>
+
+</body>
+</html>

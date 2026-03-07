@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <!-- Define la codificación de caracteres para que se vean bien
+  acentos, ñ, etc. -->
+
+  <meta charset="UTF-8"/>
+
+  <!--Hace que la página sea responsive, es decir, que se adapte
+  correctamente a celulares, tablets y pantallas pequeñas-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!--Título que aparece en la pestaña del navegador-->
+  <title>MedTrack — Mis Pacientes</title>
+
+  <!--Importa Bootstrap desde internet (CDN).
+  Bootstrap es una librería que facilita hacer diseños
+  y componentes visuales como tablas, botones, etc.-->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+
+  <!--Importa dos fuentes de Google Fonts para mejorar
+  el diseño visual de la página-->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+
+    /*
+    :root permite definir variables de colores que luego
+    se pueden reutilizar en todo el CSS.
+    Esto hace el código más ordenado.
+    */
+    :root {
+      --color-menta:        #2DD4BF;
+      --color-menta-oscuro: #0F9D8A;
+      --color-fondo:        #0F1B2D;
+      --color-campo:        #1E2D3D;
+      --color-tarjeta:      #162030;
+      --color-borde:        #243447;
+      --color-texto:        #E2EAF4;
+      --color-texto-suave:  #7A95B0;
+      --color-error:        #F4726A;
+      --color-exito:        #4ADE80;
+    }
+
+    /*
+    Hace que todos los elementos calculen su tamaño incluyendo
+    bordes y padding. Esto evita errores de tamaño en el layout.
+    */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /*
+    Estilos generales de la página
+    */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      padding: 2rem 1rem;
+
+      /*
+      Gradientes decorativos en el fondo
+      */
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    /*
+    Contenedor del encabezado superior
+    */
+    .encabezado-pagina {
+      max-width: 1100px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /*
+    Estilo del logo + nombre
+    */
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    /*
+    Cuadro donde está el icono
+    */
+    .marca-icono {
+      width: 36px;
+      height: 36px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /*
+    Tamaño del icono
+    */
+    .marca-icono svg { width: 20px; height: 20px; color: var(--color-fondo); }
+
+    /*
+    Estilo del nombre de la marca
+    */
+    .marca-nombre {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+      color: var(--color-texto);
+    }
+
+    /*
+    Botón para registrar nuevo paciente
+    */
+    .boton-nuevo {
+      background: var(--color-menta);
+      color: var(--color-fondo);
+      border: none;
+      border-radius: 12px;
+      padding: .6rem 1.4rem;
+      font-size: .9rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: background .2s, box-shadow .2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    /*
+    Efecto de cuando el mouse pasa sobre el botón
+    */
+    .boton-nuevo:hover {
+      background: var(--color-menta-oscuro);
+      box-shadow: 0 8px 24px rgba(45,212,191,.3);
+      color: var(--color-fondo);
+    }
+
+    /*
+    Tarjeta principal donde está la tabla
+    */
+    .tarjeta {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: aparecer .5s ease both;
+    }
+
+    /*
+    Animación de aparición al cargar
+    */
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /*
+    Título de sección
+    */
+    .titulo-seccion {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /*
+    Estilos de la tabla
+    */
+    .table {
+      color: var(--color-texto);
+      border-color: var(--color-borde);
+    }
+
+    /*
+    Encabezado de la tabla
+    */
+    .table thead th {
+      background: var(--color-campo);
+      color: var(--color-menta);
+      border-color: var(--color-borde);
+      font-size: .82rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      font-weight: 500;
+      padding: .85rem 1rem;
+    }
+
+    /*
+    Filas de la tabla
+    */
+    .table tbody tr {
+      border-color: var(--color-borde);
+      transition: background .15s;
+    }
+
+    /*
+    Efecto cuando el mouse pasa sobre una fila
+    */
+    .table tbody tr:hover {
+      background: rgba(45,212,191,.05);
+    }
+
+    /*
+    Celdas de la tabla
+    */
+    .table tbody td {
+      border-color: var(--color-borde);
+      padding: .85rem 1rem;
+      font-size: .9rem;
+      vertical-align: middle;
+    }
+
+    /*
+    Estilo cuando la tabla está vacía
+    */
+    .vacio {
+      text-align: center;
+      color: var(--color-texto-suave);
+      padding: 3rem !important;
+    }
+
+    /*
+    Caja para mostrar errores
+    */
+    .alerta-error {
+      background: rgba(244,114,106,.1);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<!-- Encabezado de la página -->
+<div class="encabezado-pagina">
+
+  <!-- Logo y nombre -->
+  <div class="marca">
+    <div class="marca-icono">
+
+      <!-- Icono SVG -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+
+    </div>
+
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <!-- Botón para registrar nuevo paciente -->
+  <a href="RegistarPaciente.html" class="boton-nuevo">+ Nuevo paciente</a>
+
+</div>
+
+<!-- Tarjeta que contiene la tabla -->
+<div class="tarjeta">
+
+  <h2 class="titulo-seccion">Mis pacientes</h2>
+
+  <!-- Mensaje de error si algo falla -->
+  <div class="alerta-error" id="alerta-error"></div>
+
+  <!-- Hace que la tabla se adapte en pantallas pequeñas -->
+  <div class="table-responsive">
+
+    <!-- Tabla de pacientes -->
+    <table class="table">
+
+      <!-- Encabezado -->
+      <thead>
+        <tr>
+          <th>Nombres</th>
+          <th>Apellidos</th>
+          <th>Fecha nacimiento</th>
+          <th>Género</th>
+          <th>Tipo documento</th>
+          <th>Número documento</th>
+          <th>Teléfono</th>
+          <th>EPS/Aseguradora</th>
+          <th>Diagnóstico</th>
+          <th>Alergias</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+
+      <!-- Cuerpo de la tabla -->
+      <tbody id="tabla-pacientes">
+
+        <!-- Mensaje mientras se cargan los datos -->
+        <tr>
+          <td class="vacio" colspan="11">Cargando...</td>
+        </tr>
+
+      </tbody>
+
+    </table>
+
+  </div>
+</div>
+
+<script>
+
+/*
+Obtiene el token guardado en el navegador.
+localStorage guarda datos del usuario localmente.
+Si no existe token, usa "test".
+*/
+const token = localStorage.getItem("medtrack_token") || "test";
+
+/*
+Función que pide la lista de pacientes al servidor
+*/
+async function cargarPacientes() {
+
+  try {
+
+    /*
+    fetch hace una petición HTTP al backend
+    */
+    const respuesta = await fetch("http://localhost:8000/pacientes", {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    /*
+    Convierte la respuesta en JSON
+    */
+    const datos = await respuesta.json();
+
+    /*
+    Obtiene el tbody donde se insertarán los pacientes
+    */
+    const tbody = document.getElementById("tabla-pacientes");
+
+    /*
+    Si el servidor responde con error
+    */
+    if (!respuesta.ok) {
+      mostrarError("Error al cargar los pacientes.");
+      tbody.innerHTML = "";
+      return;
+    }
+
+    /*
+    Si no hay pacientes registrados
+    */
+    if (datos.pacientes.length === 0) {
+      tbody.innerHTML = `<tr><td class="vacio" colspan="11">No hay pacientes registrados aún.</td></tr>`;
+      return;
+    }
+
+    /*
+    Genera las filas de la tabla usando los datos
+    */
+    tbody.innerHTML = datos.pacientes.map(p => `
+      <tr>
+        <td>${p.nombres}</td>
+        <td>${p.apellidos}</td>
+        <td>${p.fecha_nacimiento}</td>
+        <td>${p.genero}</td>
+        <td>${p.tipo_documento}</td>
+        <td>${p.numero_documento}</td>
+        <td>${p.telefono_contacto || "—"}</td>
+        <td>${p.eps_aseguradora || "—"}</td>
+        <td>${p.diagnostico_principal || "—"}</td>
+        <td>${p.alergias_conocidas || "—"}</td>
+        <td>${p.observaciones_adicionales || "—"}</td>
+      </tr>
+    `).join("");
+
+  } catch (err) {
+
+    /*
+    Si no se puede conectar con el servidor
+    */
+    mostrarError("No se pudo conectar con el servidor.");
+  }
+}
+
+/*
+M uestra un mensaje de error en la página
+*/
+function mostrarError(mensaje) {
+
+  const alerta = document.getElementById("alerta-error");
+
+  alerta.textContent = mensaje;
+  alerta.style.display = "block";
+}
+
+/*
+Ejecuta la función al cargar la página
+*/
+cargarPacientes();
+
+</script>
+
+</body>
+</html>

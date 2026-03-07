@@ -156,16 +156,18 @@ python -m pip install -r src/main/backend/requirements.txt
 
 
 ```bash
-cd src/main/backend
-pyton models.py
-pyton app.py
+cd backend
+python models.py
+uvicorn routes.auth_route:app --reload
+
 ```
 ## Ejecución de pruebas
 
 
 ```bash
-cd src/test/tests
+cd tests
 pytest test_auth.py
+pytest test_paciente.py
 ```
 
 ## 📌 Contexto académico

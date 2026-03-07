@@ -137,7 +137,6 @@ MedTrack/
 ### Requisitos
 - Git
 - Python 3.10+
-
 ---
 
 ### Clonar el repositorio
@@ -195,7 +194,7 @@ Institución: Pontificia Universidad Javeriana
    Diaz.afelipe@javeriana.edu.co
 11. Karol Torres
     Estudiante Ing. sistemas
-    torres_kdayan@javeriana.edu.co 
-
+    torres_kdayan@javeriana.edu.co
+    
 📄 Licencia
 Proyecto desarrollado con fines académicos.

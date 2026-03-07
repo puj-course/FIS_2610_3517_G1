@@ -1,19 +1,12 @@
-# patient_route.py
-
 from fastapi import APIRouter, HTTPException, status
 from backend.models import get_connection
 from backend.validaciones import validar_paciente, verificar_duplicado
-<<<<<<< HEAD
-# .....
-=======
 
-# .
->>>>>>> features-Karol
 router = APIRouter()
+
 
 @router.post("/pacientes", status_code=status.HTTP_201_CREATED)
 def registrar_paciente(data: dict):
-    # 1. Validar datos obligatorios y formato
     errores = validar_paciente(data)
     if errores:
         raise HTTPException(
@@ -24,7 +17,6 @@ def registrar_paciente(data: dict):
     conn = get_connection()
 
     try:
-        # 2. Verificar duplicado
         if verificar_duplicado(
             data["numero_documento"],
             data["tipo_documento"],
@@ -35,7 +27,6 @@ def registrar_paciente(data: dict):
                 detail="Ya existe un paciente con ese documento"
             )
 
-        # 3. Guardar en base de datos
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO pacientes (

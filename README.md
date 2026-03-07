@@ -159,6 +159,7 @@ python -m pip install -r src/main/backend/requirements.txt
 cd backend
 python models.py
 uvicorn routes.auth_route:app --reload
+
 ```
 ## Ejecución de pruebas
 

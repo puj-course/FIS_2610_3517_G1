@@ -44,6 +44,20 @@ def init_db():
             UNIQUE (tipo_documento, numero_documento)
         )
     """)
+# Tabla de medicamentos 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS medicamentos (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre           TEXT    NOT NULL,
+            dosis            TEXT    NOT NULL,
+            frecuencia       TEXT    NOT NULL,
+            horario          TEXT    NOT NULL,
+            fecha_inicio     TEXT    NOT NULL,
+            observaciones    TEXT,
+            paciente_id      INTEGER NOT NULL,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+        )
+    """)
 
     conn.commit()
     conn.close()

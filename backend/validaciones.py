@@ -89,12 +89,14 @@ def validar_medicamento(data: dict) -> list:
     errores = []
 
     # Campos obligatorios del medicamento
+    
     campos_obligatorios = {
-        "nombre": "El nombre del medicamento es obligatorio",
-        "dosis": "La dosis es obligatoria",
-        "frecuencia": "La frecuencia es obligatoria",
-        "horarios": "Los horarios de toma son obligatorios",
-        "paciente_id": "El paciente_id es obligatorio"
+    	"nombre": "El nombre del medicamento es obligatorio",
+    	"dosis": "La dosis es obligatoria",
+    	"frecuencia": "La frecuencia es obligatoria",
+    	"horario": "El horario de toma es obligatorio",
+    	"fecha_inicio": "La fecha de inicio es obligatoria",
+    	"paciente_id": "El paciente_id es obligatorio"
     }
 
     # Revisa que los campos obligatorios hayan llegado y no estén vacíos

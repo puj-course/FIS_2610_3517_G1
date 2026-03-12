@@ -2,6 +2,7 @@
 # Este archivo se encarga de revisar que los datos del paciente esten bien antes de guardarlos en la base de datos
 from datetime import datetime
 
+
 # Opciones validas para tipo de documento y género
 TIPOS_DOCUMENTO = ["CC", "TI", "CE", "PA", "RC"]
 GENEROS = ["Masculino", "Femenino", "Otro"]
@@ -79,3 +80,39 @@ def verificar_duplicado(numero_documento: str, tipo_documento: str, conn) -> boo
     # Si encontró algo, es duplicado
     resultado = cursor.fetchone()
     return resultado is not None
+
+
+# Lógica de creación de esquema de validación de medicamentos (HU'09)
+def validar_medicamento(data: dict) -> list:
+    # data es el diccionario con los datos del medicamento
+    # la función devuelve una lista de errores; si está vacía, todo está bien
+    errores = []
+
+    # Campos obligatorios del medicamento
+    campos_obligatorios = {
+        "nombre": "El nombre del medicamento es obligatorio",
+        "dosis": "La dosis es obligatoria",
+        "frecuencia": "La frecuencia es obligatoria",
+        "horarios": "Los horarios de toma son obligatorios",
+        "paciente_id": "El paciente_id es obligatorio"
+    }
+
+    # Revisa que los campos obligatorios hayan llegado y no estén vacíos
+    for campo, mensaje in campos_obligatorios.items():
+        valor = data.get(campo, "")
+        if valor is None or str(valor).strip() == "":
+            errores.append(mensaje)
+
+    # Si faltan campos, no seguimos validando lo demás
+    if errores:
+        return errores
+
+    # Verifica que paciente_id sea numérico
+    try:
+        paciente_id = int(data["paciente_id"])
+        if paciente_id <= 0:
+            errores.append("El paciente_id debe ser un número mayor que 0")
+    except (ValueError, TypeError):
+        errores.append("El paciente_id debe ser un número entero válido")
+
+    return errores

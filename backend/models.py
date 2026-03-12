@@ -44,7 +44,7 @@ def init_db():
             UNIQUE (tipo_documento, numero_documento)
         )
     """)
-
+# Tabla de medicamentos 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS medicamentos (
             id               INTEGER PRIMARY KEY AUTOINCREMENT,

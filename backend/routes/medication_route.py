@@ -45,14 +45,16 @@ def registrar_medicamento(data: dict): # La funcion recibe un diccionario con lo
 		cursor.execute(
 			"""
 
-			INSERT INTO medicamentos (nombre, dosis, frecuencia, horarios, paciente_id)
-			VALUES (?, ?, ?, ?, ?)
+			INSERT INTO medicamentos (nombre, dosis, frecuencia, horario, fecha_inicio, observaciones, paciente_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
 			""",
 			(
 				data["nombre"].strip(),
 				data["dosis"].strip(),
 				data["frecuencia"].strip(),
-				data["horarios"].strip(),
+				data["horario"].strip(),
+				data["fecha_inicio"].strip(),
+				data.get("observaciones", "").strip(),
 				int(data["paciente_id"])
 			)
 		)

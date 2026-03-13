@@ -233,3 +233,189 @@
 
 </div>
 </body>
+<script>
+  /*
+    Datos de prueba que simulan lo que retornaría el backend.
+    Cuando el endpoint esté listo, se reemplaza por fetch().
+  */
+  const datosPrueba = [
+    {
+      id: 1,
+      nombres: 'Carlos',
+      apellidos: 'Rodríguez Pérez',
+      diagnostico_principal: 'Hipertensión arterial',
+      medicamentos: [
+        {
+          nombre: 'Losartán',
+          dosis: '50mg',
+          frecuencia: 'Cada 24 horas',
+          horario: '8:00 AM',
+          fecha_inicio: '01/15/2026',
+          observaciones: 'Tomar con abundante agua. Evitar alimentos con alto contenido de potasio.'
+        },
+        {
+          nombre: 'Amlodipino',
+          dosis: '5mg',
+          frecuencia: 'Cada 24 horas',
+          horario: '8:00 PM',
+          fecha_inicio: '01/15/2026',
+          observaciones: null
+        }
+      ]
+    },
+    {
+      id: 2,
+      nombres: 'María',
+      apellidos: 'González López',
+      diagnostico_principal: 'Diabetes tipo 2',
+      medicamentos: [
+        {
+          nombre: 'Metformina',
+          dosis: '850mg',
+          frecuencia: 'Cada 12 horas',
+          horario: '7:00 AM y 7:00 PM',
+          fecha_inicio: '02/01/2026',
+          observaciones: 'Tomar con las comidas para reducir efectos gastrointestinales.'
+        },
+        {
+          nombre: 'Glibenclamida',
+          dosis: '5mg',
+          frecuencia: 'Cada 24 horas',
+          horario: '7:00 AM',
+          fecha_inicio: '02/01/2026',
+          observaciones: null
+        },
+        {
+          nombre: 'Atorvastatina',
+          dosis: '20mg',
+          frecuencia: 'Cada 24 horas',
+          horario: '9:00 PM',
+          fecha_inicio: '02/10/2026',
+          observaciones: 'Preferiblemente en la noche.'
+        }
+      ]
+    },
+    {
+      id: 3,
+      nombres: 'Jorge',
+      apellidos: 'Martínez Soto',
+      diagnostico_principal: 'Asma bronquial',
+      medicamentos: []
+    }
+  ];
+
+  /* Renderiza la lista de pacientes en la vista 1 */
+  function renderizarPacientes() {
+    const lista = document.getElementById('listaPacientes');
+    let html = '';
+
+    datosPrueba.forEach(function(paciente) {
+      const inicial   = paciente.nombres.charAt(0).toUpperCase();
+      const cantMeds  = paciente.medicamentos.length;
+      const textoMeds = cantMeds === 1 ? '1 medicamento' : cantMeds + ' medicamentos';
+
+      html += `
+        <div class="paciente-card" onclick="verMedicamentos(${paciente.id})">
+          <div class="paciente-avatar">${inicial}</div>
+          <div class="paciente-info">
+            <p class="paciente-nombre">${paciente.nombres} ${paciente.apellidos}</p>
+            <p class="paciente-datos">${paciente.diagnostico_principal} · ${textoMeds}</p>
+          </div>
+          <div class="paciente-flecha">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+        </div>
+      `;
+    });
+
+    lista.innerHTML = html;
+  }
+
+  /* Al hacer click en un paciente, muestra sus medicamentos */
+  function verMedicamentos(pacienteId) {
+    const paciente = datosPrueba.find(function(p) { return p.id === pacienteId; });
+    if (!paciente) return;
+
+    const inicial = paciente.nombres.charAt(0).toUpperCase();
+    document.getElementById('headerPaciente').innerHTML = `
+      <div class="paciente-header">
+        <div class="paciente-avatar">${inicial}</div>
+        <div class="paciente-info">
+          <p class="paciente-nombre">${paciente.nombres} ${paciente.apellidos}</p>
+          <p class="paciente-datos">${paciente.diagnostico_principal}</p>
+        </div>
+      </div>
+    `;
+
+    const contenedor = document.getElementById('listaMedicamentos');
+
+    if (!paciente.medicamentos.length) {
+      contenedor.innerHTML = `
+        <div class="estado">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Este paciente no tiene medicamentos registrados aún.
+        </div>
+      `;
+    } else {
+      const cant = paciente.medicamentos.length;
+      let html = `<div class="contador">Se encontraron <span>${cant}</span> medicamento(s) registrado(s).</div>`;
+
+      paciente.medicamentos.forEach(function(med) {
+        html += `
+          <div class="med-card">
+            <div class="med-header">
+              <div class="med-icono">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                </svg>
+              </div>
+              <h3 class="med-nombre">${med.nombre}</h3>
+            </div>
+            <div class="med-tags">
+              <span class="tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>
+                Dosis: ${med.dosis}
+              </span>
+              <span class="tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Frecuencia: ${med.frecuencia}
+              </span>
+              <span class="tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Horario: ${med.horario}
+              </span>
+              <span class="tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Inicio: ${med.fecha_inicio}
+              </span>
+            </div>
+            ${med.observaciones ? `
+            <div class="med-observaciones">
+              <strong>Observaciones:</strong> ${med.observaciones}
+            </div>` : ''}
+          </div>
+        `;
+      });
+
+      contenedor.innerHTML = html;
+    }
+
+    document.getElementById('vistaPacientes').classList.add('oculta');
+    document.getElementById('vistaMedicamentos').classList.remove('oculta');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* Vuelve a la lista de pacientes */
+  function volverAPacientes() {
+    document.getElementById('vistaMedicamentos').classList.add('oculta');
+    document.getElementById('vistaPacientes').classList.remove('oculta');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Inicializamos
+  renderizarPacientes();
+</script>

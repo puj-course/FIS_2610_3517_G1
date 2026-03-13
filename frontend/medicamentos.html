@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Medicamentos</title>
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --color-menta:        #2DD4BF;
+      --color-menta-oscuro: #0F9D8A;
+      --color-fondo:        #0F1B2D;
+      --color-campo:        #1E2D3D;
+      --color-tarjeta:      #162030;
+      --color-borde:        #243447;
+      --color-texto:        #E2EAF4;
+      --color-texto-suave:  #7A95B0;
+      --color-error:        #F4726A;
+      --color-exito:        #4ADE80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.13) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    .contenedor { max-width: 800px; margin: 0 auto; }
+
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 2rem;
+    }
+    .marca-icono {
+      width: 38px; height: 38px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .marca-icono svg { width: 22px; height: 22px; color: var(--color-fondo); }
+    .marca-nombre { font-family: 'DM Serif Display', serif; font-size: 1.45rem; }
+
+    .titulo    { font-family: 'DM Serif Display', serif; font-size: 1.75rem; margin: 0 0 .25rem; }
+    .subtitulo { font-size: .88rem; color: var(--color-texto-suave); margin: 0 0 1.75rem; }
+
+    .vista { animation: aparecer .35s ease both; }
+    .vista.oculta { display: none; }
+  </style>
+</head>
+<body>
+<div class="contenedor">
+
+  <!-- Logo -->
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <!-- VISTA 1: Lista de pacientes -->
+  <div class="vista" id="vistaPacientes">
+    <h1 class="titulo">Pacientes</h1>
+    <p class="subtitulo">Selecciona un paciente para ver sus medicamentos.</p>
+    <div id="listaPacientes"></div>
+  </div>
+
+  <!-- VISTA 2: Medicamentos del paciente -->
+  <div class="vista oculta" id="vistaMedicamentos">
+    <div id="headerPaciente"></div>
+    <div id="listaMedicamentos"></div>
+  </div>
+
+</div>
+</body>
+</html>

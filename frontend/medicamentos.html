@@ -198,3 +198,38 @@
     .contador span { color: var(--color-menta); font-weight: 600; }
     .estado { text-align: center; padding: 3rem 1rem; color: var(--color-texto-suave); font-size: .92rem; }
     .estado svg { width: 40px; height: 40px; margin: 0 auto 1rem; display: block; opacity: .4; }
+
+    <body>
+<div class="contenedor">
+
+  <!-- Logo -->
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <!-- VISTA 1: Lista de pacientes -->
+  <div class="vista" id="vistaPacientes">
+    <h1 class="titulo">Pacientes</h1>
+    <p class="subtitulo">Selecciona un paciente para ver sus medicamentos.</p>
+    <div id="listaPacientes"></div>
+  </div>
+
+  <!-- VISTA 2: Medicamentos del paciente -->
+  <div class="vista oculta" id="vistaMedicamentos">
+    <button class="boton-volver" onclick="volverAPacientes()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Volver a pacientes
+    </button>
+    <div id="headerPaciente"></div>
+    <div id="listaMedicamentos"></div>
+  </div>
+
+</div>
+</body>

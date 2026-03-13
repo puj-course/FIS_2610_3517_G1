@@ -94,3 +94,107 @@
 </div>
 </body>
 </html>
+
+/* Tarjeta paciente */
+    .paciente-card {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 1.1rem 1.4rem;
+      margin-bottom: .85rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .paciente-card:hover {
+      border-color: rgba(45,212,191,.5);
+      box-shadow: 0 4px 20px rgba(45,212,191,.08);
+    }
+    .paciente-avatar {
+      width: 44px; height: 44px;
+      background: rgba(45,212,191,.12);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.1rem;
+      color: var(--color-menta);
+    }
+    .paciente-info { flex: 1; min-width: 0; }
+    .paciente-nombre { font-weight: 600; font-size: .97rem; margin: 0 0 .2rem; }
+    .paciente-datos  { font-size: .8rem; color: var(--color-texto-suave); margin: 0; }
+    .paciente-flecha { color: var(--color-texto-suave); flex-shrink: 0; }
+    .paciente-flecha svg { width: 18px; height: 18px; }
+
+    /* Botón volver */
+    .boton-volver {
+      background: none;
+      border: 1.5px solid var(--color-borde);
+      color: var(--color-texto-suave);
+      border-radius: 10px;
+      padding: .5rem 1rem;
+      font-size: .85rem;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: .4rem;
+      transition: border-color .2s, color .2s;
+      margin-bottom: 1.5rem;
+    }
+    .boton-volver:hover { border-color: var(--color-menta); color: var(--color-menta); }
+    .boton-volver svg { width: 16px; height: 16px; }
+
+    /* Encabezado paciente seleccionado */
+    .paciente-header {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .paciente-header .paciente-avatar { width: 52px; height: 52px; font-size: 1.3rem; }
+    .paciente-header .paciente-nombre { font-size: 1.05rem; }
+
+    /* Tarjeta medicamento */
+    .med-card {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      animation: aparecer .3s ease both;
+      transition: border-color .2s;
+    }
+    .med-card:hover { border-color: rgba(45,212,191,.3); }
+    .med-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .85rem; }
+    .med-icono {
+      width: 38px; height: 38px;
+      background: rgba(45,212,191,.12);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .med-icono svg { width: 18px; height: 18px; color: var(--color-menta); }
+    .med-nombre { font-family: 'DM Serif Display', serif; font-size: 1.1rem; margin: 0; }
+    .med-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+    .tag {
+      background: var(--color-campo);
+      border: 1px solid var(--color-borde);
+      border-radius: 6px;
+      padding: .22rem .65rem;
+      font-size: .78rem;
+      color: var(--color-texto-suave);
+      display: inline-flex; align-items: center; gap: .3rem;
+    }
+    .tag svg { width: 12px; height: 12px; color: var(--color-menta); flex-shrink: 0; }
+    .med-observaciones {
+      font-size: .82rem; color: var(--color-texto-suave);
+      border-top: 1px solid var(--color-borde); padding-top: .75rem;
+    }
+    .med-observaciones strong { color: var(--color-texto); }
+    .contador { font-size: .82rem; color: var(--color-texto-suave); margin-bottom: 1rem; }
+    .contador span { color: var(--color-menta); font-weight: 600; }
+    .estado { text-align: center; padding: 3rem 1rem; color: var(--color-texto-suave); font-size: .92rem; }
+    .estado svg { width: 40px; height: 40px; margin: 0 auto 1rem; display: block; opacity: .4; }

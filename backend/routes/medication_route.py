@@ -9,7 +9,8 @@
 from pathlib import Path
 import sqlite3 # Para conectarse a la BD SQLite
 from fastapi import APIRouter, HTTPException
-from backend.validaciones import validar_medicamento, verificar_paciente_existe
+from backend.validaciones import validar_medicamento, verificar_paciente_existe, verificar_medicamento_duplicado
+
 
 # Crea el grupo de rutas de medicamentos
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
@@ -33,7 +34,16 @@ def registrar_medicamento(data: dict): # La funcion recibe un diccionario con lo
 		# Verificar que el paciente exista
 		if not verificar_paciente_existe(int(data["paciente_id"]), conn):
 			raise HTTPException(status_code=404, detail="El paciente no existe")
-
+		# Verificar que no se está insertando un medicamento doble
+		if verificar_medicamento_duplicado(
+    			data["nombre"].strip(),
+    			int(data["paciente_id"]),
+    			conn
+		):
+    			raise HTTPException(
+        			status_code=400,
+        			detail="El paciente ya tiene registrado este medicamento"
+    			)
 
 		# Insertar medicamento en la tabla
 		cursor.execute(

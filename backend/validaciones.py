@@ -126,3 +126,17 @@ def verificar_paciente_existe(paciente_id: int, conn) -> bool:
     cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))
     resultado = cursor.fetchone() # fechone() trae una sola fila
     return resultado is not None
+# Funcion para evitar que se ingresen medicamentos duplicados
+def verificar_medicamento_duplicado(nombre: str, paciente_id: int, conn) -> bool:
+    # Busca si el paciente ya tiene registrado un medicamento con el mismo nombre
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id
+        FROM medicamentos
+        WHERE paciente_id = ? AND LOWER(TRIM(nombre)) = LOWER(TRIM(?))
+        """,
+        (paciente_id, nombre)
+    )
+    resultado = cursor.fetchone()
+    return resultado is not None

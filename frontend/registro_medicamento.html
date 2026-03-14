@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack - Registrar Medicamento</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    /* Colores del proyecto */
+    :root {
+      --color-menta:       #2DD4BF;
+      --color-menta-oscuro:#0F9D8A;
+      --color-fondo:       #0F1B2D;
+      --color-campo:       #1E2D3D;
+      --color-tarjeta:     #162030;
+      --color-borde:       #243447;
+      --color-texto:       #E2EAF4;
+      --color-suave:       #7A95B0;
+      --color-error:       #F4726A;
+      --color-exito:       #4ADE80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* Fondo oscuro y todo centrado en pantalla */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    /* Tarjeta principal que contiene el formulario */
+    .tarjeta {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 660px;
+      padding: 2.5rem 2.5rem 2rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: subir .5s ease both;
+    }
+
+    /* La tarjeta aparece subiendo al cargar */
+    @keyframes subir {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Fila del logo y nombre de la app */
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.75rem;
+    }
+    .marca-icono {
+      width: 38px; height: 38px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .marca-icono svg { width: 22px; height: 22px; color: var(--color-fondo); }
+    .marca-nombre { font-family: 'DM Serif Display', serif; font-size: 1.45rem; }
+
+    h1 { font-family: 'DM Serif Display', serif; font-size: 1.75rem; margin: 0 0 .25rem; }
+    .subtitulo { font-size: .88rem; color: var(--color-suave); margin: 0 0 .25rem; }
+
+    /* Linea divisora con texto en el centro entre secciones */
+    .separador {
+      display: flex; align-items: center; gap: .75rem;
+      margin: 1.5rem 0 1.25rem;
+      color: var(--color-suave); font-size: .78rem;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    .separador::before, .separador::after {
+      content: ''; flex: 1; height: 1px; background: var(--color-borde);
+    }
+
+    /* Etiqueta encima de cada campo */
+    label {
+      font-size: .82rem; font-weight: 500;
+      color: var(--color-suave);
+      display: block; margin-bottom: .4rem;
+    }
+    label .obligatorio { color: var(--color-menta); }
+
+    /* Estilos de inputs y selects */
+    .form-control, .form-select {
+      background: var(--color-campo);
+      border: 1.5px solid var(--color-borde);
+      color: var(--color-texto);
+      border-radius: 10px;
+      padding: .65rem .9rem;
+      font-size: .92rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color .2s, box-shadow .2s;
+      width: 100%;
+    }
+    /* Cuando el usuario hace clic en el campo */
+    .form-control:focus, .form-select:focus {
+      background: var(--color-campo);
+      border-color: var(--color-menta);
+      color: var(--color-texto);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.18);
+      outline: none;
+    }
+    .form-control::placeholder { color: #4A6278; }
+    .form-select option { background: var(--color-campo); }
+
+    /* Borde rojo si el campo tiene error */
+    .form-control.error, .form-select.error { border-color: var(--color-error); box-shadow: none; }
+    /* Borde verde si el campo esta correcto */
+    .form-control.correcto, .form-select.correcto { border-color: var(--color-exito); box-shadow: none; }
+
+    /* Mensaje de error debajo de un campo, empieza oculto */
+    .mensaje-error { font-size: .78rem; color: var(--color-error); margin-top: .3rem; display: none; }
+    .mensaje-error.visible { display: block; }
+
+    /* Contenedor donde se muestran los horarios como pastillas */
+    .caja-horarios {
+      background: var(--color-campo);
+      border: 1.5px solid var(--color-borde);
+      border-radius: 10px;
+      padding: .5rem .75rem;
+      display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;
+      min-height: 46px; cursor: text;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .caja-horarios:focus-within { border-color: var(--color-menta); box-shadow: 0 0 0 3px rgba(45,212,191,.18); }
+    .caja-horarios.error   { border-color: var(--color-error); }
+    .caja-horarios.correcto { border-color: var(--color-exito); }
+
+    /* Cada horario agregado aparece como una pastilla verde */
+    .pastilla {
+      background: rgba(45,212,191,.15);
+      border: 1px solid rgba(45,212,191,.35);
+      color: var(--color-menta);
+      border-radius: 20px; padding: .2rem .65rem;
+      font-size: .82rem;
+      display: flex; align-items: center; gap: .35rem;
+    }
+    /* Boton X para quitar la pastilla */
+    .pastilla button {
+      background: none; border: none;
+      color: var(--color-menta); cursor: pointer; padding: 0; opacity: .7; font-size: .9rem;
+    }
+    .pastilla button:hover { opacity: 1; }
+
+    /* Input de hora dentro de la caja de horarios */
+    .input-hora {
+      border: none; background: transparent;
+      color: var(--color-texto); font-family: 'DM Sans', sans-serif;
+      font-size: .9rem; outline: none; width: 110px; padding: .15rem 0;
+    }
+    .input-hora::-webkit-calendar-picker-indicator { filter: invert(.5); cursor: pointer; }
+    .texto-ayuda { font-size: .75rem; color: var(--color-suave); margin-top: .3rem; }
+
+    /* Botones de dias de la semana */
+    .grupo-dias { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .25rem; }
+    .boton-dia {
+      background: var(--color-campo);
+      border: 1.5px solid var(--color-borde);
+      color: var(--color-suave);
+      border-radius: 8px; padding: .4rem .75rem;
+      font-size: .82rem; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all .2s; user-select: none;
+    }
+    /* Cuando el dia esta seleccionado */
+    .boton-dia.seleccionado {
+      background: rgba(45,212,191,.15);
+      border-color: var(--color-menta);
+      color: var(--color-menta); font-weight: 600;
+    }
+
+    /* Contador de caracteres del textarea */
+    .contador { font-size: .75rem; color: var(--color-suave); text-align: right; margin-top: .2rem; }
+
+    /* Caja de error general */
+    .alerta-error {
+      background: rgba(244,114,106,.12);
+      border: 1px solid rgba(244,114,106,.4);
+      color: var(--color-error);
+      border-radius: 10px; padding: .7rem 1rem;
+      font-size: .85rem; margin-top: 1rem; display: none;
+    }
+    .alerta-error.visible { display: block; }
+
+    /* Boton guardar */
+    .boton-guardar {
+      background: var(--color-menta); color: var(--color-fondo);
+      border: none; border-radius: 12px; padding: .75rem;
+      font-size: .95rem; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      width: 100%; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      transition: background .2s, box-shadow .2s, transform .1s; margin-top: 1.5rem;
+    }
+    .boton-guardar:hover  { background: var(--color-menta-oscuro); box-shadow: 0 8px 24px rgba(45,212,191,.3); }
+    .boton-guardar:active { transform: scale(.98); }
+    .boton-guardar:disabled { opacity: .6; cursor: not-allowed; }
+    .boton-guardar svg { width: 18px; height: 18px; }
+
+    /* Boton limpiar */
+    .boton-limpiar {
+      background: transparent; color: var(--color-suave);
+      border: 1.5px solid var(--color-borde); border-radius: 12px;
+      padding: .65rem; font-size: .88rem; font-family: 'DM Sans', sans-serif;
+      width: 100%; cursor: pointer;
+      transition: border-color .2s, color .2s; margin-top: .75rem;
+    }
+    .boton-limpiar:hover { border-color: var(--color-suave); color: var(--color-texto); }
+
+    /* Notificacion flotante en la esquina */
+    .contenedor-notificaciones {
+      position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999;
+      display: flex; flex-direction: column; gap: .5rem;
+    }
+    .notificacion {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-exito);
+      border-radius: 12px; padding: .9rem 1.2rem;
+      display: flex; align-items: center; gap: .75rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      animation: entrar .35s ease both; font-size: .88rem;
+    }
+    .notificacion.error { border-color: var(--color-error); }
+    @keyframes entrar {
+      from { opacity: 0; transform: translateX(40px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @media (max-width: 480px) { .tarjeta { padding: 1.75rem 1.25rem 1.5rem; } }
+  </style>
+</head>
+<body>
+
+<!-- Aqui aparecen las notificaciones flotantes -->
+<div class="contenedor-notificaciones" id="contenedorNotificaciones"></div>
+
+<div class="tarjeta">
+
+  <!-- Logo y nombre -->
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <h1>Registrar Medicamento</h1>
+  <p class="subtitulo">Completa la informacion del medicamento para el paciente.</p>
+
+  <form id="formulario" novalidate>
+
+    <!-- Seccion 1: datos del medicamento -->
+    <div class="separador">Datos del medicamento</div>
+    <div class="row g-3">
+
+      <div class="col-12">
+        <label for="nombre">Nombre del medicamento <span class="obligatorio">*</span></label>
+        <input type="text" class="form-control" id="nombre" name="nombre_medicamento"
+               placeholder="Ej. Losartan, Metformina" maxlength="100" required/>
+        <div class="mensaje-error" id="error-nombre">Ingresa el nombre del medicamento.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="concentracion">Concentracion <span class="obligatorio">*</span></label>
+        <input type="text" class="form-control" id="concentracion" name="concentracion"
+               placeholder="Ej. 50 mg, 500 mg/5 ml" maxlength="60" required/>
+        <div class="mensaje-error" id="error-concentracion">Ingresa la concentracion.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="forma">Forma farmaceutica <span class="obligatorio">*</span></label>
+        <select class="form-select" id="forma" name="forma_farmaceutica" required>
+          <option value="" disabled selected>Selecciona...</option>
+          <option value="tableta">Tableta / Pastilla</option>
+          <option value="capsula">Capsula</option>
+          <option value="jarabe">Jarabe / Solucion</option>
+          <option value="inyectable">Inyectable</option>
+          <option value="gotas">Gotas</option>
+          <option value="inhalador">Inhalador</option>
+          <option value="crema">Crema / Unguento</option>
+          <option value="parche">Parche</option>
+          <option value="otro">Otro</option>
+        </select>
+        <div class="mensaje-error" id="error-forma">Selecciona la forma farmaceutica.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="dosis">Dosis por toma <span class="obligatorio">*</span></label>
+        <input type="number" class="form-control" id="dosis" name="dosis_cantidad"
+               placeholder="Ej. 1, 2, 0.5" min="0.1" max="999" step="0.1" required/>
+        <div class="mensaje-error" id="error-dosis">Ingresa la dosis (numero mayor a 0).</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="unidad">Unidad <span class="obligatorio">*</span></label>
+        <select class="form-select" id="unidad" name="dosis_unidad" required>
+          <option value="" disabled selected>Selecciona...</option>
+          <option value="tabletas">Tableta(s)</option>
+          <option value="capsulas">Capsula(s)</option>
+          <option value="ml">Mililitros (ml)</option>
+          <option value="mg">Miligramos (mg)</option>
+          <option value="gotas">Gota(s)</option>
+          <option value="inhalaciones">Inhalacion(es)</option>
+          <option value="aplicaciones">Aplicacion(es)</option>
+        </select>
+        <div class="mensaje-error" id="error-unidad">Selecciona la unidad.</div>
+      </div>
+
+    </div>
+
+    <!-- Seccion 2: horario y frecuencia -->
+    <div class="separador">Horario y frecuencia</div>
+    <div class="row g-3">
+
+      <div class="col-md-6">
+        <label for="frecuencia">Frecuencia <span class="obligatorio">*</span></label>
+        <select class="form-select" id="frecuencia" name="frecuencia" required>
+          <option value="" disabled selected>Selecciona...</option>
+          <option value="cada_4h">Cada 4 horas</option>
+          <option value="cada_6h">Cada 6 horas</option>
+          <option value="cada_8h">Cada 8 horas</option>
+          <option value="cada_12h">Cada 12 horas</option>
+          <option value="una_vez">Una vez al dia</option>
+          <option value="dias_alternos">Dias alternos</option>
+          <option value="semanal">Semanal</option>
+          <option value="personalizado">Personalizado</option>
+        </select>
+        <div class="mensaje-error" id="error-frecuencia">Selecciona la frecuencia.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="comida">Relacion con la comida</label>
+        <select class="form-select" id="comida" name="relacion_comida">
+          <option value="" disabled selected>Selecciona...</option>
+          <option value="antes">Antes de comer</option>
+          <option value="durante">Durante la comida</option>
+          <option value="despues">Despues de comer</option>
+          <option value="ayunas">En ayunas</option>
+          <option value="no_aplica">No aplica</option>
+        </select>
+      </div>
+
+      <!-- Horarios como pastillas: el usuario agrega horas y aparecen como etiquetas -->
+      <div class="col-12">
+        <label>Horarios de toma <span class="obligatorio">*</span></label>
+        <div class="caja-horarios" id="cajaHorarios" onclick="document.getElementById('inputHora').focus()">
+          <input type="time" class="input-hora" id="inputHora"/>
+        </div>
+        <div class="mensaje-error" id="error-horarios">Agrega al menos un horario.</div>
+        <p class="texto-ayuda">Selecciona una hora y presiona Enter o el boton +</p>
+        <button type="button" onclick="agregarHorario()"
+          style="margin-top:.4rem; background:rgba(45,212,191,.12); border:1.5px solid rgba(45,212,191,.3); color:var(--color-menta); border-radius:8px; padding:.35rem .9rem; font-size:.82rem; cursor:pointer; font-family:'DM Sans',sans-serif;">
+          + Agregar horario
+        </button>
+      </div>
+
+      <!-- Dias de la semana, solo aparecen si la frecuencia es semanal o personalizada -->
+      <div class="col-12" id="seccionDias" style="display: none;">
+        <label>Dias de administracion</label>
+        <div class="grupo-dias" id="grupoDias"></div>
+        <div class="mensaje-error" id="error-dias">Selecciona al menos un dia.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="fechaInicio">Fecha de inicio <span class="obligatorio">*</span></label>
+        <input type="date" class="form-control" id="fechaInicio" name="fecha_inicio" required/>
+        <div class="mensaje-error" id="error-fechaInicio">Selecciona la fecha de inicio.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="fechaFin">Fecha de fin del tratamiento</label>
+        <input type="date" class="form-control" id="fechaFin" name="fecha_fin"/>
+        <div class="mensaje-error" id="error-fechaFin">No puede ser anterior a la fecha de inicio.</div>
+      </div>
+
+    </div>
+
+    <!-- Seccion 3: paciente asociado -->
+    <div class="separador">Paciente asociado</div>
+    <div class="row g-3">
+
+      <div class="col-12">
+        <label for="paciente">Paciente <span class="obligatorio">*</span></label>
+        <select class="form-select" id="paciente" name="paciente_id" required>
+          <option value="" disabled selected>Selecciona un paciente...</option>
+        </select>
+        <div class="mensaje-error" id="error-paciente">Selecciona el paciente.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="via">Via de administracion</label>
+        <select class="form-select" id="via" name="via_administracion">
+          <option value="" disabled selected>Selecciona...</option>
+          <option value="oral">Oral (por boca)</option>
+          <option value="sublingual">Sublingual</option>
+          <option value="topica">Topica</option>
+          <option value="nasal">Nasal</option>
+          <option value="inhalada">Inhalada</option>
+          <option value="inyectable_sc">Inyectable subcutanea</option>
+          <option value="inyectable_im">Inyectable intramuscular</option>
+          <option value="rectal">Rectal</option>
+        </select>
+      </div>
+
+      <div class="col-md-6">
+        <label for="medico">Medico que lo receto</label>
+        <input type="text" class="form-control" id="medico" name="medico_receto"
+               placeholder="Ej. Dr. Garcia" maxlength="80"/>
+      </div>
+
+      <div class="col-12">
+        <label for="instrucciones">Instrucciones especiales</label>
+        <textarea class="form-control" id="instrucciones" name="instrucciones"
+                  rows="3" maxlength="400"
+                  placeholder="Ej. Agitar antes de usar, refrigerar..."></textarea>
+        <div class="contador"><span id="contadorLetras">0</span> / 400</div>
+      </div>
+
+    </div>
+
+    <!-- Caja de error general del servidor -->
+    <div class="alerta-error" id="alertaError"></div>
+
+    <button type="submit" class="boton-guardar" id="botonGuardar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/>
+        <polyline points="7 3 7 8 15 8"/>
+      </svg>
+      Guardar medicamento
+    </button>
+
+    <button type="button" class="boton-limpiar" onclick="limpiarFormulario()">
+      Limpiar formulario
+    </button>
+
+  </form>
+</div>
+
+
+<script>
+  // Guardamos referencias a los elementos que usamos seguido
+  var formulario = document.getElementById('formulario');
+  var cajaHorarios = document.getElementById('cajaHorarios');
+  var inputHora = document.getElementById('inputHora');
+  var seccionDias = document.getElementById('seccionDias');
+  var botonGuardar = document.getElementById('botonGuardar');
+  var alertaError = document.getElementById('alertaError');
+
+  // Listas donde guardamos los horarios y dias que el usuario agrega
+  var listaHorarios = [];
+  var listaDias = [];
+
+  // Ponemos la fecha de hoy como minimo y valor por defecto en fecha de inicio
+  var fechaHoy = new Date().toISOString().split('T')[0];
+  document.getElementById('fechaInicio').min = fechaHoy;
+  document.getElementById('fechaInicio').value = fechaHoy;
+
+
+  // Pacientes de prueba, los mismos que aparecen en medicamentos.html
+  // TODO: reemplazar por fetch('/api/pacientes') cuando el backend este listo
+  var pacientesDePrueba = [
+    { id: 1, nombres: 'Carlos', apellidos: 'Rodriguez Perez', diagnostico: 'Hipertension arterial' },
+    { id: 2, nombres: 'Maria',  apellidos: 'Gonzalez Lopez',  diagnostico: 'Diabetes tipo 2'       },
+    { id: 3, nombres: 'Jorge',  apellidos: 'Martinez Soto',   diagnostico: 'Asma bronquial'        }
+  ];
+
+  // Llenamos el selector de pacientes con los datos de prueba
+  var selectorPaciente = document.getElementById('paciente');
+  for (var i = 0; i < pacientesDePrueba.length; i++) {
+    var p = pacientesDePrueba[i];
+    var opcion = document.createElement('option');
+    opcion.value = p.id;
+    opcion.textContent = p.nombres + ' ' + p.apellidos + ' - ' + p.diagnostico;
+    selectorPaciente.appendChild(opcion);
+  }
+
+
+  // Creamos los botones de dias de la semana
+  var nombresDias  = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+  var clavesDias   = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'];
+  var grupoDias = document.getElementById('grupoDias');
+
+  for (var j = 0; j < nombresDias.length; j++) {
+    var boton = document.createElement('button');
+    boton.type = 'button';
+    boton.className = 'boton-dia';
+    boton.textContent = nombresDias[j];
+    boton.dataset.clave = clavesDias[j];
+    boton.onclick = function () {
+      // Al hacer clic alternamos el dia entre seleccionado y no seleccionado
+      if (this.classList.contains('seleccionado')) {
+        this.classList.remove('seleccionado');
+        listaDias = listaDias.filter(function(d) { return d !== this.dataset.clave; }.bind(this));
+      } else {
+        this.classList.add('seleccionado');
+        listaDias.push(this.dataset.clave);
+      }
+    };
+    grupoDias.appendChild(boton);
+  }
+
+
+  // Cuando cambia la frecuencia, mostramos u ocultamos la seccion de dias
+  document.getElementById('frecuencia').addEventListener('change', function () {
+    var frecuenciasConDias = ['dias_alternos', 'semanal', 'personalizado'];
+    if (frecuenciasConDias.indexOf(this.value) !== -1) {
+      seccionDias.style.display = 'block';
+    } else {
+      seccionDias.style.display = 'none';
+      // Si ocultamos la seccion, limpiamos los dias seleccionados
+      listaDias = [];
+      var botonesDia = document.querySelectorAll('.boton-dia');
+      for (var k = 0; k < botonesDia.length; k++) {
+        botonesDia[k].classList.remove('seleccionado');
+      }
+    }
+  });
+
+
+  // Agrega una hora como pastilla al contenedor de horarios
+  function agregarHorario() {
+    var hora = inputHora.value;
+
+    if (!hora) {
+      inputHora.focus();
+      return;
+    }
+
+    // No permitimos horarios duplicados
+    if (listaHorarios.indexOf(hora) !== -1) {
+      mostrarNotificacion('Ese horario ya fue agregado.', true);
+      inputHora.value = '';
+      return;
+    }
+
+    // Agregamos la hora a la lista
+    listaHorarios.push(hora);
+
+    // Creamos la pastilla visual con la hora y un boton para quitarla
+    var pastilla = document.createElement('span');
+    pastilla.className = 'pastilla';
+    pastilla.innerHTML = hora + ' <button type="button" onclick="quitarHorario(\'' + hora + '\', this)">x</button>';
+    cajaHorarios.insertBefore(pastilla, inputHora);
+
+    // Limpiamos el input para ingresar otro horario
+    inputHora.value = '';
+
+    // Marcamos la caja como correcta y ocultamos el error
+    cajaHorarios.classList.remove('error');
+    cajaHorarios.classList.add('correcto');
+    document.getElementById('error-horarios').classList.remove('visible');
+  }
+
+  // Quita un horario cuando el usuario presiona la X de la pastilla
+  function quitarHorario(hora, boton) {
+    listaHorarios = listaHorarios.filter(function(h) { return h !== hora; });
+    boton.parentElement.remove();
+    if (listaHorarios.length === 0) {
+      cajaHorarios.classList.remove('correcto');
+    }
+  }
+
+  // Presionar Enter en el input de hora tambien agrega el horario
+  inputHora.addEventListener('keydown', function(evento) {
+    if (evento.key === 'Enter') {
+      evento.preventDefault();
+      agregarHorario();
+    }
+  });
+
+
+  // Actualiza el contador de caracteres del textarea de instrucciones
+  document.getElementById('instrucciones').addEventListener('input', function () {
+    document.getElementById('contadorLetras').textContent = this.value.length;
+  });
+
+
+  // Valida un campo: lo marca verde si esta correcto, rojo si tiene error
+  // Devuelve true si esta bien, false si no
+  function validarCampo(campo, idMensajeError) {
+    campo.classList.remove('error', 'correcto');
+    var valor = campo.value.trim();
+    var tieneError = false;
+
+    if (!valor) {
+      tieneError = true;
+    }
+    if (campo.type === 'number' && parseFloat(valor) <= 0) {
+      tieneError = true;
+    }
+
+    if (tieneError) {
+      campo.classList.add('error');
+      document.getElementById(idMensajeError).classList.add('visible');
+    } else {
+      campo.classList.add('correcto');
+      document.getElementById(idMensajeError).classList.remove('visible');
+    }
+
+    return !tieneError;
+  }
+
+
+  // Lista de campos obligatorios con su id y el id de su mensaje de error
+  var camposObligatorios = [
+    ['nombre',       'error-nombre'],
+    ['concentracion','error-concentracion'],
+    ['forma',        'error-forma'],
+    ['dosis',        'error-dosis'],
+    ['unidad',       'error-unidad'],
+    ['frecuencia',   'error-frecuencia'],
+    ['fechaInicio',  'error-fechaInicio'],
+    ['paciente',     'error-paciente']
+  ];
+
+  // Validacion en tiempo real: al salir de un campo lo validamos
+  for (var m = 0; m < camposObligatorios.length; m++) {
+    (function(idCampo, idError) {
+      var elemento = document.getElementById(idCampo);
+      elemento.addEventListener('blur',   function() { validarCampo(elemento, idError); });
+      elemento.addEventListener('change', function() { validarCampo(elemento, idError); });
+    })(camposObligatorios[m][0], camposObligatorios[m][1]);
+  }
+
+
+  // Cuando el usuario hace clic en guardar
+  document.getElementById('formulario').addEventListener('submit', function(evento) {
+    evento.preventDefault(); // evitamos que la pagina se recargue
+    alertaError.classList.remove('visible');
+
+    // Validamos todos los campos obligatorios
+    var formularioValido = true;
+    for (var n = 0; n < camposObligatorios.length; n++) {
+      var campo = document.getElementById(camposObligatorios[n][0]);
+      if (!validarCampo(campo, camposObligatorios[n][1])) {
+        formularioValido = false;
+      }
+    }
+
+    // Verificamos que haya al menos un horario agregado
+    if (listaHorarios.length === 0) {
+      cajaHorarios.classList.add('error');
+      document.getElementById('error-horarios').classList.add('visible');
+      formularioValido = false;
+    }
+
+    // Verificamos que la fecha de fin no sea anterior a la de inicio
+    var fechaInicio = document.getElementById('fechaInicio').value;
+    var campoFechaFin = document.getElementById('fechaFin');
+    campoFechaFin.classList.remove('error', 'correcto');
+    if (campoFechaFin.value && campoFechaFin.value < fechaInicio) {
+      campoFechaFin.classList.add('error');
+      document.getElementById('error-fechaFin').classList.add('visible');
+      formularioValido = false;
+    }
+
+    // Si la seccion de dias esta visible, debe tener al menos un dia seleccionado
+    if (seccionDias.style.display !== 'none' && listaDias.length === 0) {
+      document.getElementById('error-dias').classList.add('visible');
+      formularioValido = false;
+    }
+
+    // Si algo fallo, avisamos y hacemos scroll al primer campo con error
+    if (!formularioValido) {
+      mostrarNotificacion('Revisa los campos marcados en rojo.', true);
+      var primerError = formulario.querySelector('.error');
+      if (primerError) {
+        primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    // Armamos el objeto con todos los datos del formulario
+    var datos = {
+      nombre_medicamento: document.getElementById('nombre').value.trim(),
+      concentracion:      document.getElementById('concentracion').value.trim(),
+      forma_farmaceutica: document.getElementById('forma').value,
+      dosis_cantidad:     parseFloat(document.getElementById('dosis').value),
+      dosis_unidad:       document.getElementById('unidad').value,
+      frecuencia:         document.getElementById('frecuencia').value,
+      relacion_comida:    document.getElementById('comida').value,
+      horarios:           listaHorarios,
+      dias:               listaDias,
+      fecha_inicio:       fechaInicio,
+      fecha_fin:          campoFechaFin.value || null,
+      paciente_id:        parseInt(document.getElementById('paciente').value),
+      via_administracion: document.getElementById('via').value,
+      medico_receto:      document.getElementById('medico').value.trim(),
+      instrucciones:      document.getElementById('instrucciones').value.trim()
+    };
+
+    // Mostramos los datos en consola para verificar
+    console.log('Datos a guardar:', datos);
+
+    // Buscamos el nombre del paciente para mostrarlo en la notificacion
+    var pacienteSeleccionado = null;
+    for (var x = 0; x < pacientesDePrueba.length; x++) {
+      if (pacientesDePrueba[x].id === datos.paciente_id) {
+        pacienteSeleccionado = pacientesDePrueba[x];
+        break;
+      }
+    }
+    var nombrePaciente = pacienteSeleccionado
+      ? pacienteSeleccionado.nombres + ' ' + pacienteSeleccionado.apellidos
+      : 'el paciente';
+
+    // TODO: reemplazar por fetch al backend cuando este listo
+    mostrarNotificacion('"' + datos.nombre_medicamento + '" registrado para ' + nombrePaciente + '.');
+    limpiarFormulario();
+  });
+
+
+  // Limpia todos los campos y estados del formulario
+  function limpiarFormulario() {
+    formulario.reset();
+
+    // Quitamos los colores de validacion de todos los campos
+    var todosCampos = formulario.querySelectorAll('.form-control, .form-select');
+    for (var i = 0; i < todosCampos.length; i++) {
+      todosCampos[i].classList.remove('correcto', 'error');
+    }
+
+    // Borramos todas las pastillas de horario
+    var pastillas = document.querySelectorAll('.pastilla');
+    for (var j = 0; j < pastillas.length; j++) {
+      pastillas[j].remove();
+    }
+    listaHorarios = [];
+    cajaHorarios.classList.remove('correcto', 'error');
+
+    // Desmarcamos todos los dias
+    var botonesDia = document.querySelectorAll('.boton-dia');
+    for (var k = 0; k < botonesDia.length; k++) {
+      botonesDia[k].classList.remove('seleccionado');
+    }
+    listaDias = [];
+
+    // Ocultamos la seccion de dias
+    seccionDias.style.display = 'none';
+
+    // Reiniciamos el contador de instrucciones
+    document.getElementById('contadorLetras').textContent = '0';
+
+    // Volvemos a poner la fecha de hoy
+    document.getElementById('fechaInicio').value = fechaHoy;
+
+    // Ocultamos la alerta de error
+    alertaError.classList.remove('visible');
+  }
+
+
+  // Muestra una notificacion en la esquina que desaparece sola
+  function mostrarNotificacion(mensaje, esError) {
+    var contenedor = document.getElementById('contenedorNotificaciones');
+    var notificacion = document.createElement('div');
+    notificacion.className = 'notificacion' + (esError ? ' error' : '');
+    notificacion.textContent = mensaje;
+    contenedor.appendChild(notificacion);
+    setTimeout(function() { notificacion.remove(); }, 3500);
+  }
+</script>
+
+</body>
+</html>

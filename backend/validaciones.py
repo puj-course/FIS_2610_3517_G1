@@ -118,3 +118,11 @@ def validar_medicamento(data: dict) -> list:
         errores.append("El paciente_id debe ser un número entero válido")
 
     return errores
+
+def verificar_paciente_existe(paciente_id: int, conn) -> bool:
+    # Busca si el paciente existe en la base de datos
+    # Devuelve True si existe, False si no
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))
+    resultado = cursor.fetchone() # fechone() trae una sola fila
+    return resultado is not None

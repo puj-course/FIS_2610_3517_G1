@@ -9,7 +9,7 @@
 from pathlib import Path
 import sqlite3 # Para conectarse a la BD SQLite
 from fastapi import APIRouter, HTTPException
-from backend.validaciones import validar_medicamento
+from backend.validaciones import validar_medicamento, verificar_paciente_existe
 
 # Crea el grupo de rutas de medicamentos
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
@@ -31,13 +31,7 @@ def registrar_medicamento(data: dict): # La funcion recibe un diccionario con lo
 
 	try:
 		# Verificar que el paciente exista
-		cursor.execute(
-			"SELECT id FROM pacientes WHERE id = ?", # se usa '?' para no meter el valor directo en el string
-			(int(data["paciente_id"]),)
-		)
-		paciente = cursor.fetchone()
-
-		if not paciente:
+		if not verificar_paciente_existe(int(data["paciente_id"]), conn):
 			raise HTTPException(status_code=404, detail="El paciente no existe")
 
 

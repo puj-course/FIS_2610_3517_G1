@@ -79,3 +79,29 @@ def verificar_duplicado(numero_documento: str, tipo_documento: str, conn) -> boo
     # Si encontró algo, es duplicado
     resultado = cursor.fetchone()
     return resultado is not None
+# Validaciones adicionales de formato para medicamento 
+def validar_formato_medicamento(data: dict) -> list:
+    """
+    Complementa validar_medicamento() con reglas de formato:
+      - El nombre debe tener al menos 2 caracteres
+      - La fecha_inicio debe tener formato mm/dd/yyyy y no ser anterior al 2000
+    Devuelve lista de errores; vacía si todo está bien.
+    """
+    errores = []
+
+    # El nombre no puede ser un solo carácter
+    nombre = str(data.get("nombre", "")).strip()
+    if nombre and len(nombre) < 2:
+        errores.append("El nombre del medicamento debe tener al menos 2 caracteres")
+
+    # La fecha debe tener formato mm/dd/yyyy y no ser anterior al año 2000
+    fecha = str(data.get("fecha_inicio", "")).strip()
+    if fecha:
+        try:
+            fecha_parsed = datetime.strptime(fecha, "%m/%d/%Y")
+            if fecha_parsed < datetime(2000, 1, 1):
+                errores.append("La fecha de inicio no puede ser anterior al año 2000")
+        except ValueError:
+            errores.append("La fecha de inicio debe tener formato mm/dd/yyyy")
+
+    return errores

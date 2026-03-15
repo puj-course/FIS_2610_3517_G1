@@ -1,113 +1,490 @@
 <!DOCTYPE html>
-<html lang="es"> 
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedTrack — Iniciar Sesión</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f0f4f8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-        .card-login {
-            width: 100%;
-            max-width: 420px;
-            border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-        }
-        .btn-primary {
-            background-color: #2d6be4;
-            border: none;
-        }
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #2d6be4;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Iniciar sesión</title>
+
+  <!-- Bootstrap para la cuadrícula y utilidades base -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Fuentes tipográficas del proyecto -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    /* Colores que usamos en toda la página */
+    :root {
+      --color-menta:        #2DD4BF;
+      --color-menta-oscuro: #0F9D8A;
+      --color-fondo:        #0F1B2D;
+      --color-campo:        #1E2D3D;
+      --color-tarjeta:      #162030;
+      --color-borde:        #243447;
+      --color-texto:        #E2EAF4;
+      --color-texto-suave:  #7A95B0;
+      --color-error:        #F4726A;
+      --color-exito:        #4ADE80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* Centramos todo en la pantalla con fondo oscuro y decoración de degradados */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.13) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    /* La tarjeta blanca/oscura que contiene el formulario */
+    .tarjeta {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 460px;
+      padding: 2.5rem 2.5rem 2rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: aparecer .45s ease both;
+    }
+
+    /* La tarjeta aparece subiendo suavemente desde abajo */
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Fila con el ícono y el nombre de la app */
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.75rem;
+    }
+
+    /* Cuadro verde que contiene el ícono */
+    .marca-icono {
+      width: 38px;
+      height: 38px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .marca-icono svg { width: 22px; height: 22px; color: var(--color-fondo); }
+
+    .marca-nombre {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.45rem;
+    }
+
+    /* Título y subtítulo de la pantalla */
+    .titulo   { font-family: 'DM Serif Display', serif; font-size: 1.75rem; margin: 0 0 .25rem; }
+    .subtitulo { font-size: .88rem; color: var(--color-texto-suave); margin: 0 0 1.75rem; }
+
+    /* Texto pequeño encima de cada campo */
+    .etiqueta {
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--color-texto-suave);
+      margin-bottom: .4rem;
+      display: block;
+      letter-spacing: .03em;
+    }
+    .etiqueta .obligatorio { color: var(--color-menta); margin-left: 2px; }
+
+    /* Estilos de los inputs */
+    .form-control {
+      background: var(--color-campo);
+      border: 1.5px solid var(--color-borde);
+      color: var(--color-texto);
+      border-radius: 10px;
+      padding: .65rem .9rem;
+      font-size: .92rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color .2s, box-shadow .2s;
+      width: 100%;
+    }
+
+    /* Cuando el usuario hace clic en el campo */
+    .form-control:focus {
+      background: var(--color-campo);
+      border-color: var(--color-menta);
+      color: var(--color-texto);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.18);
+      outline: none;
+    }
+    .form-control::placeholder { color: #4A6278; }
+
+    /* Borde rojo si el campo tiene error */
+    .form-control.invalido { border-color: var(--color-error); box-shadow: none; }
+    /* Borde verde si el campo está correcto */
+    .form-control.valido   { border-color: var(--color-exito); box-shadow: none; }
+
+    /* Texto de error debajo de un campo */
+    .mensaje-error {
+      font-size: .78rem;
+      color: var(--color-error);
+      margin-top: .3rem;
+      display: none; /* empieza oculto, lo mostramos con JS */
+    }
+    .mensaje-error.visible { display: block; }
+
+    /* Caja roja para errores generales (ej: credenciales incorrectas) */
+    .alerta-error {
+      background: rgba(244,114,106,.12);
+      border: 1px solid rgba(244,114,106,.4);
+      color: var(--color-error);
+      border-radius: 10px;
+      padding: .7rem 1rem;
+      font-size: .85rem;
+      margin-top: 1rem;
+      display: none; /* empieza oculta */
+    }
+    .alerta-error.visible { display: block; }
+
+    /* Contenedor del input con el botón de ojo para ver/ocultar contraseña */
+    .grupo-contrasena { position: relative; }
+    .grupo-contrasena .form-control { padding-right: 2.8rem; }
+
+    /* Botón del ojito */
+    .boton-ojo {
+      position: absolute;
+      right: .8rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+    }
+    .boton-ojo:hover { color: var(--color-texto); }
+    .boton-ojo svg { width: 18px; height: 18px; }
+
+    /* Botón principal verde de "Iniciar sesión" */
+    .boton-principal {
+      background: var(--color-menta);
+      color: var(--color-fondo);
+      border: none;
+      border-radius: 12px;
+      padding: .75rem;
+      font-size: .95rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      width: 100%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      transition: background .2s, box-shadow .2s, transform .1s;
+      margin-top: 1.25rem;
+    }
+    .boton-principal:hover  { background: var(--color-menta-oscuro); box-shadow: 0 8px 24px rgba(45,212,191,.3); }
+    .boton-principal:active { transform: scale(.98); }
+    .boton-principal:disabled { opacity: .6; cursor: not-allowed; }
+    .boton-principal svg { width: 18px; height: 18px; }
+
+    /* Texto de "¿No tienes cuenta?" */
+    .pie-formulario {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: .88rem;
+      color: var(--color-texto-suave);
+    }
+
+    /* Enlace para ir a la página de registro */
+    .enlace {
+      color: var(--color-menta);
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 0;
+    }
+    .enlace:hover { color: var(--color-menta-oscuro); }
+
+    @media (max-width: 480px) {
+      .tarjeta { padding: 1.75rem 1.25rem 1.5rem; }
+    }
+  </style>
 </head>
 <body>
 
-<div class="card card-login p-4">
-    <div class="text-center mb-4">
-        <div class="logo">💊 MedTrack</div>
-        <p class="text-muted mt-1">Inicio de sesión</p>
+<div class="tarjeta">
+
+  <!-- Logo y nombre de la aplicación -->
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <h1 class="titulo">Bienvenido de nuevo</h1>
+  <p class="subtitulo">Ingresa tus credenciales para continuar.</p>
+
+  <!-- Formulario de inicio de sesión -->
+  <form id="formularioLogin" novalidate>
+
+    <!-- Campo correo -->
+    <div class="mb-3">
+      <label class="etiqueta" for="correo">
+        Correo electrónico <span class="obligatorio">*</span>
+      </label>
+      <input
+        type="email"
+        class="form-control"
+        id="correo"
+        placeholder="tu@correo.com"
+        autocomplete="email"
+        required
+      />
+      <div class="mensaje-error" id="errorCorreo">Ingresa un correo válido.</div>
     </div>
 
-    <!-- Alerta de error (oculta por defecto) -->
-    <div id="alerta-error" class="alert alert-danger d-none" role="alert"></div>
-
-    <form id="form-login" novalidate>
-        <div class="mb-3">
-            <label for="correo" class="form-label">Correo electrónico</label>
-            <input
-                type="email"
-                class="form-control"
-                id="correo"
-                placeholder="medtrack@correo.com"
-                required
-            >
-            <div class="invalid-feedback">Ingrese un correo válido</div>
-        </div>
-
-        <div class="mb-4">
-            <label for="contrasena" class="form-label">Contraseña</label>
-            <input
-                type="password"
-                class="form-control"
-                id="contrasena"
-                placeholder="Tu contraseña"
-                required
-                minlength="6"
-            >
-            <div class="invalid-feedback">La contraseña debe ser mayor a 6 caracteres</div>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-100" id="btn-login">
-            Iniciar sesión
+    <!-- Campo contraseña con ojito para mostrar/ocultar -->
+    <div class="mb-1">
+      <label class="etiqueta" for="contrasena">
+        Contraseña <span class="obligatorio">*</span>
+      </label>
+      <div class="grupo-contrasena">
+        <input
+          type="password"
+          class="form-control"
+          id="contrasena"
+          placeholder="Tu contraseña"
+          autocomplete="current-password"
+          required
+        />
+        <!-- Al hacer clic aquí se muestra u oculta la contraseña -->
+        <button type="button" class="boton-ojo" id="botonOjo" aria-label="Mostrar contraseña">
+          <!-- Ícono de ojo abierto (por defecto) -->
+          <svg id="iconoOjoAbierto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <!-- Ícono de ojo tachado (se muestra cuando la contraseña es visible) -->
+          <svg id="iconoOjoCerrado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
         </button>
-    </form>
+      </div>
+      <div class="mensaje-error" id="errorContrasena">Ingresa tu contraseña.</div>
+    </div>
+
+    <!-- Aquí aparece el mensaje si el correo o la contraseña son incorrectos -->
+    <div class="alerta-error" id="alertaLogin"></div>
+
+    <!-- Botón de envío -->
+    <button type="submit" class="boton-principal" id="botonLogin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/>
+        <line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+      Iniciar sesión
+    </button>
+
+  </form>
+
+  <!-- Enlace para ir a registrarse si no tiene cuenta -->
+  <p class="pie-formulario">
+    ¿No tienes cuenta?
+    <button class="enlace" onclick="irARegistro()">Regístrate aquí</button>
+  </p>
+
 </div>
 
+
 <script>
-    const form = document.getElementById("form-login");
-    const alertaError = document.getElementById("alerta-error");
-    const btnLogin = document.getElementById("btn-login");
+  /*
+    Guardamos en variables los elementos del HTML que vamos a usar.
+    Así es más fácil trabajar con ellos sin repetir getElementById.
+  */
+  const formularioLogin  = document.getElementById('formularioLogin');
+  const campoCorreo      = document.getElementById('correo');
+  const campoContrasena  = document.getElementById('contrasena');
+  const botonOjo         = document.getElementById('botonOjo');
+  const iconoOjoAbierto  = document.getElementById('iconoOjoAbierto');
+  const iconoOjoCerrado  = document.getElementById('iconoOjoCerrado');
+  const alertaLogin      = document.getElementById('alertaLogin');
+  const botonLogin       = document.getElementById('botonLogin');
 
-    function mostrarError(mensaje) {
-        alertaError.textContent = mensaje;
-        alertaError.classList.remove("d-none");
+
+  /*
+    ── MOSTRAR U OCULTAR LA CONTRASEÑA ──
+    Cuando el usuario hace clic en el ojito, cambiamos el tipo del input
+    entre "password" (puntitos) y "text" (texto visible).
+    También cambiamos el ícono para reflejar el estado actual.
+  */
+  botonOjo.addEventListener('click', function () {
+    const estaOculta = campoContrasena.type === 'password';
+
+    if (estaOculta) {
+      // Mostramos la contraseña como texto normal
+      campoContrasena.type = 'text';
+      iconoOjoAbierto.style.display = 'none';
+      iconoOjoCerrado.style.display = 'block';
+    } else {
+      // Volvemos a ocultar la contraseña con puntitos
+      campoContrasena.type = 'password';
+      iconoOjoAbierto.style.display = 'block';
+      iconoOjoCerrado.style.display = 'none';
+    }
+  });
+
+
+  /*
+    ── VALIDAR UN CAMPO ──
+    Revisa si el campo cumple las reglas básicas.
+    Pone el borde verde si está bien, rojo si tiene error.
+    Devuelve true si está correcto, false si no.
+  */
+  function validarCampo(campo, idMensajeError) {
+    campo.classList.remove('invalido', 'valido');
+    const mensajeError = document.getElementById(idMensajeError);
+    const valor = campo.value.trim();
+
+    // Si el campo está vacío y es obligatorio, mostramos el error
+    if (!valor) {
+      campo.classList.add('invalido');
+      mensajeError.classList.add('visible');
+      return false;
     }
 
-    function ocultarError() {
-        alertaError.classList.add("d-none");
+    // Si es el campo de correo, verificamos que tenga formato válido (ej: algo@algo.com)
+    if (campo.type === 'email') {
+      const formatoCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!formatoCorreo.test(valor)) {
+        campo.classList.add('invalido');
+        mensajeError.classList.add('visible');
+        return false;
+      }
     }
 
-    form.addEventListener("submit", async function (e) {
-        e.preventDefault();
-        ocultarError();
+    // Si llegamos aquí, el campo está bien
+    campo.classList.add('valido');
+    mensajeError.classList.remove('visible');
+    return true;
+  }
 
-        // Validacion de Bootstrap
-        if (!form.checkValidity()) {
-            form.classList.add("was-validated");
-            return;
-        }
 
-        const correo = document.getElementById("correo").value.trim();
-        const contrasena = document.getElementById("contrasena").value;
+  /*
+    ── VALIDACIÓN EN TIEMPO REAL ──
+    Cuando el usuario sale de un campo (blur), lo validamos.
+    Si ya tenía un error y empieza a corregirlo (input), lo revalidamos
+    para quitar el rojo en cuanto esté bien.
+  */
+  campoCorreo.addEventListener('blur',  () => validarCampo(campoCorreo, 'errorCorreo'));
+  campoCorreo.addEventListener('input', () => {
+    if (campoCorreo.classList.contains('invalido')) validarCampo(campoCorreo, 'errorCorreo');
+  });
 
-        btnLogin.disabled = true;
-        btnLogin.textContent = "Ingresando";
+  campoContrasena.addEventListener('blur',  () => validarCampo(campoContrasena, 'errorContrasena'));
+  campoContrasena.addEventListener('input', () => {
+    if (campoContrasena.classList.contains('invalido')) validarCampo(campoContrasena, 'errorContrasena');
+  });
 
-setTimeout(() => {
-    alert("¡Registro exitoso!");
-    window.location.href = "dashboard.html"; 
-}, 1000);
-    });
+
+  /*
+    ── ENVÍO DEL FORMULARIO ──
+    Cuando el usuario hace clic en "Iniciar sesión":
+    1. Frenamos el comportamiento por defecto del navegador
+    2. Validamos los campos
+    3. Si están bien, enviamos los datos al backend Flask
+    4. Si el servidor responde con error, mostramos el mensaje
+    5. Si todo sale bien, redirigimos al inicio
+  */
+  formularioLogin.addEventListener('submit', async function (evento) {
+    evento.preventDefault(); // evitamos que la página se recargue sola
+
+    // Ocultamos cualquier alerta de error anterior
+    alertaLogin.classList.remove('visible');
+
+    // Validamos los dos campos
+    const correoValido     = validarCampo(campoCorreo, 'errorCorreo');
+    const contrasenaValida = validarCampo(campoContrasena, 'errorContrasena');
+
+    // Si alguno está mal, no seguimos
+    if (!correoValido || !contrasenaValida) return;
+
+    // Deshabilitamos el botón mientras esperamos respuesta del servidor
+    botonLogin.disabled = true;
+    botonLogin.textContent = 'Ingresando…';
+
+    try {
+      /*
+        Enviamos el correo y la contraseña al backend Flask.
+        Usamos fetch para hacer la peticion sin recargar la página.
+      */
+      const respuesta = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          correo:     campoCorreo.value.trim(),
+          contrasena: campoContrasena.value
+        })
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        // El servidor respondió con error
+        alertaLogin.textContent = datos.error;
+        alertaLogin.classList.add('visible');
+        return;
+      }
+
+      // Todo salió bien: guardamos el nombre del usuario y vamos al inicio
+      sessionStorage.setItem('usuario', JSON.stringify(datos.usuario));
+      window.location.href = 'registro_paciente.html';
+
+    } catch (error) {
+      // Esto pasa si el servidor no está corriendo o hay problema de red
+      alertaLogin.textContent = 'No se pudo conectar al servidor. ¿Está corriendo Flask?';
+      alertaLogin.classList.add('visible');
+
+    } finally {
+      // Siempre volvemos a habilitar el botón al final, sin importar qué pasó
+      botonLogin.disabled = false;
+      botonLogin.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+          <polyline points="10 17 15 12 10 7"/>
+          <line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+        Iniciar sesión`;
+    }
+  });
+
+
+  /*
+    ── IR A LA PÁGINA DE REGISTRO ──
+    Cuando el usuario hace clic en "Regístrate aquí",
+    simplemente lo llevamos a la otra página HTML.
+  */
+  function irARegistro() {
+    window.location.href = 'registro.html';
+  }
 </script>
+
 </body>
 </html>

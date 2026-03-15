@@ -25,9 +25,27 @@ def init_db():
             rol TEXT NOT NULL CHECK(rol IN ('cuidador', 'administrador'))
         )
     """)
-   # solo 2 subissues estan aqui
+
     # Tabla de pacientes
-# Tabla de medicamentos
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pacientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombres TEXT NOT NULL,
+            apellidos TEXT NOT NULL,
+            fecha_nacimiento TEXT NOT NULL,
+            genero TEXT NOT NULL,
+            tipo_documento TEXT NOT NULL,
+            numero_documento TEXT NOT NULL,
+            telefono_contacto TEXT NOT NULL,
+            eps_aseguradora TEXT,
+            diagnostico_principal TEXT,
+            alergias_conocidas TEXT,
+            observaciones_adicionales TEXT,
+            UNIQUE (tipo_documento, numero_documento)
+        )
+    """)
+
+    # Tabla de medicamentos
     # Campos obligatorios: nombre, dosis, frecuencia, horario, fecha_inicio, paciente_id
     # Campo opcional: observaciones
     cursor.execute("""
@@ -43,12 +61,12 @@ def init_db():
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
         )
     """)
+
     conn.commit()
     conn.close()
     print("Base de datos inicializada correctamente.")
 
+
 if __name__ == "__main__":
     init_db()
     # aumentara la implementacion
-    
-

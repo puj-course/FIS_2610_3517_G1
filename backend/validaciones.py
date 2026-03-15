@@ -2,6 +2,7 @@
 # Este archivo se encarga de revisar que los datos del paciente esten bien antes de guardarlos en la base de datos
 from datetime import datetime
 
+
 # Opciones validas para tipo de documento y género
 TIPOS_DOCUMENTO = ["CC", "TI", "CE", "PA", "RC"]
 GENEROS = ["Masculino", "Femenino", "Otro"]
@@ -79,7 +80,7 @@ def verificar_duplicado(numero_documento: str, tipo_documento: str, conn) -> boo
     # Si encontró algo, es duplicado
     resultado = cursor.fetchone()
     return resultado is not None
-# Validaciones adicionales de formato para medicamento 
+# Validaciones adicionales de formato para medicamento — issue #195
 def validar_formato_medicamento(data: dict) -> list:
     """
     Complementa validar_medicamento() con reglas de formato:
@@ -105,3 +106,45 @@ def validar_formato_medicamento(data: dict) -> list:
             errores.append("La fecha de inicio debe tener formato mm/dd/yyyy")
 
     return errores
+
+
+# Lógica de creación de esquema de validación de medicamentos (HU'09)
+def validar_medicamento(data: dict) -> list:
+    errores = []
+    campos_obligatorios = {
+        "nombre": "El nombre del medicamento es obligatorio",
+        "dosis": "La dosis es obligatoria",
+        "frecuencia": "La frecuencia es obligatoria",
+        "horario": "El horario de toma es obligatorio",
+        "fecha_inicio": "La fecha de inicio es obligatoria",
+        "paciente_id": "El paciente_id es obligatorio"
+    }
+    for campo, mensaje in campos_obligatorios.items():
+        valor = data.get(campo, "")
+        if valor is None or str(valor).strip() == "":
+            errores.append(mensaje)
+    if errores:
+        return errores
+    try:
+        paciente_id = int(data["paciente_id"])
+        if paciente_id <= 0:
+            errores.append("El paciente_id debe ser un número mayor que 0")
+    except (ValueError, TypeError):
+        errores.append("El paciente_id debe ser un número entero válido")
+    return errores
+
+def verificar_paciente_existe(paciente_id: int, conn) -> bool:
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))
+    return cursor.fetchone() is not None
+
+def verificar_medicamento_duplicado(nombre: str, paciente_id: int, conn) -> bool:
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id FROM medicamentos
+        WHERE paciente_id = ? AND LOWER(TRIM(nombre)) = LOWER(TRIM(?))
+        """,
+        (paciente_id, nombre)
+    )
+    return cursor.fetchone() is not None

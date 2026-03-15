@@ -74,8 +74,10 @@ def verificar_duplicado(numero_documento: str, tipo_documento: str, conn) -> boo
     cursor = conn.cursor()
 
     # Arma la consulta con los datos recibidos
-    query = f"SELECT id FROM pacientes WHERE numero_documento = '{numero_documento}' AND tipo_documento = '{tipo_documento}'"
-    cursor.execute(query)
+    cursor.execute(
+        "SELECT id FROM pacientes WHERE numero_documento = ? AND tipo_documento = ?",
+        (numero_documento, tipo_documento)
+    )
 
     # Si encontró algo, es duplicado
     resultado = cursor.fetchone()

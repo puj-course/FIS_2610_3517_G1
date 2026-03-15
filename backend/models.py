@@ -45,6 +45,8 @@ def init_db():
         )
     """)
 # Tabla de medicamentos 
+    # Campos obligatorios: nombre, dosis, frecuencia, horario, fecha_inicio, paciente_id
+    # Campo opcional: observaciones
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS medicamentos (
             id               INTEGER PRIMARY KEY AUTOINCREMENT,

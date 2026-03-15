@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Registrar Medicamento</title>
+
+  <!-- Importamos Bootstrap para la cuadricula y estilos base -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Importamos las fuentes del texto del proyecto -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    /*
+      Aqui se definen los colores que usamos en toda la pagina
+      (mismas variables que RegistrarPaciente.html)
+    */
+    :root {
+      --color-menta:         #2DD4BF;
+      --color-menta-oscuro:  #0F9D8A;
+      --color-fondo:         #0F1B2D;
+      --color-campo:         #1E2D3D;
+      --color-tarjeta:       #162030;
+      --color-borde:         #243447;
+      --color-texto:         #E2EAF4;
+      --color-texto-suave:   #7A95B0;
+      --color-error:         #F4726A;
+      --color-exito:         #4ADE80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    .tarjeta-formulario {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 640px;
+      padding: 2.5rem 2.5rem 2rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: aparecer .5s ease both;
+    }
+
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .encabezado { margin-bottom: 2rem; }
+
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .marca-icono {
+      width: 36px;
+      height: 36px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .marca-icono svg { width: 20px; height: 20px; color: var(--color-fondo); }
+
+    .marca-nombre {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+      color: var(--color-texto);
+    }
+
+    .encabezado h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.75rem;
+      margin: 0 0 .3rem;
+      line-height: 1.2;
+    }
+
+    .encabezado p {
+      font-size: .9rem;
+      color: var(--color-texto-suave);
+      margin: 0;
+    }
+
+    .separador {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin: 1.5rem 0 1.25rem;
+      color: var(--color-texto-suave);
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .separador::before,
+    .separador::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-borde);
+    }
+
+    .etiqueta-campo {
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--color-texto-suave);
+      margin-bottom: .4rem;
+      letter-spacing: .03em;
+    }
+    .etiqueta-campo .obligatorio { color: var(--color-menta); margin-left: 2px; }
+
+    .form-control,
+    .form-select {
+      background: var(--color-campo);
+      border: 1.5px solid var(--color-borde);
+      color: var(--color-texto);
+      border-radius: 10px;
+      padding: .65rem .9rem;
+      font-size: .92rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      background: var(--color-campo);
+      border-color: var(--color-menta);
+      color: var(--color-texto);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.18);
+      outline: none;
+    }
+
+    .form-control::placeholder { color: #4A6278; }
+    .form-select option { background: var(--color-campo); }
+
+    /* Borde rojo cuando el campo tiene un error */
+    .form-control.campo-invalido,
+    .form-select.campo-invalido {
+      border-color: var(--color-error);
+      box-shadow: none;
+    }
+
+    /* Borde verde cuando el campo está correcto */
+    .form-control.campo-valido,
+    .form-select.campo-valido {
+      border-color: var(--color-exito);
+      box-shadow: none;
+    }
+
+    /* Mensaje de error debajo del campo — oculto por defecto */
+    .mensaje-error {
+      font-size: .78rem;
+      color: var(--color-error);
+      margin-top: .3rem;
+      display: none;
+    }
+
+    /* Se muestra solo cuando el campo tiene la clase campo-invalido */
+    .form-control.campo-invalido ~ .mensaje-error,
+    .form-select.campo-invalido ~ .mensaje-error {
+      display: block;
+    }
+
+    .boton-guardar {
+      background: var(--color-menta);
+      color: var(--color-fondo);
+      border: none;
+      border-radius: 12px;
+      padding: .75rem 2rem;
+      font-size: .95rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      width: 100%;
+      cursor: pointer;
+      transition: background .2s, transform .1s, box-shadow .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      margin-top: 1.5rem;
+    }
+    .boton-guardar:hover  { background: var(--color-menta-oscuro); box-shadow: 0 8px 24px rgba(45,212,191,.3); }
+    .boton-guardar:active { transform: scale(.98); }
+    .boton-guardar svg { width: 18px; height: 18px; }
+
+    .boton-limpiar {
+      background: transparent;
+      color: var(--color-texto-suave);
+      border: 1.5px solid var(--color-borde);
+      border-radius: 12px;
+      padding: .65rem 1.5rem;
+      font-size: .88rem;
+      font-family: 'DM Sans', sans-serif;
+      width: 100%;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+      margin-top: .75rem;
+    }
+    .boton-limpiar:hover { border-color: var(--color-texto-suave); color: var(--color-texto); }
+
+    /* Notificaciones flotantes — igual que en RegistrarPaciente */
+    .contenedor-notificacion {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+    }
+    .notificacion {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-exito);
+      border-radius: 12px;
+      padding: .9rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      animation: deslizar .35s ease both;
+      font-size: .88rem;
+    }
+    .notificacion.error { border-color: var(--color-error); }
+    .notificacion .icono { font-size: 1.2rem; }
+
+    @keyframes deslizar {
+      from { opacity: 0; transform: translateX(40px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @media (max-width: 480px) {
+      .tarjeta-formulario { padding: 1.75rem 1.25rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Aqui aparecerán las notificaciones flotantes -->
+<div class="contenedor-notificacion" id="contenedorNotificacion"></div>
+
+<!-- Tarjeta principal del formulario -->
+<div class="tarjeta-formulario">
+
+  <!-- Encabezado con logo y título -->
+  <div class="encabezado">
+    <div class="marca">
+      <div class="marca-icono">
+        <!-- Icono de pastilla -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.5 20H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v3"/>
+          <circle cx="18" cy="18" r="3"/>
+          <path d="m22 22-1.5-1.5"/>
+        </svg>
+      </div>
+      <span class="marca-nombre">MedTrack</span>
+    </div>
+    <h1>Registrar Medicamento</h1>
+    <p>Completa la información del medicamento para el seguimiento del tratamiento.</p>
+  </div>
+
+  <!-- Formulario principal -->
+  <form id="formularioMedicamento" novalidate>
+
+    <!-- ── Información del medicamento ── -->
+    <div class="separador">Información del medicamento</div>
+
+    <div class="row g-3">
+
+      <!-- Nombre del medicamento -->
+      <div class="col-12">
+        <label class="etiqueta-campo" for="nombre">
+          Nombre del medicamento <span class="obligatorio">*</span>
+        </label>
+        <input type="text" class="form-control" id="nombre" name="nombre"
+               placeholder="Ej. Aspirina, Metformina…" maxlength="100"
+               autocomplete="off" required/>
+        <div class="mensaje-error" id="errorNombre">Ingresa el nombre del medicamento.</div>
+      </div>
+
+      <!-- Dosis -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="dosis">
+          Dosis <span class="obligatorio">*</span>
+        </label>
+        <input type="text" class="form-control" id="dosis" name="dosis"
+               placeholder="Ej. 500 mg, 1 tableta…" maxlength="60"
+               autocomplete="off" required/>
+        <div class="mensaje-error" id="errorDosis">Ingresa la dosis del medicamento.</div>
+      </div>
+
+      <!-- Frecuencia -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="frecuencia">
+          Frecuencia <span class="obligatorio">*</span>
+        </label>
+        <select class="form-select" id="frecuencia" name="frecuencia" required>
+          <option value="" disabled selected>Selecciona…</option>
+          <option value="Cada 4 horas">Cada 4 horas</option>
+          <option value="Cada 6 horas">Cada 6 horas</option>
+          <option value="Cada 8 horas">Cada 8 horas</option>
+          <option value="Cada 12 horas">Cada 12 horas</option>
+          <option value="Cada 24 horas">Cada 24 horas</option>
+          <option value="Una vez al día">Una vez al día</option>
+          <option value="Dos veces al día">Dos veces al día</option>
+          <option value="Tres veces al día">Tres veces al día</option>
+        </select>
+        <div class="mensaje-error" id="errorFrecuencia">Selecciona la frecuencia de administración.</div>
+      </div>
+
+    </div>
+
+    <!-- ── Horario y fechas ── -->
+    <div class="separador">Horario y fechas</div>
+
+    <div class="row g-3">
+
+      <!-- Horario -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="horario">
+          Horario de administración <span class="obligatorio">*</span>
+        </label>
+        <input type="text" class="form-control" id="horario" name="horario"
+               placeholder="Ej. 08:00, 14:00, 20:00" maxlength="60"
+               autocomplete="off" required/>
+        <div class="mensaje-error" id="errorHorario">Ingresa el horario de administración.</div>
+      </div>
+
+      <!-- Fecha de inicio -->
+      <div class="col-md-6">
+        <label class="etiqueta-campo" for="fechaInicio">
+          Fecha de inicio <span class="obligatorio">*</span>
+        </label>
+        <input type="date" class="form-control" id="fechaInicio" name="fecha_inicio" required/>
+        <div class="mensaje-error" id="errorFechaInicio">Selecciona una fecha de inicio válida.</div>
+      </div>
+
+    </div>
+
+    <!-- ── Observaciones ── -->
+    <div class="separador">Observaciones</div>
+
+    <div class="row g-3">
+
+      <!-- Observaciones opcionales con contador -->
+      <div class="col-12">
+        <label class="etiqueta-campo" for="observaciones">Observaciones adicionales</label>
+        <textarea class="form-control" id="observaciones" name="observaciones"
+                  rows="3" maxlength="400"
+                  placeholder="Notas relevantes para el cuidado del tratamiento…"></textarea>
+        <div style="font-size:.75rem;color:var(--color-texto-suave);text-align:right;margin-top:.2rem;">
+          <span id="contadorObservaciones">0</span> / 400
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Botón guardar -->
+    <button type="submit" class="boton-guardar" id="botonGuardar">
+      <!-- Ícono de disquete -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/>
+        <polyline points="7 3 7 8 15 8"/>
+      </svg>
+      Guardar medicamento
+    </button>
+
+    <!-- Botón limpiar -->
+    <button type="button" class="boton-limpiar" id="botonLimpiar">
+      Limpiar formulario
+    </button>
+
+  </form>
+</div>
+
+<script>
+  /*
+    Referencias a los elementos del formulario.
+    Seguimos el mismo patrón que en RegistrarPaciente.html.
+  */
+  const formulario             = document.getElementById('formularioMedicamento');
+  const campoNombre            = document.getElementById('nombre');
+  const campoDosis             = document.getElementById('dosis');
+  const campoFrecuencia        = document.getElementById('frecuencia');
+  const campoHorario           = document.getElementById('horario');
+  const campoFechaInicio       = document.getElementById('fechaInicio');
+  const campoObservaciones     = document.getElementById('observaciones');
+  const contadorObservaciones  = document.getElementById('contadorObservaciones');
+  const contenedorNotificacion = document.getElementById('contenedorNotificacion');
+
+  /*
+    La fecha de inicio no puede ser anterior al año 2000
+  */
+  campoFechaInicio.min = '2000-01-01';
+
+  /*
+    Contador de caracteres en observaciones
+  */
+  campoObservaciones.addEventListener('input', function () {
+    contadorObservaciones.textContent = this.value.length;
+  });
+
+  /*
+    mostrarNotificacion — igual que en RegistrarPaciente.html
+    Crea una cajita en la esquina con un mensaje que desaparece sola.
+      - mensaje: texto a mostrar
+      - tipo: 'exito' (verde) o 'error' (rojo)
+  */
+  function mostrarNotificacion(mensaje, tipo = 'exito') {
+    const notificacion = document.createElement('div');
+    notificacion.className = `notificacion${tipo === 'error' ? ' error' : ''}`;
+    const icono = tipo === 'exito' ? 'bien' : '¡alerta!';
+    notificacion.innerHTML = `<span class="icono">${icono}</span><span>${mensaje}</span>`;
+    contenedorNotificacion.appendChild(notificacion);
+    setTimeout(() => notificacion.remove(), 3500);
+  }
+
+  /*
+    validarCampo — mismo patrón que RegistrarPaciente.html
+    Pone borde verde o rojo según si el campo está bien.
+    Retorna true si es válido, false si tiene error.
+  */
+  function validarCampo(campo) {
+    campo.classList.remove('campo-invalido', 'campo-valido');
+    const valor = campo.value.trim();
+
+    /* Regla 1: campo obligatorio vacío */
+    if (campo.required && !valor) {
+      campo.classList.add('campo-invalido');
+      return false;
+    }
+
+    /* Regla 2: nombre debe tener al menos 2 caracteres */
+    if (campo.id === 'nombre' && valor && valor.length < 2) {
+      campo.classList.add('campo-invalido');
+      document.getElementById('errorNombre').textContent =
+        'El nombre debe tener al menos 2 caracteres.';
+      return false;
+    }
+
+    /* Regla 3: fecha de inicio — no puede ser anterior a 2000 */
+    if (campo.id === 'fechaInicio' && valor) {
+      const fecha = new Date(valor);
+      const fechaMinima = new Date('2000-01-01');
+      if (isNaN(fecha) || fecha < fechaMinima) {
+        campo.classList.add('campo-invalido');
+        document.getElementById('errorFechaInicio').textContent =
+          'La fecha de inicio no puede ser anterior al año 2000.';
+        return false;
+      }
+    }
+
+    // Si llegamos aquí sin errores el campo es válido
+    if (valor) campo.classList.add('campo-valido');
+    return true;
+  }
+
+  /*
+    Validación en tiempo real:
+    Al salir del campo (blur) validamos.
+    Si ya tenía error, revalidamos mientras escribe para quitar el rojo.
+  */
+  document.querySelectorAll('.form-control, .form-select').forEach(function (campo) {
+    campo.addEventListener('blur', function () {
+      validarCampo(campo);
+    });
+    campo.addEventListener('input', function () {
+      if (campo.classList.contains('campo-invalido')) {
+        validarCampo(campo);
+      }
+    });
+  });
+
+  /*
+    Envío del formulario:
+    1. Prevenimos el envío normal del navegador.
+    2. Validamos todos los campos.
+    3. Si hay errores mostramos notificación y hacemos scroll al primer campo rojo.
+    4. Si todo está bien recogemos los datos y los enviamos al backend.
+  */
+  formulario.addEventListener('submit', function (evento) {
+    evento.preventDefault();
+
+    const todosCampos = this.querySelectorAll('.form-control, .form-select');
+    let formularioValido = true;
+
+    // Validamos campo por campo
+    todosCampos.forEach(function (campo) {
+      if (!validarCampo(campo)) {
+        formularioValido = false;
+      }
+    });
+
+    // Si algún campo falló avisamos y paramos
+    if (!formularioValido) {
+      mostrarNotificacion('Revisa los campos marcados en rojo.', 'error');
+      const primerCampoConError = this.querySelector('.campo-invalido');
+      if (primerCampoConError) {
+        primerCampoConError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    // Recolectamos los datos del formulario
+    const datosMedicamento = Object.fromEntries(new FormData(this).entries());
+
+    // Enviamos los datos al backend
+    const botonGuardar = document.getElementById('botonGuardar');
+    botonGuardar.disabled = true;
+    botonGuardar.textContent = 'Guardando...';
+
+    fetch('http://localhost:8000/medicamentos/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datosMedicamento)
+    })
+    .then(function(r) { return r.json().then(function(b) { return { ok: r.ok, body: b }; }); })
+    .then(function(resultado) {
+      if (!resultado.ok) {
+        // El backend devolvió errores de validación, los mostramos al usuario
+        var mensajes = Array.isArray(resultado.body.detail)
+          ? resultado.body.detail.join(' | ')
+          : resultado.body.detail;
+        mostrarNotificacion(mensajes, 'error');
+      } else {
+        // Registro exitoso
+        mostrarNotificacion(`Medicamento "${datosMedicamento.nombre}" registrado correctamente.`);
+        formulario.reset();
+        todosCampos.forEach(function (campo) {
+          campo.classList.remove('campo-valido', 'campo-invalido');
+        });
+        contadorObservaciones.textContent = '0';
+      }
+    })
+    .catch(function() {
+      // Error de conexión con el servidor
+      mostrarNotificacion('Error de conexión. Verifica que el servidor esté activo.', 'error');
+    })
+    .finally(function() {
+      botonGuardar.disabled = false;
+      botonGuardar.textContent = 'Guardar medicamento';
+    });
+  });
+
+  /*
+    Botón limpiar — resetea el formulario a su estado inicial
+  */
+  document.getElementById('botonLimpiar').addEventListener('click', function () {
+    formulario.reset();
+    formulario.querySelectorAll('.form-control, .form-select').forEach(function (campo) {
+      campo.classList.remove('campo-valido', 'campo-invalido');
+    });
+    contadorObservaciones.textContent = '0';
+  });
+</script>
+
+</body>
+</html>

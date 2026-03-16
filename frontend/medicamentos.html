@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Medicamentos</title>
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --color-menta:        #2DD4BF;
+      --color-menta-oscuro: #0F9D8A;
+      --color-fondo:        #0F1B2D;
+      --color-campo:        #1E2D3D;
+      --color-tarjeta:      #162030;
+      --color-borde:        #243447;
+      --color-texto:        #E2EAF4;
+      --color-texto-suave:  #7A95B0;
+      --color-error:        #F4726A;
+      --color-exito:        #4ADE80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.13) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    .contenedor { max-width: 800px; margin: 0 auto; }
+
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 2rem;
+    }
+    .marca-icono {
+      width: 38px; height: 38px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .marca-icono svg { width: 22px; height: 22px; color: var(--color-fondo); }
+    .marca-nombre { font-family: 'DM Serif Display', serif; font-size: 1.45rem; }
+
+    .titulo    { font-family: 'DM Serif Display', serif; font-size: 1.75rem; margin: 0 0 .25rem; }
+    .subtitulo { font-size: .88rem; color: var(--color-texto-suave); margin: 0 0 1.75rem; }
+
+    .vista { animation: aparecer .35s ease both; }
+    .vista.oculta { display: none; }
+  </style>
+</head>
+<body>
+<div class="contenedor">
+
+  <!-- Logo -->
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <!-- VISTA 1: Lista de pacientes -->
+  <div class="vista" id="vistaPacientes">
+    <h1 class="titulo">Pacientes</h1>
+    <p class="subtitulo">Selecciona un paciente para ver sus medicamentos.</p>
+    <div id="listaPacientes"></div>
+  </div>
+
+  <!-- VISTA 2: Medicamentos del paciente -->
+  <div class="vista oculta" id="vistaMedicamentos">
+    <div id="headerPaciente"></div>
+    <div id="listaMedicamentos"></div>
+  </div>
+
+</div>
+</body>
+</html>
+
+/* Tarjeta paciente */
+    .paciente-card {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 1.1rem 1.4rem;
+      margin-bottom: .85rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .paciente-card:hover {
+      border-color: rgba(45,212,191,.5);
+      box-shadow: 0 4px 20px rgba(45,212,191,.08);
+    }
+    .paciente-avatar {
+      width: 44px; height: 44px;
+      background: rgba(45,212,191,.12);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.1rem;
+      color: var(--color-menta);
+    }
+    .paciente-info { flex: 1; min-width: 0; }
+    .paciente-nombre { font-weight: 600; font-size: .97rem; margin: 0 0 .2rem; }
+    .paciente-datos  { font-size: .8rem; color: var(--color-texto-suave); margin: 0; }
+    .paciente-flecha { color: var(--color-texto-suave); flex-shrink: 0; }
+    .paciente-flecha svg { width: 18px; height: 18px; }
+
+    /* Botón volver */
+    .boton-volver {
+      background: none;
+      border: 1.5px solid var(--color-borde);
+      color: var(--color-texto-suave);
+      border-radius: 10px;
+      padding: .5rem 1rem;
+      font-size: .85rem;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: .4rem;
+      transition: border-color .2s, color .2s;
+      margin-bottom: 1.5rem;
+    }
+    .boton-volver:hover { border-color: var(--color-menta); color: var(--color-menta); }
+    .boton-volver svg { width: 16px; height: 16px; }
+
+    /* Encabezado paciente seleccionado */
+    .paciente-header {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .paciente-header .paciente-avatar { width: 52px; height: 52px; font-size: 1.3rem; }
+    .paciente-header .paciente-nombre { font-size: 1.05rem; }
+
+    /* Tarjeta medicamento */
+    .med-card {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      animation: aparecer .3s ease both;
+      transition: border-color .2s;
+    }
+    .med-card:hover { border-color: rgba(45,212,191,.3); }
+    .med-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .85rem; }
+    .med-icono {
+      width: 38px; height: 38px;
+      background: rgba(45,212,191,.12);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .med-icono svg { width: 18px; height: 18px; color: var(--color-menta); }
+    .med-nombre { font-family: 'DM Serif Display', serif; font-size: 1.1rem; margin: 0; }
+    .med-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+    .tag {
+      background: var(--color-campo);
+      border: 1px solid var(--color-borde);
+      border-radius: 6px;
+      padding: .22rem .65rem;
+      font-size: .78rem;
+      color: var(--color-texto-suave);
+      display: inline-flex; align-items: center; gap: .3rem;
+    }
+    .tag svg { width: 12px; height: 12px; color: var(--color-menta); flex-shrink: 0; }
+    .med-observaciones {
+      font-size: .82rem; color: var(--color-texto-suave);
+      border-top: 1px solid var(--color-borde); padding-top: .75rem;
+    }
+    .med-observaciones strong { color: var(--color-texto); }
+    .contador { font-size: .82rem; color: var(--color-texto-suave); margin-bottom: 1rem; }
+    .contador span { color: var(--color-menta); font-weight: 600; }
+    .estado { text-align: center; padding: 3rem 1rem; color: var(--color-texto-suave); font-size: .92rem; }
+    .estado svg { width: 40px; height: 40px; margin: 0 auto 1rem; display: block; opacity: .4; }
+
+    <body>
+<div class="contenedor">
+
+  <!-- Logo -->
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <!-- VISTA 1: Lista de pacientes -->
+  <div class="vista" id="vistaPacientes">
+    <h1 class="titulo">Pacientes</h1>
+    <p class="subtitulo">Selecciona un paciente para ver sus medicamentos.</p>
+    <div id="listaPacientes"></div>
+  </div>
+
+  <!-- VISTA 2: Medicamentos del paciente -->
+  <div class="vista oculta" id="vistaMedicamentos">
+    <button class="boton-volver" onclick="volverAPacientes()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Volver a pacientes
+    </button>
+    <div id="headerPaciente"></div>
+    <div id="listaMedicamentos"></div>
+  </div>
+
+</div>
+</body>
+<script>
+  /*
+    Datos de prueba que simulan lo que retornaría el backend.
+    Cuando el endpoint esté listo, se reemplaza por fetch().
+  */
+  const datosPrueba = [
+    {
+      id: 1,
+      nombres: 'Carlos',
+      apellidos: 'Rodríguez Pérez',
+      diagnostico_principal: 'Hipertensión arterial',
+      medicamentos: [
+        {
+          nombre: 'Losartán',
+          dosis: '50mg',
+          frecuencia: 'Cada 24 horas',
+          horario: '8:00 AM',
+          fecha_inicio: '01/15/2026',
+          observaciones: 'Tomar con abundante agua. Evitar alimentos con alto contenido de potasio.'
+        },
+        {
+          nombre: 'Amlodipino',
+          dosis: '5mg',
+          frecuencia: 'Cada 24 horas',
+          horario: '8:00 PM',
+          fecha_inicio: '01/15/2026',
+          observaciones: null
+        }
+      ]
+    },
+    {
+      id: 2,
+      nombres: 'María',
+      apellidos: 'González López',
+      diagnostico_principal: 'Diabetes tipo 2',
+      medicamentos: [
+        {
+          nombre: 'Metformina',
+          dosis: '850mg',
+          frecuencia: 'Cada 12 horas',
+          horario: '7:00 AM y 7:00 PM',
+          fecha_inicio: '02/01/2026',
+          observaciones: 'Tomar con las comidas para reducir efectos gastrointestinales.'
+        },
+        {
+          nombre: 'Glibenclamida',
+          dosis: '5mg',
+          frecuencia: 'Cada 24 horas',
+          horario: '7:00 AM',
+          fecha_inicio: '02/01/2026',
+          observaciones: null
+        },
+        {
+          nombre: 'Atorvastatina',
+          dosis: '20mg',
+          frecuencia: 'Cada 24 horas',
+          horario: '9:00 PM',
+          fecha_inicio: '02/10/2026',
+          observaciones: 'Preferiblemente en la noche.'
+        }
+      ]
+    },
+    {
+      id: 3,
+      nombres: 'Jorge',
+      apellidos: 'Martínez Soto',
+      diagnostico_principal: 'Asma bronquial',
+      medicamentos: []
+    }
+  ];
+
+  /* Renderiza la lista de pacientes en la vista 1 */
+  function renderizarPacientes() {
+    const lista = document.getElementById('listaPacientes');
+    let html = '';
+
+    datosPrueba.forEach(function(paciente) {
+      const inicial   = paciente.nombres.charAt(0).toUpperCase();
+      const cantMeds  = paciente.medicamentos.length;
+      const textoMeds = cantMeds === 1 ? '1 medicamento' : cantMeds + ' medicamentos';
+
+      html += `
+        <div class="paciente-card" onclick="verMedicamentos(${paciente.id})">
+          <div class="paciente-avatar">${inicial}</div>
+          <div class="paciente-info">
+            <p class="paciente-nombre">${paciente.nombres} ${paciente.apellidos}</p>
+            <p class="paciente-datos">${paciente.diagnostico_principal} · ${textoMeds}</p>
+          </div>
+          <div class="paciente-flecha">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+        </div>
+      `;
+    });
+
+    lista.innerHTML = html;
+  }
+
+  /* Al hacer click en un paciente, muestra sus medicamentos */
+  function verMedicamentos(pacienteId) {
+    const paciente = datosPrueba.find(function(p) { return p.id === pacienteId; });
+    if (!paciente) return;
+
+    const inicial = paciente.nombres.charAt(0).toUpperCase();
+    document.getElementById('headerPaciente').innerHTML = `
+      <div class="paciente-header">
+        <div class="paciente-avatar">${inicial}</div>
+        <div class="paciente-info">
+          <p class="paciente-nombre">${paciente.nombres} ${paciente.apellidos}</p>
+          <p class="paciente-datos">${paciente.diagnostico_principal}</p>
+        </div>
+      </div>
+    `;
+
+    const contenedor = document.getElementById('listaMedicamentos');
+
+    if (!paciente.medicamentos.length) {
+      contenedor.innerHTML = `
+        <div class="estado">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Este paciente no tiene medicamentos registrados aún.
+        </div>
+      `;
+    } else {
+      const cant = paciente.medicamentos.length;
+      let html = `<div class="contador">Se encontraron <span>${cant}</span> medicamento(s) registrado(s).</div>`;
+
+      paciente.medicamentos.forEach(function(med) {
+        html += `
+          <div class="med-card">
+            <div class="med-header">
+              <div class="med-icono">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                </svg>
+              </div>
+              <h3 class="med-nombre">${med.nombre}</h3>
+            </div>
+            <div class="med-tags">
+              <span class="tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>
+                Dosis: ${med.dosis}
+              </span>
+              <span class="tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Frecuencia: ${med.frecuencia}
+              </span>
+              <span class="tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Horario: ${med.horario}
+              </span>
+              <span class="tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Inicio: ${med.fecha_inicio}
+              </span>
+            </div>
+            ${med.observaciones ? `
+            <div class="med-observaciones">
+              <strong>Observaciones:</strong> ${med.observaciones}
+            </div>` : ''}
+          </div>
+        `;
+      });
+
+      contenedor.innerHTML = html;
+    }
+
+    document.getElementById('vistaPacientes').classList.add('oculta');
+    document.getElementById('vistaMedicamentos').classList.remove('oculta');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* Vuelve a la lista de pacientes */
+  function volverAPacientes() {
+    document.getElementById('vistaMedicamentos').classList.add('oculta');
+    document.getElementById('vistaPacientes').classList.remove('oculta');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Inicializamos
+  renderizarPacientes();
+</script>

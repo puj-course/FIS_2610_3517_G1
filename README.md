@@ -100,68 +100,43 @@ La aplicación no solo recuerda qué medicamento tomar, sino que construye un hi
 
 ---
 
-## Estructura del Proyecto
-```bash
-MedTrack/ 
-├── .github/ 
-│   ├── ISSUE_TEMPLATE/ 
-│   │   ├── bug_report.md 
-│   │   ├── feature_request.md 
-│   ├── PULL_REQUEST_TEMPLATE.md 
-│   └── workflows/ 
-│       ├── ci.yml 
-│       └── cd.yml 
-├── conf/ 
-│   ├── config.yaml 
-│   └── settings.json 
-├── docs/ 
-│   ├── api/ 
-│   ├── architecture/ 
-│   └── user_guide/ 
-├── jupyter/ 
-│   ├── notebooks/ 
-│   │   ├── exploration.ipynb 
-│   │   └── analysis.ipynb 
-│   └── datasets/ 
-│       ├── data1.csv 
-│       └── data2.csv 
-├── scripts/ 
-│   ├── setup.sh 
-│   ├── deploy.sh 
-│   └── test.sh 
-├── src/ 
-│   ├── main/ 
-│   │   ├── backend/   //BACKEND 
-│   │   │   ├── models.py 
-│   │   │   ├── auth.py 
-│   │   │   ├── database.db 
-│   │   │   ├── requirements.txt 
-│   │   │   ├── routes/ 
-│   │   │   |   ├── auth_route.py 
-│   │   └── frontend/       //FRONTEND 
-│   │       ├── login.html 
-│   │       └── dashboard.html 
-│   └── test/ 
-│       └── tests/          //PRUEBAS 
-│           └── test_auth.py 
-│   ├── temp_file.txt 
-│   └── temp_data/ 
-│       ├── temp1.tmp 
-│       └── temp2.tmp 
-├── .gitignore 
-├── README.md 
-├── LICENSE 
-├── requirements.txt 
-├── CHANGELOG.md 
-├── CONTRIBUTING.md 
-└── Makefile 
+# MedTrack — Estructura del Proyecto
+
+```
+MedTrack/
+├── conf/
+│   └── .gitkeep
+├── backend/                        // BACKEND
+│   ├── routes/
+│   │   ├── auth_route.py           // Endpoints de autenticación (signin, signup)
+│   │   └── patient_route.py        // Endpoints de registro y consulta de pacientes
+│   ├── _init_.py                   // Inicialización del módulo backend
+│   ├── auth.py                     // Lógica de encriptación de contraseñas y JWT
+│   ├── main.py                     // Punto de entrada de la aplicación FastAPI
+│   ├── models.py                   // Conexión a la base de datos e inicialización de tablas
+│   ├── seed.py                     // Script para crear usuario de prueba inicial
+│   ├── validaciones.py             // Validaciones y manejo de errores del registro de paciente
+│   ├── database.db                 // Base de datos SQLite
+│   └── requirements.txt            // Dependencias del backend
+├── frontend/                       // FRONTEND
+│   ├── login.html                  // Interfaz de inicio de sesión
+│   ├── dashboard.html              // Panel principal
+│   ├── patients.html               // Listado de pacientes
+│   └── RegistrarPaciente.html      // Formulario de registro de paciente
+├── tests/                          // PRUEBAS
+│   ├── test_auth.py                // Pruebas funcionales de autenticación
+│   └── test_paciente.py            // Pruebas funcionales de registro de paciente
+├── .gitignore
+├── BOILERPLATE.md                  // Estructura del proyecto
+├── LICENSE
+├── README.md
+└── requirements.txt                // Dependencias generales
 ```
 
 ## Instalación y Ejecución
 ### Requisitos
 - Git
 - Python 3.10+
-
 ---
 
 ### Clonar el repositorio
@@ -181,16 +156,18 @@ python -m pip install -r src/main/backend/requirements.txt
 
 
 ```bash
-cd src/main/backend
-pyton models.py
-pyton app.py
+cd backend
+python models.py
+uvicorn routes.auth_route:app --reload
+
 ```
 ## Ejecución de pruebas
 
 
 ```bash
-cd src/test/tests
+cd tests
 pytest test_auth.py
+pytest test_paciente.py
 ```
 
 ## 📌 Contexto académico
@@ -219,7 +196,7 @@ Institución: Pontificia Universidad Javeriana
    Diaz.afelipe@javeriana.edu.co
 11. Karol Torres
     Estudiante Ing. sistemas
-    torres_kdayan@javeriana.edu.co 
-
+    torres_kdayan@javeriana.edu.co
+    
 📄 Licencia
 Proyecto desarrollado con fines académicos.

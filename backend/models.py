@@ -61,7 +61,17 @@ def init_db():
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
         )
     """)
-
+# Tabla de recordatoriios
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS recordatorios (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            medicamento_id  INTEGER NOT NULL,
+            hora            TEXT    NOT NULL,
+            dias            TEXT    NOT NULL,
+            activo          INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
+        )
+    """)
     conn.commit()
     conn.close()
     print("Base de datos inicializada correctamente.")

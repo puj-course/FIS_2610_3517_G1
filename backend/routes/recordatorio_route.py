@@ -24,3 +24,11 @@ def consultar_recordatorios(paciente_id: int):
     cursor.execute(query)
     recordatorios = cursor.fetchall()
     conn.close()
+
+    #ahora miro que el paciente si existe antes de consultar
+    cursor.execute(f"SELECT id FROM pacientes WHERE id = {paciente_id}")
+    paciente = cursor.fetchone()
+
+    if not paciente:
+        conn.close()
+        return {"status": 404, "message": "Paciente no encontrado"}

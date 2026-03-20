@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<!-- Le dice al navegador que este es un archivo HTML5 -->
+<html lang="es">
+
+<head>
+  <!-- Define la codificación para que se vean bien los acentos y la ñ -->
+  <meta charset="UTF-8"/>
+
+  <!-- Hace que la página se vea bien en celulares y tablets -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!-- Título que aparece en la pestaña del navegador -->
+  <title>MedTrack — Recordatorios</title>
+
+  <!-- Bootstrap: librería que nos da estilos y componentes listos para usar -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+
+  <!-- Fuentes tipográficas del proyecto -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+
+    /*
+    Variables de colores del proyecto.
+    Se definen una vez aquí y se usan en todo el CSS con var(--nombre).
+    Así si queremos cambiar un color, solo lo cambiamos en un lugar.
+    */
+    :root {
+      --color-menta:        #2DD4BF; /* color principal verde azulado */
+      --color-menta-oscuro: #0F9D8A; /* menta más oscuro para hover */
+      --color-fondo:        #0F1B2D; /* fondo general de la página */
+      --color-campo:        #1E2D3D; /* fondo de los inputs y encabezado tabla */
+      --color-tarjeta:      #162030; /* fondo de la tarjeta principal */
+      --color-borde:        #243447; /* color de los bordes */
+      --color-texto:        #E2EAF4; /* texto principal */
+      --color-texto-suave:  #7A95B0; /* texto secundario */
+      --color-error:        #F4726A; /* rojo para errores */
+      --color-exito:        #4ADE80; /* verde para éxito */
+    }
+
+    /*
+    Hace que todos los elementos incluyan el borde y el padding
+    dentro de su tamaño. Evita que los elementos se salgan de lugar.
+    */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /*
+    Estilos del cuerpo de la página:
+    - Fondo oscuro
+    - Fuente del proyecto
+    - Padding para que no quede pegado a los bordes
+    - Dos degradados decorativos en las esquinas
+    */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    /*
+    Contenedor del encabezado superior.
+    Usa flexbox para poner el logo a la izquierda
+    y el botón a la derecha.
+    */
+    .encabezado-pagina {
+      max-width: 1100px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /*
+    Contenedor del logo: icono + nombre en fila
+    */
+    .marca { display: flex; align-items: center; gap: .6rem; }
+
+    /*
+    Cuadro verde donde va el icono
+    */
+    .marca-icono {
+      width: 36px; height: 36px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .marca-icono svg { width: 20px; height: 20px; color: var(--color-fondo); }
+
+    /*
+    Nombre "MedTrack" en la fuente serif del proyecto
+    */
+    .marca-nombre {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+      color: var(--color-texto);
+    }
+
+    /*
+    Botón verde para agregar nuevo recordatorio.
+    text-decoration:none porque es un enlace <a> pero queremos que
+    se vea como botón.
+    */
+    .boton-nuevo {
+      background: var(--color-menta);
+      color: var(--color-fondo);
+      border: none;
+      border-radius: 12px;
+      padding: .6rem 1.4rem;
+      font-size: .9rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: background .2s, box-shadow .2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    /* Cuando el mouse pasa encima se oscurece y aparece sombra */
+    .boton-nuevo:hover {
+      background: var(--color-menta-oscuro);
+      box-shadow: 0 8px 24px rgba(45,212,191,.3);
+      color: var(--color-fondo);
+    }
+
+    /*
+    Tarjeta principal que contiene la tabla.
+    Tiene fondo oscuro, bordes redondeados y sombra.
+    La animación "aparecer" hace que suba suavemente al cargar.
+    */
+    .tarjeta {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: aparecer .5s ease both;
+    }
+
+    /*
+    Animación: la tarjeta aparece subiendo desde abajo
+    */
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /*
+    Título "Recordatorios activos"
+    */
+    .titulo-seccion {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /*
+    Estilos de la tabla
+    */
+    .table { color: var(--color-texto); border-color: var(--color-borde); }
+
+    /*
+    Encabezado de la tabla: fondo oscuro, texto menta en mayúsculas
+    */
+    .table thead th {
+      background: var(--color-campo);
+      color: var(--color-menta);
+      border-color: var(--color-borde);
+      font-size: .82rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      font-weight: 500;
+      padding: .85rem 1rem;
+    }
+
+    /*
+    Filas de la tabla con efecto hover suave
+    */
+    .table tbody tr { border-color: var(--color-borde); transition: background .15s; }
+    .table tbody tr:hover { background: rgba(45,212,191,.05); }
+
+    /*
+    Celdas de la tabla
+    */
+    .table tbody td {
+      border-color: var(--color-borde);
+      padding: .85rem 1rem;
+      font-size: .9rem;
+      vertical-align: middle;
+    }
+
+    /*
+    Estilo cuando la tabla no tiene datos
+    */
+    .vacio {
+      text-align: center;
+      color: var(--color-texto-suave);
+      padding: 3rem !important;
+    }
+
+    /*
+    Caja roja que aparece cuando hay un error de conexión
+    */
+    .alerta-error {
+      background: rgba(244,114,106,.1);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: none; /* oculta por defecto, se muestra con JavaScript */
+    }
+
+    /*
+    Badges para mostrar el estado del recordatorio.
+    Verde si está activo, gris si está inactivo.
+    */
+    .badge-activo {
+      background: rgba(74,222,128,.15);
+      color: var(--color-exito);
+      border: 1px solid var(--color-exito);
+      border-radius: 20px;
+      padding: .2rem .7rem;
+      font-size: .78rem;
+      font-weight: 500;
+    }
+    .badge-inactivo {
+      background: rgba(122,149,176,.15);
+      color: var(--color-texto-suave);
+      border: 1px solid var(--color-texto-suave);
+      border-radius: 20px;
+      padding: .2rem .7rem;
+      font-size: .78rem;
+      font-weight: 500;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<!-- ── ENCABEZADO ─────────────────────────────────────────────────────── -->
+<div class="encabezado-pagina">
+
+  <!-- Logo y nombre de la app -->
+  <div class="marca">
+    <div class="marca-icono">
+      <!-- Icono SVG de alerta médica -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <!-- Botón que lleva al formulario para crear un nuevo recordatorio -->
+  <a href="recordatorios.html" class="boton-nuevo">+ Nuevo recordatorio</a>
+
+</div>
+
+<!-- ── TARJETA CON LA TABLA ───────────────────────────────────────────── -->
+<div class="tarjeta">
+
+  <h2 class="titulo-seccion">Recordatorios activos</h2>
+
+  <!-- Mensaje de error, oculto por defecto.
+       Se muestra si el backend no responde. -->
+  <div class="alerta-error" id="alerta-error"></div>
+
+  <!-- table-responsive hace que la tabla tenga scroll horizontal
+       en pantallas pequeñas en vez de romperse -->
+  <div class="table-responsive">
+
+    <table class="table">
+
+      <!-- Encabezado de la tabla con los nombres de las columnas -->
+      <thead>
+        <tr>
+          <th>Medicamento</th>
+          <th>Dosis</th>
+          <th>Hora</th>
+          <th>Días</th>
+          <th>Estado</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+
+      <!-- Cuerpo de la tabla.
+           Empieza con "Cargando..." y JavaScript lo reemplaza
+           con los datos reales del backend. -->
+      <tbody id="tabla-recordatorios">
+        <tr>
+          <td class="vacio" colspan="6">Cargando...</td>
+        </tr>
+      </tbody>
+
+    </table>
+  </div>
+</div>
+
+<!-- ── JAVASCRIPT ─────────────────────────────────────────────────────── -->
+<script>
+
+  /*
+  Obtenemos el token guardado cuando el usuario inició sesión.
+  Si no hay token, usamos "test" para poder ver la página sin backend.
+  En producción esto debería redirigir al login.
+  */
+  const token = localStorage.getItem("medtrack_token") || "test";
+
+  /*
+  Esta función le pide al backend la lista de recordatorios
+  y los muestra en la tabla.
+  Es "async" porque hace una petición a internet y hay que
+  esperar la respuesta antes de continuar.
+  */
+  async function cargarRecordatorios() {
+    try {
+
+      /*
+      fetch hace una petición HTTP GET al backend.
+      Le enviamos el token en el encabezado para que el backend
+      sepa quién está pidiendo los datos.
+      */
+      const respuesta = await fetch("http://localhost:8000/recordatorios", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      /*
+      Convertimos la respuesta a formato JSON para poder usarla
+      como un objeto de JavaScript normal.
+      */
+      const datos = await respuesta.json();
+
+      /*
+      Guardamos la referencia al tbody para poder modificarlo
+      */
+      const tbody = document.getElementById("tabla-recordatorios");
+
+      /*
+      Si el backend respondió con error (código 400, 401, 500, etc.)
+      mostramos el mensaje de error y paramos aquí.
+      */
+      if (!respuesta.ok) {
+        mostrarError("Error al cargar los recordatorios.");
+        tbody.innerHTML = "";
+        return;
+      }
+
+      /*
+      Si el backend respondió bien pero no hay recordatorios,
+      mostramos un mensaje informativo en la tabla.
+      */
+      if (datos.recordatorios.length === 0) {
+        tbody.innerHTML = `<tr><td class="vacio" colspan="6">No hay recordatorios registrados aún.</td></tr>`;
+        return;
+      }
+
+      /*
+      Si hay recordatorios, generamos una fila HTML por cada uno.
+      .map() recorre la lista y convierte cada recordatorio en una fila <tr>.
+      .join("") une todas las filas en un solo texto HTML.
+      El estado se muestra como un badge verde o gris según si está activo.
+      */
+      tbody.innerHTML = datos.recordatorios.map(r => `
+        <tr>
+          <td>${r.nombre_medicamento}</td>
+          <td>${r.dosis}</td>
+          <td>${r.hora}</td>
+          <td>${r.dias}</td>
+          <td>
+            <span class="${r.activo ? 'badge-activo' : 'badge-inactivo'}">
+              ${r.activo ? 'Activo' : 'Inactivo'}
+            </span>
+          </td>
+          <td>${r.observaciones || "—"}</td>
+        </tr>
+      `).join("");
+
+    } catch (err) {
+
+      /*
+      Si fetch falla completamente (sin conexión, servidor apagado, etc.)
+      caemos aquí y mostramos el error.
+      */
+      mostrarError("No se pudo conectar con el servidor.");
+    }
+  }
+
+  /*
+  Muestra el mensaje de error en la caja roja de arriba de la tabla.
+  */
+  function mostrarError(mensaje) {
+    const alerta = document.getElementById("alerta-error");
+    alerta.textContent = mensaje;
+    alerta.style.display = "block";
+  }
+
+  /*
+  Ejecutamos cargarRecordatorios() apenas carga la página.
+  */
+  cargarRecordatorios();
+
+</script>
+
+</body>
+</html>

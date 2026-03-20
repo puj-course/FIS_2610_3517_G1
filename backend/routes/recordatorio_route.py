@@ -32,3 +32,17 @@ def consultar_recordatorios(paciente_id: int):
     if not paciente:
         conn.close()
         return {"status": 404, "message": "Paciente no encontrado"}
+    
+    #ahora si no hay recordatorios retorna una lista sola
+    resultado = []
+    for r in recordatorios:
+        resultado.append({
+            "id": r["id"],
+            "medicamento_id": r["medicamento_id"],
+            "medicamento_nombre": r["medicamento_nombre"],
+            "hora": r["hora"],
+            "dias": r["dias"],
+            "activo": r["activo"]
+        })
+
+    return {"status": 200, "recordatorios": resultado}

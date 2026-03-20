@@ -13,6 +13,14 @@ def consultar_recordatorios(paciente_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
+    # Primero verificamos que el paciente existe
+    cursor.execute(f"SELECT id FROM pacientes WHERE id = {paciente_id}")
+    paciente = cursor.fetchone()
+
+    if not paciente:
+        conn.close()
+        return {"status": 404, "message": "Paciente no encontrado"}
+
     # Consulta los recordatorios activos del paciente haciendo JOIN con medicamentos
     # porque recordatorios no tiene paciente_id directo sino medicamento_id
     query = f"""
@@ -25,15 +33,7 @@ def consultar_recordatorios(paciente_id: int):
     recordatorios = cursor.fetchall()
     conn.close()
 
-    #ahora miro que el paciente si existe antes de consultar
-    cursor.execute(f"SELECT id FROM pacientes WHERE id = {paciente_id}")
-    paciente = cursor.fetchone()
-
-    if not paciente:
-        conn.close()
-        return {"status": 404, "message": "Paciente no encontrado"}
-    
-    #ahora si no hay recordatorios retorna una lista sola
+    # Si no hay recordatorios retorna lista vacía
     resultado = []
     for r in recordatorios:
         resultado.append({

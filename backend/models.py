@@ -82,7 +82,17 @@ def init_db():
     conn.close()
     print("Base de datos inicializada correctamente.")
 
-
+def get_recordatorios_activos(medicamento_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM recordatorios 
+        WHERE medicamento_id = ? AND activo = 1
+    """, (medicamento_id,))
+    recordatorios = cursor.fetchall()
+    conn.close()
+    return recordatorios
+    
 if __name__ == "__main__":
     init_db()
     # aumentara la implementacion

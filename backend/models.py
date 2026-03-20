@@ -61,7 +61,13 @@ def init_db():
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
         )
     """)
-# Tabla de recordatoriios
+    
+
+    # Tabla de recordatorios
+    # Campos: id, medicamento_id (FK), hora (HH:MM), dias (texto separado por comas), activo (0 o 1)
+    # Relacion: cada recordatorio pertenece a un medicamento registrado
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS recordatorios (
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS recordatorios (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,

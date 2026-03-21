@@ -92,7 +92,25 @@ def get_recordatorios_activos(medicamento_id):
     recordatorios = cursor.fetchall()
     conn.close()
     return recordatorios
-    
+
+    recordatorios = cursor.fetchall()
+    conn.close()
+    return recordatorios
+
+def insertar_recordatorio(medicamento_id, hora, dias, activo=1):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO recordatorios (medicamento_id, hora, dias, activo)
+        VALUES (?, ?, ?, ?)
+    """, (medicamento_id, hora, dias, activo))
+    conn.commit()
+    conn.close()
+
+if __name__ == "__main__":
+    init_db()
+    # aumentara la implementacion
+
 if __name__ == "__main__":
     init_db()
     # aumentara la implementacion

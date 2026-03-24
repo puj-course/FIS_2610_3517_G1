@@ -61,8 +61,10 @@ def init_db():
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
         )
     """)
+    
 
     # Tabla de recordatorios
+<<<<<<< HEAD
     # AUTOINCREMENT hace que el sistema de BD genere las id 
     cursor.execute("""
 	CREATE TABLE IF NOT EXISTS recordatorios (
@@ -74,12 +76,53 @@ def init_db():
 		observaciones TEXT,
 		FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
 	)
+=======
+    # Campos: id, medicamento_id (FK), hora (HH:MM), dias (texto separado por comas), activo (0 o 1)
+    # Relacion: cada recordatorio pertenece a un medicamento registrado
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS recordatorios (
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS recordatorios (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            medicamento_id  INTEGER NOT NULL,
+            hora            TEXT    NOT NULL,
+            dias            TEXT    NOT NULL,
+            activo          INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
+        )
+>>>>>>> 3601cb8e3928b08e5c9a4814f48d609fc4139234
     """)
     conn.commit()
     conn.close()
     print("Base de datos inicializada correctamente.")
 
+def get_recordatorios_activos(medicamento_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM recordatorios 
+        WHERE medicamento_id = ? AND activo = 1
+    """, (medicamento_id,))
+    recordatorios = cursor.fetchall()
+    conn.close()
+    return recordatorios
+
+    recordatorios = cursor.fetchall()
+    conn.close()
+    return recordatorios
+
+def insertar_recordatorio(medicamento_id, hora, dias, activo=1):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO recordatorios (medicamento_id, hora, dias, activo)
+        VALUES (?, ?, ?, ?)
+    """, (medicamento_id, hora, dias, activo))
+    conn.commit()
+    conn.close()
 
 if __name__ == "__main__":
     init_db()
     # aumentara la implementacion
+
+

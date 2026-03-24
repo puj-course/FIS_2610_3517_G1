@@ -204,3 +204,11 @@ def validar_recordatorio(data: dict) -> list:
 		except (ValueError, TypeError):
 			errores.append("El campo activo debe ser un número entero válido")
 	return errores
+
+	# Verificar la existencia del medicamento en la BD
+	# Devuelve True si existe, False si no
+def verificar_medicamento_existe(medicamento_id: int, conn) -> bool:
+	cursor = conn.cursor() # conn recibe la conexion a SQLite
+	cursor.execute("SELECT id FROM medicamentos WHERE id = ?", (medicamento_id,))
+	resultado = cursor.fetchone() # fetchone trae una sola fila
+	return resultado is not None

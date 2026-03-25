@@ -63,39 +63,7 @@
 
     .vista { animation: aparecer .35s ease both; }
     .vista.oculta { display: none; }
-  </style>
-</head>
-<body>
-<div class="contenedor">
 
-  <!-- Logo -->
-  <div class="marca">
-    <div class="marca-icono">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
-      </svg>
-    </div>
-    <span class="marca-nombre">MedTrack</span>
-  </div>
-
-  <!-- VISTA 1: Lista de pacientes -->
-  <div class="vista" id="vistaPacientes">
-    <h1 class="titulo">Pacientes</h1>
-    <p class="subtitulo">Selecciona un paciente para ver sus medicamentos.</p>
-    <div id="listaPacientes"></div>
-  </div>
-
-  <!-- VISTA 2: Medicamentos del paciente -->
-  <div class="vista oculta" id="vistaMedicamentos">
-    <div id="headerPaciente"></div>
-    <div id="listaMedicamentos"></div>
-  </div>
-
-</div>
-</body>
-</html>
-
-/* Tarjeta paciente */
     .paciente-card {
       background: var(--color-tarjeta);
       border: 1px solid var(--color-borde);
@@ -128,7 +96,6 @@
     .paciente-flecha { color: var(--color-texto-suave); flex-shrink: 0; }
     .paciente-flecha svg { width: 18px; height: 18px; }
 
-    /* Botón volver */
     .boton-volver {
       background: none;
       border: 1.5px solid var(--color-borde);
@@ -145,7 +112,6 @@
     .boton-volver:hover { border-color: var(--color-menta); color: var(--color-menta); }
     .boton-volver svg { width: 16px; height: 16px; }
 
-    /* Encabezado paciente seleccionado */
     .paciente-header {
       background: var(--color-tarjeta);
       border: 1px solid var(--color-borde);
@@ -157,7 +123,6 @@
     .paciente-header .paciente-avatar { width: 52px; height: 52px; font-size: 1.3rem; }
     .paciente-header .paciente-nombre { font-size: 1.05rem; }
 
-    /* Tarjeta medicamento */
     .med-card {
       background: var(--color-tarjeta);
       border: 1px solid var(--color-borde);
@@ -199,7 +164,21 @@
     .estado { text-align: center; padding: 3rem 1rem; color: var(--color-texto-suave); font-size: .92rem; }
     .estado svg { width: 40px; height: 40px; margin: 0 auto 1rem; display: block; opacity: .4; }
 
-    <body>
+    .alerta-error {
+      background: rgba(244,114,106,.12);
+      border: 1px solid rgba(244,114,106,.4);
+      color: var(--color-error);
+      border-radius: 10px;
+      padding: .7rem 1rem;
+      font-size: .85rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .alerta-error.visible { display: block; }
+  </style>
+</head>
+<body>
+
 <div class="contenedor">
 
   <!-- Logo -->
@@ -216,6 +195,7 @@
   <div class="vista" id="vistaPacientes">
     <h1 class="titulo">Pacientes</h1>
     <p class="subtitulo">Selecciona un paciente para ver sus medicamentos.</p>
+    <div class="alerta-error" id="alertaErrorPacientes"></div>
     <div id="listaPacientes"></div>
   </div>
 
@@ -227,144 +207,122 @@
       </svg>
       Volver a pacientes
     </button>
+    <div class="alerta-error" id="alertaErrorMedicamentos"></div>
     <div id="headerPaciente"></div>
     <div id="listaMedicamentos"></div>
   </div>
 
 </div>
-</body>
+
 <script>
-  /*
-    Datos de prueba que simulan lo que retornaría el backend.
-    Cuando el endpoint esté listo, se reemplaza por fetch().
-  */
-  const datosPrueba = [
-    {
-      id: 1,
-      nombres: 'Carlos',
-      apellidos: 'Rodríguez Pérez',
-      diagnostico_principal: 'Hipertensión arterial',
-      medicamentos: [
-        {
-          nombre: 'Losartán',
-          dosis: '50mg',
-          frecuencia: 'Cada 24 horas',
-          horario: '8:00 AM',
-          fecha_inicio: '01/15/2026',
-          observaciones: 'Tomar con abundante agua. Evitar alimentos con alto contenido de potasio.'
-        },
-        {
-          nombre: 'Amlodipino',
-          dosis: '5mg',
-          frecuencia: 'Cada 24 horas',
-          horario: '8:00 PM',
-          fecha_inicio: '01/15/2026',
-          observaciones: null
-        }
-      ]
-    },
-    {
-      id: 2,
-      nombres: 'María',
-      apellidos: 'González López',
-      diagnostico_principal: 'Diabetes tipo 2',
-      medicamentos: [
-        {
-          nombre: 'Metformina',
-          dosis: '850mg',
-          frecuencia: 'Cada 12 horas',
-          horario: '7:00 AM y 7:00 PM',
-          fecha_inicio: '02/01/2026',
-          observaciones: 'Tomar con las comidas para reducir efectos gastrointestinales.'
-        },
-        {
-          nombre: 'Glibenclamida',
-          dosis: '5mg',
-          frecuencia: 'Cada 24 horas',
-          horario: '7:00 AM',
-          fecha_inicio: '02/01/2026',
-          observaciones: null
-        },
-        {
-          nombre: 'Atorvastatina',
-          dosis: '20mg',
-          frecuencia: 'Cada 24 horas',
-          horario: '9:00 PM',
-          fecha_inicio: '02/10/2026',
-          observaciones: 'Preferiblemente en la noche.'
-        }
-      ]
-    },
-    {
-      id: 3,
-      nombres: 'Jorge',
-      apellidos: 'Martínez Soto',
-      diagnostico_principal: 'Asma bronquial',
-      medicamentos: []
-    }
-  ];
+  // URL base del backend
+  const BASE_URL = 'http://localhost:8000';
 
-  /* Renderiza la lista de pacientes en la vista 1 */
-  function renderizarPacientes() {
+  /* Carga los pacientes reales desde el backend al abrir la página */
+  async function cargarPacientes() {
     const lista = document.getElementById('listaPacientes');
-    let html = '';
+    lista.innerHTML = `<div class="estado">Cargando pacientes...</div>`;
 
-    datosPrueba.forEach(function(paciente) {
-      const inicial   = paciente.nombres.charAt(0).toUpperCase();
-      const cantMeds  = paciente.medicamentos.length;
-      const textoMeds = cantMeds === 1 ? '1 medicamento' : cantMeds + ' medicamentos';
+    try {
+      const respuesta = await fetch(BASE_URL + '/pacientes');
+      const datos = await respuesta.json();
 
-      html += `
-        <div class="paciente-card" onclick="verMedicamentos(${paciente.id})">
-          <div class="paciente-avatar">${inicial}</div>
-          <div class="paciente-info">
-            <p class="paciente-nombre">${paciente.nombres} ${paciente.apellidos}</p>
-            <p class="paciente-datos">${paciente.diagnostico_principal} · ${textoMeds}</p>
-          </div>
-          <div class="paciente-flecha">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
+      // Si no hay pacientes en la BD mostramos mensaje
+      if (!datos.length) {
+        lista.innerHTML = `
+          <div class="estado">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
+            No hay pacientes registrados aún.
           </div>
-        </div>
-      `;
-    });
+        `;
+        return;
+      }
 
-    lista.innerHTML = html;
+      // Renderizamos cada paciente como tarjeta clickeable
+      let html = '';
+      datos.forEach(function(paciente) {
+        const inicial = paciente.nombres.charAt(0).toUpperCase();
+        html += `
+          <div class="paciente-card" onclick="verMedicamentos(${paciente.id}, '${paciente.nombres}', '${paciente.apellidos}', '${paciente.diagnostico_principal || ''}')">
+            <div class="paciente-avatar">${inicial}</div>
+            <div class="paciente-info">
+              <p class="paciente-nombre">${paciente.nombres} ${paciente.apellidos}</p>
+              <p class="paciente-datos">${paciente.diagnostico_principal || 'Sin diagnóstico registrado'}</p>
+            </div>
+            <div class="paciente-flecha">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          </div>
+        `;
+      });
+      lista.innerHTML = html;
+
+    } catch (error) {
+      // Si el backend no responde mostramos error
+      document.getElementById('alertaErrorPacientes').textContent = 'No se pudo conectar al servidor. ¿Está corriendo el backend?';
+      document.getElementById('alertaErrorPacientes').classList.add('visible');
+      lista.innerHTML = '';
+    }
   }
 
-  /* Al hacer click en un paciente, muestra sus medicamentos */
-  function verMedicamentos(pacienteId) {
-    const paciente = datosPrueba.find(function(p) { return p.id === pacienteId; });
-    if (!paciente) return;
+  /* Al hacer click en un paciente consulta sus medicamentos reales */
+  async function verMedicamentos(pacienteId, nombres, apellidos, diagnostico) {
+    const contenedor = document.getElementById('listaMedicamentos');
+    const alerta = document.getElementById('alertaErrorMedicamentos');
+    alerta.classList.remove('visible');
 
-    const inicial = paciente.nombres.charAt(0).toUpperCase();
+    // Mostramos encabezado del paciente seleccionado
+    const inicial = nombres.charAt(0).toUpperCase();
     document.getElementById('headerPaciente').innerHTML = `
       <div class="paciente-header">
         <div class="paciente-avatar">${inicial}</div>
         <div class="paciente-info">
-          <p class="paciente-nombre">${paciente.nombres} ${paciente.apellidos}</p>
-          <p class="paciente-datos">${paciente.diagnostico_principal}</p>
+          <p class="paciente-nombre">${nombres} ${apellidos}</p>
+          <p class="paciente-datos">${diagnostico || 'Sin diagnóstico registrado'}</p>
         </div>
       </div>
     `;
 
-    const contenedor = document.getElementById('listaMedicamentos');
+    // Cambiamos a la vista de medicamentos
+    document.getElementById('vistaPacientes').classList.add('oculta');
+    document.getElementById('vistaMedicamentos').classList.remove('oculta');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    if (!paciente.medicamentos.length) {
-      contenedor.innerHTML = `
-        <div class="estado">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          Este paciente no tiene medicamentos registrados aún.
-        </div>
-      `;
-    } else {
-      const cant = paciente.medicamentos.length;
-      let html = `<div class="contador">Se encontraron <span>${cant}</span> medicamento(s) registrado(s).</div>`;
+    contenedor.innerHTML = `<div class="estado">Cargando medicamentos...</div>`;
 
-      paciente.medicamentos.forEach(function(med) {
+    try {
+      const respuesta = await fetch(BASE_URL + '/medicamentos/' + pacienteId);
+
+      // Si el paciente no existe retorna 404
+      if (respuesta.status === 404) {
+        alerta.textContent = 'No se encontró el paciente en la base de datos.';
+        alerta.classList.add('visible');
+        contenedor.innerHTML = '';
+        return;
+      }
+
+      const datos = await respuesta.json();
+
+      // Si no tiene medicamentos mostramos mensaje
+      if (!datos.length) {
+        contenedor.innerHTML = `
+          <div class="estado">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Este paciente no tiene medicamentos registrados aún.
+          </div>
+        `;
+        return;
+      }
+
+      // Renderizamos los medicamentos reales
+      let html = `<div class="contador">Se encontraron <span>${datos.length}</span> medicamento(s) registrado(s).</div>`;
+      datos.forEach(function(med) {
         html += `
           <div class="med-card">
             <div class="med-header">
@@ -400,13 +358,14 @@
           </div>
         `;
       });
-
       contenedor.innerHTML = html;
-    }
 
-    document.getElementById('vistaPacientes').classList.add('oculta');
-    document.getElementById('vistaMedicamentos').classList.remove('oculta');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      // Si el backend no responde mostramos error
+      alerta.textContent = 'No se pudo conectar al servidor. ¿Está corriendo el backend?';
+      alerta.classList.add('visible');
+      contenedor.innerHTML = '';
+    }
   }
 
   /* Vuelve a la lista de pacientes */
@@ -416,6 +375,9 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Inicializamos
-  renderizarPacientes();
+  // Cargamos los pacientes al abrir la página
+  cargarPacientes();
 </script>
+
+</body>
+</html>

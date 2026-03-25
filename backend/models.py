@@ -61,22 +61,21 @@ def init_db():
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
         )
     """)
-    
+
 
     # Tabla de recordatorios
-    # Campos: id, medicamento_id (FK), hora (HH:MM), dias (texto separado por comas), activo (0 o 1)
-    # Relacion: cada recordatorio pertenece a un medicamento registrado
+
+    # AUTOINCREMENT hace que el sistema de BD genere las id 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS recordatorios (
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS recordatorios (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            medicamento_id  INTEGER NOT NULL,
-            hora            TEXT    NOT NULL,
-            dias            TEXT    NOT NULL,
-            activo          INTEGER NOT NULL DEFAULT 1,
-            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
-        )
+	CREATE TABLE IF NOT EXISTS recordatorios (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		medicamento_id INTEGER NOT NULL,
+		hora_recordatorio TEXT NOT NULL,
+		fecha_inicio TEXT NOT NULL,
+		activo INTEGER NOT NULL DEFAULT 1,
+		observaciones TEXT,
+		FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
+	)
     """)
     conn.commit()
     conn.close()
@@ -111,6 +110,4 @@ if __name__ == "__main__":
     init_db()
     # aumentara la implementacion
 
-if __name__ == "__main__":
-    init_db()
-    # aumentara la implementacion
+

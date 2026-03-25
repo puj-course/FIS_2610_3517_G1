@@ -297,7 +297,7 @@
     try {
       const respuesta = await fetch(BASE_URL + '/medicamentos/' + pacienteId);
 
-      // Si el paciente no existe retorna 404
+      // Si el paciente no existe retorna error
       if (respuesta.status === 404) {
         alerta.textContent = 'No se encontró el paciente en la base de datos.';
         alerta.classList.add('visible');
@@ -320,7 +320,7 @@
         return;
       }
 
-      // Renderizamos los medicamentos reales
+      // ver  los medicamentos reales
       let html = `<div class="contador">Se encontraron <span>${datos.length}</span> medicamento(s) registrado(s).</div>`;
       datos.forEach(function(med) {
         html += `
@@ -361,14 +361,14 @@
       contenedor.innerHTML = html;
 
     } catch (error) {
-      // Si el backend no responde mostramos error
+      // Si backend no responde es un error
       alerta.textContent = 'No se pudo conectar al servidor. ¿Está corriendo el backend?';
       alerta.classList.add('visible');
       contenedor.innerHTML = '';
     }
   }
 
-  /* Vuelve a la lista de pacientes */
+  //Vuelve a la lista de pacientes 
   function volverAPacientes() {
     document.getElementById('vistaMedicamentos').classList.add('oculta');
     document.getElementById('vistaPacientes').classList.remove('oculta');

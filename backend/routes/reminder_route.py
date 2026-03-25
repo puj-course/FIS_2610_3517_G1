@@ -45,7 +45,7 @@ def insertar_recordatorio(data: dict) -> int:
 	finally:
 		conn.close()
 
-# Endpoint POST recordatoios
+# Endpoint POST recordatorios
 @router.post("/")
 def crear_recordatorio(data: dict):
     errores = validar_recordatorio(data)

@@ -10,7 +10,7 @@ from backend.validaciones import validar_paciente, verificar_duplicado
 router = APIRouter() #Creación del router
 
 # Definición del router y FastAPI ejecuta la función registrar_pacientes
-# @router.post("/pacientes", status_code=status.HTTP_201_CREATED)
+@router.post("/pacientes", status_code=status.HTTP_201_CREATED)
 def registrar_paciente(data: dict): # El cuerpo de la petición debe llegar como un diccionario de python
     # Se revisan errores llamando a validar_paciente
     errores = validar_paciente(data)

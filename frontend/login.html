@@ -432,30 +432,41 @@
 
     try {
       /*
-        Enviamos el correo y la contraseña al backend Flask.
-        Usamos fetch para hacer la peticion sin recargar la página.
+      Enviamos el correo y la contraseña al backend FastAPI.
+      El endpoint es POST /signin en el puerto 8000.
       */
-      const respuesta = await fetch('http://localhost:5000/api/login', {
+      const respuesta = await fetch('http://localhost:8000/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          correo:     campoCorreo.value.trim(),
-          contrasena: campoContrasena.value
+          username: campoCorreo.value.trim(),
+          password: campoContrasena.value
         })
       });
 
+      /*
+      Convertimos la respuesta a JSON para poder usarla
+      */
       const datos = await respuesta.json();
 
       if (!respuesta.ok) {
-        // El servidor respondió con error
-        alertaLogin.textContent = datos.error;
+        /*
+        El servidor respondió con error, mostramos el mensaje
+        que viene en datos.detail
+        */
+        alertaLogin.textContent = datos.detail;
         alertaLogin.classList.add('visible');
         return;
       }
 
-      // Todo salió bien: guardamos el nombre del usuario y vamos al inicio
-      sessionStorage.setItem('usuario', JSON.stringify(datos.usuario));
-      window.location.href = 'registro_paciente.html';
+      /*
+      Todo salió bien: guardamos el token y los datos del usuario
+      en localStorage para que las otras páginas los puedan usar.
+      Luego redirigimos al dashboard.
+      */
+      localStorage.setItem('medtrack_token',   datos.token);
+      localStorage.setItem('medtrack_usuario', JSON.stringify(datos.usuario));
+      window.location.href = 'dashboard.html';
 
     } catch (error) {
       // Esto pasa si el servidor no está corriendo o hay problema de red

@@ -36,6 +36,22 @@
         localStorage.removeItem("medtrack_usuario");
         window.location.href = "login.html";
     }
+
+ //Servicio HTTP: obtener lista de pacientes
+    async function obtenerPacientes() {
+        const response = await fetch("http://localhost:8000/pacientes", {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: no se pudo obtener la lista de pacientes`);
+        }
+
+        return await response.json();
+    }
 </script>
 
 </body>

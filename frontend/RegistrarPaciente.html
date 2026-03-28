@@ -199,6 +199,7 @@
       font-size: .78rem;
       color: var(--color-error);
       margin-top: .3rem;
+      display: none;
     }
 
     /*
@@ -362,9 +363,9 @@
         </label>
         <select class="form-select" id="genero" name="genero" required>
           <option value="" disabled selected>Selecciona…</option>
-          <option value="femenino">Femenino</option>
-          <option value="masculino">Masculino</option>
-          <option value="otro">Otro</option>
+          <option value="Femenino">Femenino</option>
+          <option value="Masculino">Masculino</option>
+          <option value="Otro">Otro</option>
           <option value="no_especifica">Prefiero no decirlo</option>
         </select>
         <div class="mensaje-error" id="errorGenero">Selecciona una opción.</div>
@@ -377,8 +378,8 @@
         </label>
         <select class="form-select" id="tipoDocumento" name="tipo_documento" required>
           <option value="" disabled selected>Selecciona…</option>
-          <option value="cc">Cédula de ciudadanía</option>
-          <option value="ti">Tarjeta de identidad</option>
+          <option value="CC">Cédula de ciudadanía</option>
+          <option value="TI">Tarjeta de identidad</option>
           <option value="pasaporte">Pasaporte</option>
           <option value="ce">Cédula de extranjería</option>
           <option value="rc">Registro civil</option>
@@ -407,7 +408,7 @@
       <!-- Telefono -->
       <div class="col-md-6">
         <label class="etiqueta-campo" for="telefono">Teléfono de contacto</label>
-        <input type="tel" class="form-control" id="telefono" name="telefono"
+        <input type="tel" class="form-control" id="telefono" name="telefono_contacto"
                placeholder="Ej. 3001234567" maxlength="15" inputmode="tel"
                pattern="[0-9+\-\s()]{7,15}"/>
         <div class="mensaje-error" id="errorTelefono">Ingresa un teléfono válido (mínimo 7 dígitos).</div>
@@ -416,14 +417,14 @@
       <!-- EPS -->
       <div class="col-md-6">
         <label class="etiqueta-campo" for="eps">EPS / Aseguradora</label>
-        <input type="text" class="form-control" id="eps" name="eps"
+        <input type="text" class="form-control" id="eps" name="eps_aseguradora"
                placeholder="Ej. Sura, Sanitas…" maxlength="60"/>
       </div>
 
       <!-- Diagnostico -->
       <div class="col-12">
         <label class="etiqueta-campo" for="diagnostico">Diagnóstico principal</label>
-        <input type="text" class="form-control" id="diagnostico" name="diagnostico"
+        <input type="text" class="form-control" id="diagnostico" name="diagnostico_principal"
                placeholder="Ej. Hipertensión arterial" maxlength="120"/>
       </div>
 
@@ -639,37 +640,49 @@
       FormData recoge automáticamente todos los campos con su "name"
       Object.fromEntries lo convierte a un objeto normal 
     */
-    const datosPaciente = Object.fromEntries(new FormData(this).entries());
+    const botonGuardar = document.getElementById('botonGuardar');
+  botonGuardar.disabled = true;
+  botonGuardar.textContent = 'Guardando...';
+  const datosPaciente = Object.fromEntries(new FormData(this).entries());
 
-    /*
-      Aquí es donde se conecta con Flask.
-      Por ahora mostramos los datos en consola.
-    */
-    console.log('Datos del paciente a guardar:', datosPaciente);
-
-    // Notificación de éxito
-    mostrarNotificacion(`Paciente "${datosPaciente.nombres} ${datosPaciente.apellidos}" registrado correctamente.`);
-
-    // Limpiamos el formulario después de guardar
-    this.reset();
-    todosCampos.forEach(function (campo) {
-      campo.classList.remove('campo-valido', 'campo-invalido');
-    });
-    contadorObservaciones.textContent = '0';
+  // Convertir fecha de yyyy-mm-dd a mm/dd/yyyy que espera el backend
+  if (datosPaciente.fecha_nacimiento) {
+    const partes = datosPaciente.fecha_nacimiento.split('-');
+    datosPaciente.fecha_nacimiento = `${partes[1]}/${partes[2]}/${partes[0]}`;
+  }
+  fetch('http://localhost:8000/pacientes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datosPaciente)
+  })
+  .then(function(r) {
+    return r.json().then(function(b) { return { ok: r.ok, body: b }; });
+  })
+  .then(function(resultado) {
+    if (!resultado.ok) {
+      const mensajes = Array.isArray(resultado.body.detail)
+        ? resultado.body.detail.join(' | ')
+        : resultado.body.detail;
+      mostrarNotificacion(mensajes, 'error');
+    } else {
+      mostrarNotificacion(`Paciente "${datosPaciente.nombres} ${datosPaciente.apellidos}" registrado correctamente.`);
+      formulario.reset();
+      todosCampos.forEach(function(c) {
+        c.classList.remove('campo-valido', 'campo-invalido');
+      });
+      contadorObservaciones.textContent = '0';
+    }
+  })
+  .catch(function() {
+    mostrarNotificacion('Error de conexión con el servidor.', 'error');
+  })
+  .finally(function() {
+    botonGuardar.disabled = false;
+    botonGuardar.textContent = 'Guardar paciente';
   });
 
-  /*
-    boton de limpiar
-    Resetea el formulario a su estado inicial:
-    borra todos los valores y quita los colores de validación
-  */
-  document.getElementById('botonLimpiar').addEventListener('click', function () {
-    formulario.reset();
-    formulario.querySelectorAll('.form-control, .form-select').forEach(function (campo) {
-      campo.classList.remove('campo-valido', 'campo-invalido');
-    });
-    contadorObservaciones.textContent = '0';
   });
+
 </script>
 
 </body>

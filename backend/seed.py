@@ -1,5 +1,9 @@
-# backend/seed.py  ← correr una sola vez para crear usuario de prueba
-from models import get_connection, init_db
+# backend/seed.py - correr una sola vez para crear usuario de prueba
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from backend.models import get_connection, init_db
 from backend.auth import hash_password
 
 init_db()
@@ -12,10 +16,10 @@ try:
         INSERT INTO usuarios (nombre, correo, contrasena, rol)
         VALUES (?, ?, ?, ?)
     """, (
-        "Admin Prueba",
-        "admin@medtrack.com",
-        encriptar_contrasena("admin123"),
-        "administrador"
+        "Sofia",
+        "sofia@medtrack.com",
+        hash_password("admin123"),
+        "cuidador"
     ))
     conn.commit()
     print("Usuario de prueba creado.")

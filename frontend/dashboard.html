@@ -70,6 +70,33 @@
         }
     }
 
+    //  Renderizar lista de pacientes con datos reales
+    function renderizarListaPacientes(pacientes) {
+    const contenedor = document.getElementById("lista-pacientes");
+    contenedor.innerHTML = "";
+
+    pacientes.forEach(paciente => {
+        const tarjeta = document.createElement("div");
+        tarjeta.classList.add("card", "mb-3");
+        tarjeta.innerHTML = `
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-1">${paciente.nombres} ${paciente.apellidos}</h5>
+                    <p class="card-text text-muted mb-0">
+                        Documento: ${paciente.tipo_documento} ${paciente.numero_documento}
+                        &nbsp;|&nbsp;
+                        Diagnóstico: ${paciente.diagnostico_principal || "Sin diagnóstico registrado"}
+                    </p>
+                </div>
+                <a href="patients.html?id=${paciente.id}" class="btn btn-primary btn-sm">
+                    Ver detalle
+                </a>
+            </div>
+        `;
+        contenedor.appendChild(tarjeta);
+    });
+}
+
     // Se ejecuta automáticamente al cargar la página
     document.addEventListener("DOMContentLoaded", cargarPacientes);
 </script>

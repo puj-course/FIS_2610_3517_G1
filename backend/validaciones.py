@@ -112,8 +112,8 @@ def validar_formato_medicamento(data: dict) -> list:
 
 # Lógica de creación de esquema de validación de medicamentos (HU'09)
 def validar_medicamento(data: dict) -> list:
-    errores = []
-    campos_obligatorios = {
+    errores = [] # Si en la data pasada por parámetro no hay errores, devuelve  [], de lo contrario devuelve la lista con los errores
+    campos_obligatorios = { # campos_obligatorios es un diccionario en el que est'an definidos los campos que no pueden faltar
         "nombre": "El nombre del medicamento es obligatorio",
         "dosis": "La dosis es obligatoria",
         "frecuencia": "La frecuencia es obligatoria",
@@ -122,14 +122,14 @@ def validar_medicamento(data: dict) -> list:
         "paciente_id": "El paciente_id es obligatorio"
     }
     for campo, mensaje in campos_obligatorios.items():
-        valor = data.get(campo, "")
-        if valor is None or str(valor).strip() == "":
+        valor = data.get(campo, "") # Busca el valor del campo en el JSON y si no existe, devuelve ""
+        if valor is None or str(valor).strip() == "": # str(valor).strip() == "" sirve para detectar: vacío, espacios o None
             errores.append(mensaje)
     if errores:
         return errores
     try:
-        paciente_id = int(data["paciente_id"])
-        if paciente_id <= 0:
+        paciente_id = int(data["paciente_id"]) # int(data["paciente_id"]) convierte el paciente_id a entero. Si falla, significa que llegó mal.
+        if paciente_id <= 0: # Evita errores con id's de pacientes que sean cero o negativos (no válidos)
             errores.append("El paciente_id debe ser un número mayor que 0")
     except (ValueError, TypeError):
         errores.append("El paciente_id debe ser un número entero válido")
@@ -138,7 +138,7 @@ def validar_medicamento(data: dict) -> list:
 def verificar_paciente_existe(paciente_id: int, conn) -> bool:
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))
-    return cursor.fetchone() is not None
+    return cursor.fetchone() is not None # Devuelve true o false dependiendo si el paciente existe en la database
 #
 def verificar_medicamento_duplicado(nombre: str, paciente_id: int, conn) -> bool:
     cursor = conn.cursor()

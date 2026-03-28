@@ -29,14 +29,15 @@ def verify_password_hash(password, reference_hash):
     return hash_password(password) == reference_hash
 
 # Funcion que crea un payload y lo firma
-def generate_jwt():
+def generate_jwt(user_id, correo, rol):
     payload = {
-        'iss': 'PLACEHOLDER',  # para identificar el sistema emisor
-        'sub': 'PLACEHOLDER',  # un token representa un usuario
-        'iat': int((datetime.now(timezone.utc)).timestamp()),  # momento de emisión
-        'exp': int((datetime.now(timezone.utc) + timedelta(hours=0.5)).timestamp()),  # momento de expiración
+        'iss': 'MedTrack',
+        'sub': correo,        # identifica al usuario
+        'id':  user_id,       # id del usuario
+        'rol': rol,           # rol del usuario
+        'iat': int((datetime.now(timezone.utc)).timestamp()),
+        'exp': int((datetime.now(timezone.utc) + timedelta(hours=8)).timestamp()),
     }
-    # Si alguien modifica el payload, la firma deja de ser válida
     encoded_jwt = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 

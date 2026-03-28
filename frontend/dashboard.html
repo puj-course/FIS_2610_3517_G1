@@ -52,7 +52,28 @@
 
         return await response.json();
     }
+     // HU-I03.2 — Gestión de estado y carga de pacientes
+    async function cargarPacientes() {
+        document.getElementById("estado-carga").style.display = "block";
+        document.getElementById("estado-error").style.display = "none";
+        document.getElementById("lista-pacientes").style.display = "none";
+
+        try {
+            const pacientes = await obtenerPacientes();
+            document.getElementById("estado-carga").style.display = "none";
+            document.getElementById("lista-pacientes").style.display = "block";
+            renderizarListaPacientes(pacientes);
+        } catch (error) {
+            document.getElementById("estado-carga").style.display = "none";
+            document.getElementById("mensaje-error").textContent = error.message;
+            document.getElementById("estado-error").style.display = "block";
+        }
+    }
+
+    // Se ejecuta automáticamente al cargar la página
+    document.addEventListener("DOMContentLoaded", cargarPacientes);
 </script>
 
 </body>
 </html>
+

@@ -32,11 +32,11 @@ def verify_password_hash(password, reference_hash):
 def generate_jwt(user_id, correo, rol):
     payload = {
         'iss': 'MedTrack',
-        'sub': str(user_id),
-        'correo': correo,
+        'sub': correo,
+        'id':  user_id,
         'rol': rol,
         'iat': int((datetime.now(timezone.utc)).timestamp()),
-        'exp': int((datetime.now(timezone.utc) + timedelta(hours=0.5)).timestamp()),
+        'exp': int((datetime.now(timezone.utc) + timedelta(hours=8)).timestamp()),
     }
     encoded_jwt = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

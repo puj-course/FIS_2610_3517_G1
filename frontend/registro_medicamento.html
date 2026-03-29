@@ -463,6 +463,7 @@
   var inputHora = document.getElementById('inputHora');
   var seccionDias = document.getElementById('seccionDias');
   var botonGuardar = document.getElementById('botonGuardar');
+  var textoOriginalBoton = botonGuardar.innerHTML;
   var alertaError = document.getElementById('alertaError');
 
   // Listas donde guardamos los horarios y dias que el usuario agrega
@@ -664,80 +665,84 @@ async function cargarPacientes() {
       elemento.addEventListener('change', function() { validarCampo(elemento, idError); });
     })(camposObligatorios[m][0], camposObligatorios[m][1]);
   }
+  // Convertiir fecha para que coincida con el formato del backend
+  // Si el input trae 2026-03-28 la funcion lo convierte a 03/28/2026
+  function convertirFechaAFormatoBackend(fechaISO) {
+  if (!fechaISO) return "";
 
+  var partes = fechaISO.split("-");
+  if (partes.length !== 3) return fechaISO;
 
-  // Cuando el usuario hace clic en guardar
-  document.getElementById('formulario').addEventListener('submit', function(evento) {
-    evento.preventDefault(); // evitamos que la pagina se recargue
-    alertaError.classList.remove('visible');
+  return partes[1] + "/" + partes[2] + "/" + partes[0];
+  }
 
-    // Validamos todos los campos obligatorios
-    var formularioValido = true;
-    for (var n = 0; n < camposObligatorios.length; n++) {
-      var campo = document.getElementById(camposObligatorios[n][0]);
-      if (!validarCampo(campo, camposObligatorios[n][1])) {
-        formularioValido = false;
-      }
-    }
+//
 
-    // Verificamos que haya al menos un horario agregado
-    if (listaHorarios.length === 0) {
-      cajaHorarios.classList.add('error');
-      document.getElementById('error-horarios').classList.add('visible');
+// Cuando el usuario hace clic en guardar
+document.getElementById('formulario').addEventListener('submit', async function(evento) {
+  evento.preventDefault();
+  alertaError.classList.remove('visible');
+  alertaError.textContent = '';
+
+  // Validamos todos los campos obligatorios
+  var formularioValido = true;
+  for (var n = 0; n < camposObligatorios.length; n++) {
+    var campo = document.getElementById(camposObligatorios[n][0]);
+    if (!validarCampo(campo, camposObligatorios[n][1])) {
       formularioValido = false;
     }
+  }
 
-    // Verificamos que la fecha de fin no sea anterior a la de inicio
-    var fechaInicio = document.getElementById('fechaInicio').value;
-    var campoFechaFin = document.getElementById('fechaFin');
-    campoFechaFin.classList.remove('error', 'correcto');
-    if (campoFechaFin.value && campoFechaFin.value < fechaInicio) {
-      campoFechaFin.classList.add('error');
-      document.getElementById('error-fechaFin').classList.add('visible');
-      formularioValido = false;
+  // Verificamos que haya al menos un horario agregado
+  if (listaHorarios.length === 0) {
+    cajaHorarios.classList.add('error');
+    document.getElementById('error-horarios').classList.add('visible');
+    formularioValido = false;
+  }
+
+  // Verificamos que la fecha de fin no sea anterior a la de inicio
+  var fechaInicio = document.getElementById('fechaInicio').value;
+  var campoFechaFin = document.getElementById('fechaFin');
+  campoFechaFin.classList.remove('error', 'correcto');
+
+  if (campoFechaFin.value && campoFechaFin.value < fechaInicio) {
+    campoFechaFin.classList.add('error');
+    document.getElementById('error-fechaFin').classList.add('visible');
+    formularioValido = false;
+  }
+
+  // Si la seccion de dias esta visible, debe tener al menos un dia seleccionado
+  if (seccionDias.style.display !== 'none' && listaDias.length === 0) {
+    document.getElementById('error-dias').classList.add('visible');
+    formularioValido = false;
+  }
+
+  // Si algo fallo, avisamos y hacemos scroll al primer campo con error
+  if (!formularioValido) {
+    mostrarNotificacion('Revisa los campos marcados en rojo.', true);
+    var primerError = formulario.querySelector('.error');
+    if (primerError) {
+      primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    return;
+  }
 
-    // Si la seccion de dias esta visible, debe tener al menos un dia seleccionado
-    if (seccionDias.style.display !== 'none' && listaDias.length === 0) {
-      document.getElementById('error-dias').classList.add('visible');
-      formularioValido = false;
-    }
+  // Construimos un payload compatible con el backend
+  var frecuenciaSelect = document.getElementById('frecuencia');
+  var frecuenciaTexto = frecuenciaSelect.options[frecuenciaSelect.selectedIndex].text;
 
-    // Si algo fallo, avisamos y hacemos scroll al primer campo con error
-    if (!formularioValido) {
-      mostrarNotificacion('Revisa los campos marcados en rojo.', true);
-      var primerError = formulario.querySelector('.error');
-      if (primerError) {
-        primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      return;
-    }
+  var payload = {
+    nombre: document.getElementById('nombre').value.trim(),
+    dosis: document.getElementById('dosis').value + ' ' + document.getElementById('unidad').value,
+    frecuencia: frecuenciaTexto,
+    horario: listaHorarios.join(', '),
+    fecha_inicio: convertirFechaAFormatoBackend(fechaInicio),
+    observaciones: document.getElementById('instrucciones').value.trim(),
+    paciente_id: parseInt(document.getElementById('paciente').value)
+  };
 
-    // Armamos el objeto con todos los datos del formulario
-    var datos = {
-      nombre_medicamento: document.getElementById('nombre').value.trim(),
-      concentracion:      document.getElementById('concentracion').value.trim(),
-      forma_farmaceutica: document.getElementById('forma').value,
-      dosis_cantidad:     parseFloat(document.getElementById('dosis').value),
-      dosis_unidad:       document.getElementById('unidad').value,
-      frecuencia:         document.getElementById('frecuencia').value,
-      relacion_comida:    document.getElementById('comida').value,
-      horarios:           listaHorarios,
-      dias:               listaDias,
-      fecha_inicio:       fechaInicio,
-      fecha_fin:          campoFechaFin.value || null,
-      paciente_id:        parseInt(document.getElementById('paciente').value),
-      via_administracion: document.getElementById('via').value,
-      medico_receto:      document.getElementById('medico').value.trim(),
-      instrucciones:      document.getElementById('instrucciones').value.trim()
-    };
+  console.log('Payload a enviar:', payload);
 
-    // Mostramos los datos en consola para verificar
-    console.log('Datos a guardar:', datos);
-
-
-  
-  // Buscamos el texto del paciente seleccionado en el select
   var selectorPaciente = document.getElementById('paciente');
   var nombrePaciente = 'el paciente';
 
@@ -745,13 +750,50 @@ async function cargarPacientes() {
     nombrePaciente = selectorPaciente.options[selectorPaciente.selectedIndex].text;
   }
 
-  mostrarNotificacion('"' + datos.nombre_medicamento + '" registrado para ' + nombrePaciente + '.', false);
-  limpiarFormulario();
+  try {
+    botonGuardar.disabled = true;
+    botonGuardar.textContent = 'Guardando...';
+
+    const respuesta = await fetch(`${BASE_URL}/medicamentos/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const resultado = await respuesta.json().catch(() => ({}));
+
+    if (!respuesta.ok) {
+      var mensajeError = 'No se pudo registrar el medicamento.';
+
+      if (Array.isArray(resultado.detail)) {
+        mensajeError = resultado.detail.join(' ');
+      } else if (typeof resultado.detail === 'string') {
+        mensajeError = resultado.detail;
+      }
+
+      throw new Error(mensajeError);
+    }
+
+    mostrarNotificacion('"' + payload.nombre + '" registrado para ' + nombrePaciente + '.', false);
+    limpiarFormulario();
+
+  } catch (error) {
+    console.error('Error al registrar medicamento:', error);
+    alertaError.textContent = error.message || 'Ocurrio un error al registrar el medicamento.';
+    alertaError.classList.add('visible');
+    mostrarNotificacion(alertaError.textContent, true);
+
+  } finally {
+    botonGuardar.disabled = false;
+    botonGuardar.innerHTML = textoOriginalBoton;
+  }
 });
 
-
-function limpiarFormulario() {
-  formulario.reset();
+//
+  function limpiarFormulario() {
+   formulario.reset();
 
   // Quitamos los colores de validacion de todos los campos
   var todosCampos = formulario.querySelectorAll('.form-control, .form-select');

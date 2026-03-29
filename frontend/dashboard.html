@@ -18,6 +18,23 @@
 <div class="container mt-5">
     <h2>Bienvenido/a al dashboard</h2>
     <p class="text-muted">Aquí irá el contenido principal de MedTrack.</p>
+
+<div id="estado-carga" class="text-center mt-4">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Cargando pacientes...</p>
+</div>
+
+<div id="estado-error" class="alert alert-danger mt-4" style="display:none">
+        <p id="mensaje-error" class="mb-2"></p>
+        <button class="btn btn-sm btn-danger" onclick="cargarPacientes()">Reintentar</button>
+ </div>
+
+    <div id="lista-pacientes" style="display:none"></div>
+
+    <div id="estado-vacio" class="text-center mt-4" style="display:none">
+        <p class="text-muted">No hay pacientes registrados aún.</p>
+        <a href="RegistrarPaciente.html" class="btn btn-primary">+ Agregar paciente</a>
+    </div>
 </div>
 
 <script>
@@ -52,7 +69,7 @@
 
         return await response.json();
     }
-     // HU-I03.2 — Gestión de estado y carga de pacientes
+   // — Gestión de estado y carga de pacientes
     async function cargarPacientes() {
         document.getElementById("estado-carga").style.display = "block";
         document.getElementById("estado-error").style.display = "none";

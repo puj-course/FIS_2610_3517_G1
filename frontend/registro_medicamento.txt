@@ -452,11 +452,8 @@
   </form>
 </div>
 
-
+const BASE_URL = "http://127.0.0.1:8000";
 <script>
-  const BASE_URL = "http://127.0.0.1:8000";
-
-
   // Guardamos referencias a los elementos que usamos seguido
   var formulario = document.getElementById('formulario');
   var cajaHorarios = document.getElementById('cajaHorarios');
@@ -474,7 +471,25 @@
   document.getElementById('fechaInicio').min = fechaHoy;
   document.getElementById('fechaInicio').value = fechaHoy;
 
+/*
+  // Pacientes de prueba, los mismos que aparecen en medicamentos.html
+  // TODO: reemplazar por fetch('/api/pacientes') cuando el backend este listo
+  var pacientesDePrueba = [
+    { id: 1, nombres: 'Carlos', apellidos: 'Rodriguez Perez', diagnostico: 'Hipertension arterial' },
+    { id: 2, nombres: 'Maria',  apellidos: 'Gonzalez Lopez',  diagnostico: 'Diabetes tipo 2'       },
+    { id: 3, nombres: 'Jorge',  apellidos: 'Martinez Soto',   diagnostico: 'Asma bronquial'        }
+  ];
 
+  // Llenamos el selector de pacientes con los datos de prueba
+  var selectorPaciente = document.getElementById('paciente');
+  for (var i = 0; i < pacientesDePrueba.length; i++) {
+    var p = pacientesDePrueba[i];
+    var opcion = document.createElement('option');
+    opcion.value = p.id;
+    opcion.textContent = p.nombres + ' ' + p.apellidos + ' - ' + p.diagnostico;
+    selectorPaciente.appendChild(opcion);
+  }
+*/
 // Cargar pacientes
 async function cargarPacientes() {
   const selectorPaciente = document.getElementById("paciente");
@@ -735,57 +750,61 @@ async function cargarPacientes() {
     // Mostramos los datos en consola para verificar
     console.log('Datos a guardar:', datos);
 
+    // Buscamos el nombre del paciente para mostrarlo en la notificacion
+    var pacienteSeleccionado = null;
+    for (var x = 0; x < pacientesDePrueba.length; x++) {
+      if (pacientesDePrueba[x].id === datos.paciente_id) {
+        pacienteSeleccionado = pacientesDePrueba[x];
+        break;
+      }
+    }
+    var nombrePaciente = pacienteSeleccionado
+      ? pacienteSeleccionado.nombres + ' ' + pacienteSeleccionado.apellidos
+      : 'el paciente';
 
-  
-  // Buscamos el texto del paciente seleccionado en el select
-  var selectorPaciente = document.getElementById('paciente');
-  var nombrePaciente = 'el paciente';
+    // TODO: reemplazar por fetch al backend cuando este listo
+    mostrarNotificacion('"' + datos.nombre_medicamento + '" registrado para ' + nombrePaciente + '.');
+    limpiarFormulario();
+  });
 
-  if (selectorPaciente.selectedIndex >= 0) {
-    nombrePaciente = selectorPaciente.options[selectorPaciente.selectedIndex].text;
+
+  // Limpia todos los campos y estados del formulario
+  function limpiarFormulario() {
+    formulario.reset();
+
+    // Quitamos los colores de validacion de todos los campos
+    var todosCampos = formulario.querySelectorAll('.form-control, .form-select');
+    for (var i = 0; i < todosCampos.length; i++) {
+      todosCampos[i].classList.remove('correcto', 'error');
+    }
+
+    // Borramos todas las pastillas de horario
+    var pastillas = document.querySelectorAll('.pastilla');
+    for (var j = 0; j < pastillas.length; j++) {
+      pastillas[j].remove();
+    }
+    listaHorarios = [];
+    cajaHorarios.classList.remove('correcto', 'error');
+
+    // Desmarcamos todos los dias
+    var botonesDia = document.querySelectorAll('.boton-dia');
+    for (var k = 0; k < botonesDia.length; k++) {
+      botonesDia[k].classList.remove('seleccionado');
+    }
+    listaDias = [];
+
+    // Ocultamos la seccion de dias
+    seccionDias.style.display = 'none';
+
+    // Reiniciamos el contador de instrucciones
+    document.getElementById('contadorLetras').textContent = '0';
+
+    // Volvemos a poner la fecha de hoy
+    document.getElementById('fechaInicio').value = fechaHoy;
+
+    // Ocultamos la alerta de error
+    alertaError.classList.remove('visible');
   }
-
-  mostrarNotificacion('"' + datos.nombre_medicamento + '" registrado para ' + nombrePaciente + '.', false);
-  limpiarFormulario();
-});
-
-
-function limpiarFormulario() {
-  formulario.reset();
-
-  // Quitamos los colores de validacion de todos los campos
-  var todosCampos = formulario.querySelectorAll('.form-control, .form-select');
-  for (var i = 0; i < todosCampos.length; i++) {
-    todosCampos[i].classList.remove('correcto', 'error');
-  }
-
-  // Borramos todas las pastillas de horario
-  var pastillas = document.querySelectorAll('.pastilla');
-  for (var j = 0; j < pastillas.length; j++) {
-    pastillas[j].remove();
-  }
-  listaHorarios = [];
-  cajaHorarios.classList.remove('correcto', 'error');
-
-  // Desmarcamos todos los dias
-  var botonesDia = document.querySelectorAll('.boton-dia');
-  for (var k = 0; k < botonesDia.length; k++) {
-    botonesDia[k].classList.remove('seleccionado');
-  }
-  listaDias = [];
-
-  // Ocultamos la seccion de dias
-  seccionDias.style.display = 'none';
-
-  // Reiniciamos el contador de instrucciones
-  document.getElementById('contadorLetras').textContent = '0';
-
-  // Volvemos a poner la fecha de hoy
-  document.getElementById('fechaInicio').value = fechaHoy;
-
-  // Ocultamos la alerta de error
-  alertaError.classList.remove('visible');
-}
 
 
   // Muestra una notificacion en la esquina que desaparece sola
@@ -800,7 +819,7 @@ function limpiarFormulario() {
   
   document.addEventListener("DOMContentLoaded", function (){
 	cargarPacientes();
-  });  
+});  
 </script>
 
 </body>

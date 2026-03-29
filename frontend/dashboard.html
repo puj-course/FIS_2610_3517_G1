@@ -71,21 +71,27 @@
     }
    // — Gestión de estado y carga de pacientes
     async function cargarPacientes() {
-        document.getElementById("estado-carga").style.display = "block";
-        document.getElementById("estado-error").style.display = "none";
-        document.getElementById("lista-pacientes").style.display = "none";
+    document.getElementById("estado-carga").style.display = "block";
+    document.getElementById("estado-error").style.display = "none";
+    document.getElementById("lista-pacientes").style.display = "none";
+    document.getElementById("estado-vacio").style.display = "none";
 
-        try {
-            const pacientes = await obtenerPacientes();
-            document.getElementById("estado-carga").style.display = "none";
+    try {
+        const pacientes = await obtenerPacientes();
+        document.getElementById("estado-carga").style.display = "none";
+
+        if (pacientes.length === 0) {
+            document.getElementById("estado-vacio").style.display = "block";
+        } else {
             document.getElementById("lista-pacientes").style.display = "block";
             renderizarListaPacientes(pacientes);
-        } catch (error) {
-            document.getElementById("estado-carga").style.display = "none";
-            document.getElementById("mensaje-error").textContent = error.message;
-            document.getElementById("estado-error").style.display = "block";
         }
+    } catch (error) {
+        document.getElementById("estado-carga").style.display = "none";
+        document.getElementById("mensaje-error").textContent = error.message;
+        document.getElementById("estado-error").style.display = "block";
     }
+}
 
     //  Renderizar lista de pacientes con datos reales
     function renderizarListaPacientes(pacientes) {

@@ -7,7 +7,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
-    /* Colores del proyecto */
+    /* Colores usados en el proyecto */
     :root {
       --color-menta:       #2DD4BF;
       --color-menta-oscuro:#0F9D8A;
@@ -454,395 +454,430 @@
 
 
 <script>
-  const BASE_URL = "http://127.0.0.1:8000";
+    const BASE_URL = "http://127.0.0.1:8000";
 
 
-  // Guardamos referencias a los elementos que usamos seguido
-  var formulario = document.getElementById('formulario');
-  var cajaHorarios = document.getElementById('cajaHorarios');
-  var inputHora = document.getElementById('inputHora');
-  var seccionDias = document.getElementById('seccionDias');
-  var botonGuardar = document.getElementById('botonGuardar');
-  var textoOriginalBoton = botonGuardar.innerHTML;
-  var alertaError = document.getElementById('alertaError');
-
-  // Listas donde guardamos los horarios y dias que el usuario agrega
-  var listaHorarios = [];
-  var listaDias = [];
-
-  // Ponemos la fecha de hoy como minimo y valor por defecto en fecha de inicio
-  var fechaHoy = new Date().toISOString().split('T')[0];
-  document.getElementById('fechaInicio').min = fechaHoy;
-  document.getElementById('fechaInicio').value = fechaHoy;
-
-
-// Cargar pacientes
-async function cargarPacientes() {
-  const selectorPaciente = document.getElementById("paciente");
-
-  // Estado inicial mientras carga
-  selectorPaciente.innerHTML = '<option value="">Cargando pacientes...</option>';
-  selectorPaciente.disabled = true;
-
-  try {
-    const respuesta = await fetch(`${BASE_URL}/pacientes`);
-
-    if (!respuesta.ok) {
-      throw new Error("No se pudieron obtener los pacientes");
+    // Guardamos referencias a los elementos que usamos seguido
+    var formulario = document.getElementById('formulario');
+    var cajaHorarios = document.getElementById('cajaHorarios');
+    var inputHora = document.getElementById('inputHora');
+    var seccionDias = document.getElementById('seccionDias');
+    var botonGuardar = document.getElementById('botonGuardar');
+    var textoOriginalBoton = botonGuardar.innerHTML;
+    var alertaError = document.getElementById('alertaError');
+    // Funciones para mostrar y ocultar la alerta general de error que aparece debajo del formulario
+    function mostrarAlertaGeneral(mensaje) {
+        alertaError.textContent = mensaje;
+        alertaError.classList.add('visible');
     }
 
-    const datos = await respuesta.json();
-
-    // Ajusta esta línea si tu backend devuelve otra estructura
-    const pacientes = datos.pacientes || datos;
-
-    if (!pacientes || pacientes.length === 0) {
-      selectorPaciente.innerHTML = '<option value="">No hay pacientes registrados</option>';
-      return;
+    function ocultarAlertaGeneral() {
+        alertaError.textContent = '';
+        alertaError.classList.remove('visible');
     }
 
-    selectorPaciente.innerHTML = '<option value="">Seleccione un paciente</option>';
+    function establecerEstadoBotonGuardado(guardando) {
+        if (guardando) {
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = 'Guardando...';
+        } else {
+            botonGuardar.disabled = false;
+            botonGuardar.innerHTML = textoOriginalBoton;
+        }
+    }
 
-    pacientes.forEach((paciente) => {
-      const opcion = document.createElement("option");
-      opcion.value = paciente.id;
-      opcion.textContent = `${paciente.nombres} ${paciente.apellidos} - ${paciente.numero_documento}`;
-      selectorPaciente.appendChild(opcion);
+    function establecerEstadoSelectorPaciente(mensaje, deshabilitado) {
+        var selectorPaciente = document.getElementById('paciente');
+        selectorPaciente.innerHTML = `<option value="">${mensaje}</option>`;
+        selectorPaciente.disabled = deshabilitado;
+    }
+
+    // Listas donde guardamos los horarios y dias que el usuario agrega
+    var listaHorarios = [];
+    var listaDias = [];
+
+    // Ponemos la fecha de hoy como minimo y valor por defecto en fecha de inicio
+    var fechaHoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaInicio').min = fechaHoy;
+    document.getElementById('fechaInicio').value = fechaHoy;
+
+
+    // Cargar pacientes
+    async function cargarPacientes() {
+        const selectorPaciente = document.getElementById("paciente");
+
+        if (!selectorPaciente) {
+            console.error("No se encontró el selector de pacientes.");
+            return;
+        }
+
+        ocultarAlertaGeneral();
+        establecerEstadoSelectorPaciente('Cargando pacientes...', true);
+
+        try {
+            const respuesta = await fetch(`${BASE_URL}/pacientes`);
+
+            if (!respuesta.ok) {
+                throw new Error("No se pudieron obtener los pacientes.");
+            }
+
+            const datos = await respuesta.json();
+            const pacientes = datos.pacientes || datos;
+
+            if (!pacientes || pacientes.length === 0) {
+                establecerEstadoSelectorPaciente('No hay pacientes registrados', true);
+                mostrarAlertaGeneral('No hay pacientes registrados en el sistema. Debes crear uno antes de registrar medicamentos.');
+                return;
+            }
+
+            selectorPaciente.innerHTML = '<option value="">Seleccione un paciente</option>';
+
+            pacientes.forEach((paciente) => {
+                const opcion = document.createElement("option");
+                opcion.value = paciente.id;
+                opcion.textContent = `${paciente.nombres} ${paciente.apellidos} - ${paciente.numero_documento}`;
+                selectorPaciente.appendChild(opcion);
+            });
+
+            selectorPaciente.disabled = false;
+
+        } catch (error) {
+            console.error("Error al cargar pacientes:", error);
+            establecerEstadoSelectorPaciente('Error al cargar pacientes', true);
+            mostrarAlertaGeneral('No se pudieron cargar los pacientes. Verifica que el backend esté encendido.');
+        }
+    }
+
+
+    // Creamos los botones de dias de la semana
+    var nombresDias = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+    var clavesDias = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'];
+    var grupoDias = document.getElementById('grupoDias');
+
+    for (var j = 0; j < nombresDias.length; j++) {
+        var boton = document.createElement('button');
+        boton.type = 'button';
+        boton.className = 'boton-dia';
+        boton.textContent = nombresDias[j];
+        boton.dataset.clave = clavesDias[j];
+        boton.onclick = function () {
+            // Al hacer clic alternamos el dia entre seleccionado y no seleccionado
+            if (this.classList.contains('seleccionado')) {
+                this.classList.remove('seleccionado');
+                listaDias = listaDias.filter(function (d) { return d !== this.dataset.clave; }.bind(this));
+            } else {
+                this.classList.add('seleccionado');
+                listaDias.push(this.dataset.clave);
+            }
+        };
+        grupoDias.appendChild(boton);
+    }
+
+
+    // Cuando cambia la frecuencia, mostramos u ocultamos la seccion de dias
+    document.getElementById('frecuencia').addEventListener('change', function () {
+        var frecuenciasConDias = ['dias_alternos', 'semanal', 'personalizado'];
+        if (frecuenciasConDias.indexOf(this.value) !== -1) {
+            seccionDias.style.display = 'block';
+        } else {
+            seccionDias.style.display = 'none';
+            // Si ocultamos la seccion, limpiamos los dias seleccionados
+            listaDias = [];
+            var botonesDia = document.querySelectorAll('.boton-dia');
+            for (var k = 0; k < botonesDia.length; k++) {
+                botonesDia[k].classList.remove('seleccionado');
+            }
+        }
     });
 
-    selectorPaciente.disabled = false;
 
-  } catch (error) {
-    console.error("Error al cargar pacientes:", error);
-    selectorPaciente.innerHTML = '<option value="">Error al cargar pacientes</option>';
-  }
-}
+    // Agrega una hora como pastilla al contenedor de horarios
+    function agregarHorario() {
+        var hora = inputHora.value;
 
+        if (!hora) {
+            inputHora.focus();
+            return;
+        }
 
-  // Creamos los botones de dias de la semana
-  var nombresDias  = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-  var clavesDias   = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'];
-  var grupoDias = document.getElementById('grupoDias');
+        // No permitimos horarios duplicados
+        if (listaHorarios.indexOf(hora) !== -1) {
+            mostrarNotificacion('Ese horario ya fue agregado.', true);
+            inputHora.value = '';
+            return;
+        }
 
-  for (var j = 0; j < nombresDias.length; j++) {
-    var boton = document.createElement('button');
-    boton.type = 'button';
-    boton.className = 'boton-dia';
-    boton.textContent = nombresDias[j];
-    boton.dataset.clave = clavesDias[j];
-    boton.onclick = function () {
-      // Al hacer clic alternamos el dia entre seleccionado y no seleccionado
-      if (this.classList.contains('seleccionado')) {
-        this.classList.remove('seleccionado');
-        listaDias = listaDias.filter(function(d) { return d !== this.dataset.clave; }.bind(this));
-      } else {
-        this.classList.add('seleccionado');
-        listaDias.push(this.dataset.clave);
-      }
-    };
-    grupoDias.appendChild(boton);
-  }
+        // Agregamos la hora a la lista
+        listaHorarios.push(hora);
 
+        // Creamos la pastilla visual con la hora y un boton para quitarla
+        var pastilla = document.createElement('span');
+        pastilla.className = 'pastilla';
+        pastilla.innerHTML = hora + ' <button type="button" onclick="quitarHorario(\'' + hora + '\', this)">x</button>';
+        cajaHorarios.insertBefore(pastilla, inputHora);
 
-  // Cuando cambia la frecuencia, mostramos u ocultamos la seccion de dias
-  document.getElementById('frecuencia').addEventListener('change', function () {
-    var frecuenciasConDias = ['dias_alternos', 'semanal', 'personalizado'];
-    if (frecuenciasConDias.indexOf(this.value) !== -1) {
-      seccionDias.style.display = 'block';
-    } else {
-      seccionDias.style.display = 'none';
-      // Si ocultamos la seccion, limpiamos los dias seleccionados
-      listaDias = [];
-      var botonesDia = document.querySelectorAll('.boton-dia');
-      for (var k = 0; k < botonesDia.length; k++) {
-        botonesDia[k].classList.remove('seleccionado');
-      }
-    }
-  });
+        // Limpiamos el input para ingresar otro horario
+        inputHora.value = '';
 
-
-  // Agrega una hora como pastilla al contenedor de horarios
-  function agregarHorario() {
-    var hora = inputHora.value;
-
-    if (!hora) {
-      inputHora.focus();
-      return;
+        // Marcamos la caja como correcta y ocultamos el error
+        cajaHorarios.classList.remove('error');
+        cajaHorarios.classList.add('correcto');
+        document.getElementById('error-horarios').classList.remove('visible');
     }
 
-    // No permitimos horarios duplicados
-    if (listaHorarios.indexOf(hora) !== -1) {
-      mostrarNotificacion('Ese horario ya fue agregado.', true);
-      inputHora.value = '';
-      return;
+    // Quita un horario cuando el usuario presiona la X de la pastilla
+    function quitarHorario(hora, boton) {
+        listaHorarios = listaHorarios.filter(function (h) { return h !== hora; });
+        boton.parentElement.remove();
+        if (listaHorarios.length === 0) {
+            cajaHorarios.classList.remove('correcto');
+        }
     }
 
-    // Agregamos la hora a la lista
-    listaHorarios.push(hora);
-
-    // Creamos la pastilla visual con la hora y un boton para quitarla
-    var pastilla = document.createElement('span');
-    pastilla.className = 'pastilla';
-    pastilla.innerHTML = hora + ' <button type="button" onclick="quitarHorario(\'' + hora + '\', this)">x</button>';
-    cajaHorarios.insertBefore(pastilla, inputHora);
-
-    // Limpiamos el input para ingresar otro horario
-    inputHora.value = '';
-
-    // Marcamos la caja como correcta y ocultamos el error
-    cajaHorarios.classList.remove('error');
-    cajaHorarios.classList.add('correcto');
-    document.getElementById('error-horarios').classList.remove('visible');
-  }
-
-  // Quita un horario cuando el usuario presiona la X de la pastilla
-  function quitarHorario(hora, boton) {
-    listaHorarios = listaHorarios.filter(function(h) { return h !== hora; });
-    boton.parentElement.remove();
-    if (listaHorarios.length === 0) {
-      cajaHorarios.classList.remove('correcto');
-    }
-  }
-
-  // Presionar Enter en el input de hora tambien agrega el horario
-  inputHora.addEventListener('keydown', function(evento) {
-    if (evento.key === 'Enter') {
-      evento.preventDefault();
-      agregarHorario();
-    }
-  });
-
-
-  // Actualiza el contador de caracteres del textarea de instrucciones
-  document.getElementById('instrucciones').addEventListener('input', function () {
-    document.getElementById('contadorLetras').textContent = this.value.length;
-  });
-
-
-  // Valida un campo: lo marca verde si esta correcto, rojo si tiene error
-  // Devuelve true si esta bien, false si no
-  function validarCampo(campo, idMensajeError) {
-    campo.classList.remove('error', 'correcto');
-    var valor = campo.value.trim();
-    var tieneError = false;
-
-    if (!valor) {
-      tieneError = true;
-    }
-    if (campo.type === 'number' && parseFloat(valor) <= 0) {
-      tieneError = true;
-    }
-
-    if (tieneError) {
-      campo.classList.add('error');
-      document.getElementById(idMensajeError).classList.add('visible');
-    } else {
-      campo.classList.add('correcto');
-      document.getElementById(idMensajeError).classList.remove('visible');
-    }
-
-    return !tieneError;
-  }
-
-
-  // Lista de campos obligatorios con su id y el id de su mensaje de error
-  var camposObligatorios = [
-    ['nombre',       'error-nombre'],
-    ['concentracion','error-concentracion'],
-    ['forma',        'error-forma'],
-    ['dosis',        'error-dosis'],
-    ['unidad',       'error-unidad'],
-    ['frecuencia',   'error-frecuencia'],
-    ['fechaInicio',  'error-fechaInicio'],
-    ['paciente',     'error-paciente']
-  ];
-
-  // Validacion en tiempo real: al salir de un campo lo validamos
-  for (var m = 0; m < camposObligatorios.length; m++) {
-    (function(idCampo, idError) {
-      var elemento = document.getElementById(idCampo);
-      elemento.addEventListener('blur',   function() { validarCampo(elemento, idError); });
-      elemento.addEventListener('change', function() { validarCampo(elemento, idError); });
-    })(camposObligatorios[m][0], camposObligatorios[m][1]);
-  }
-  // Convertiir fecha para que coincida con el formato del backend
-  // Si el input trae 2026-03-28 la funcion lo convierte a 03/28/2026
-  function convertirFechaAFormatoBackend(fechaISO) {
-  if (!fechaISO) return "";
-
-  var partes = fechaISO.split("-");
-  if (partes.length !== 3) return fechaISO;
-
-  return partes[1] + "/" + partes[2] + "/" + partes[0];
-  }
-
-//
-
-// Cuando el usuario hace clic en guardar
-document.getElementById('formulario').addEventListener('submit', async function(evento) {
-  evento.preventDefault();
-  alertaError.classList.remove('visible');
-  alertaError.textContent = '';
-
-  // Validamos todos los campos obligatorios
-  var formularioValido = true;
-  for (var n = 0; n < camposObligatorios.length; n++) {
-    var campo = document.getElementById(camposObligatorios[n][0]);
-    if (!validarCampo(campo, camposObligatorios[n][1])) {
-      formularioValido = false;
-    }
-  }
-
-  // Verificamos que haya al menos un horario agregado
-  if (listaHorarios.length === 0) {
-    cajaHorarios.classList.add('error');
-    document.getElementById('error-horarios').classList.add('visible');
-    formularioValido = false;
-  }
-
-  // Verificamos que la fecha de fin no sea anterior a la de inicio
-  var fechaInicio = document.getElementById('fechaInicio').value;
-  var campoFechaFin = document.getElementById('fechaFin');
-  campoFechaFin.classList.remove('error', 'correcto');
-
-  if (campoFechaFin.value && campoFechaFin.value < fechaInicio) {
-    campoFechaFin.classList.add('error');
-    document.getElementById('error-fechaFin').classList.add('visible');
-    formularioValido = false;
-  }
-
-  // Si la seccion de dias esta visible, debe tener al menos un dia seleccionado
-  if (seccionDias.style.display !== 'none' && listaDias.length === 0) {
-    document.getElementById('error-dias').classList.add('visible');
-    formularioValido = false;
-  }
-
-  // Si algo fallo, avisamos y hacemos scroll al primer campo con error
-  if (!formularioValido) {
-    mostrarNotificacion('Revisa los campos marcados en rojo.', true);
-    var primerError = formulario.querySelector('.error');
-    if (primerError) {
-      primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    return;
-  }
-
-  // Construimos un payload compatible con el backend
-  var frecuenciaSelect = document.getElementById('frecuencia');
-  var frecuenciaTexto = frecuenciaSelect.options[frecuenciaSelect.selectedIndex].text;
-
-  var payload = {
-    nombre: document.getElementById('nombre').value.trim(),
-    dosis: document.getElementById('dosis').value + ' ' + document.getElementById('unidad').value,
-    frecuencia: frecuenciaTexto,
-    horario: listaHorarios.join(', '),
-    fecha_inicio: convertirFechaAFormatoBackend(fechaInicio),
-    observaciones: document.getElementById('instrucciones').value.trim(),
-    paciente_id: parseInt(document.getElementById('paciente').value)
-  };
-
-  console.log('Payload a enviar:', payload);
-
-  var selectorPaciente = document.getElementById('paciente');
-  var nombrePaciente = 'el paciente';
-
-  if (selectorPaciente.selectedIndex >= 0) {
-    nombrePaciente = selectorPaciente.options[selectorPaciente.selectedIndex].text;
-  }
-
-  try {
-    botonGuardar.disabled = true;
-    botonGuardar.textContent = 'Guardando...';
-
-    const respuesta = await fetch(`${BASE_URL}/medicamentos/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
+    // Presionar Enter en el input de hora tambien agrega el horario
+    inputHora.addEventListener('keydown', function (evento) {
+        if (evento.key === 'Enter') {
+            evento.preventDefault();
+            agregarHorario();
+        }
     });
 
-    const resultado = await respuesta.json().catch(() => ({}));
 
-    if (!respuesta.ok) {
-      var mensajeError = 'No se pudo registrar el medicamento.';
+    // Actualiza el contador de caracteres del textarea de instrucciones
+    document.getElementById('instrucciones').addEventListener('input', function () {
+        document.getElementById('contadorLetras').textContent = this.value.length;
+    });
 
-      if (Array.isArray(resultado.detail)) {
-        mensajeError = resultado.detail.join(' ');
-      } else if (typeof resultado.detail === 'string') {
-        mensajeError = resultado.detail;
-      }
 
-      throw new Error(mensajeError);
+    // Valida un campo: lo marca verde si esta correcto, rojo si tiene error
+    // Devuelve true si esta bien, false si no
+    function validarCampo(campo, idMensajeError) {
+        campo.classList.remove('error', 'correcto');
+        var valor = campo.value.trim();
+        var tieneError = false;
+
+        if (!valor) {
+            tieneError = true;
+        }
+        if (campo.type === 'number' && parseFloat(valor) <= 0) {
+            tieneError = true;
+        }
+
+        if (tieneError) {
+            campo.classList.add('error');
+            document.getElementById(idMensajeError).classList.add('visible');
+        } else {
+            campo.classList.add('correcto');
+            document.getElementById(idMensajeError).classList.remove('visible');
+        }
+
+        return !tieneError;
     }
 
-    mostrarNotificacion('"' + payload.nombre + '" registrado para ' + nombrePaciente + '.', false);
-    limpiarFormulario();
 
-  } catch (error) {
-    console.error('Error al registrar medicamento:', error);
-    alertaError.textContent = error.message || 'Ocurrio un error al registrar el medicamento.';
-    alertaError.classList.add('visible');
-    mostrarNotificacion(alertaError.textContent, true);
+    // Lista de campos obligatorios con su id y el id de su mensaje de error
+    var camposObligatorios = [
+        ['nombre', 'error-nombre'],
+        ['concentracion', 'error-concentracion'],
+        ['forma', 'error-forma'],
+        ['dosis', 'error-dosis'],
+        ['unidad', 'error-unidad'],
+        ['frecuencia', 'error-frecuencia'],
+        ['fechaInicio', 'error-fechaInicio'],
+        ['paciente', 'error-paciente']
+    ];
 
-  } finally {
-    botonGuardar.disabled = false;
-    botonGuardar.innerHTML = textoOriginalBoton;
-  }
-});
+    // Validacion en tiempo real: al salir de un campo lo validamos
+    for (var m = 0; m < camposObligatorios.length; m++) {
+        (function (idCampo, idError) {
+            var elemento = document.getElementById(idCampo);
+            elemento.addEventListener('blur', function () { validarCampo(elemento, idError); });
+            elemento.addEventListener('change', function () { validarCampo(elemento, idError); });
+        })(camposObligatorios[m][0], camposObligatorios[m][1]);
+    }
+    // Convertiir fecha para que coincida con el formato del backend
+    // Si el input trae 2026-03-28 la funcion lo convierte a 03/28/2026
+    function convertirFechaAFormatoBackend(fechaISO) {
+        if (!fechaISO) return "";
 
-//
-  function limpiarFormulario() {
-   formulario.reset();
+        var partes = fechaISO.split("-");
+        if (partes.length !== 3) return fechaISO;
 
-  // Quitamos los colores de validacion de todos los campos
-  var todosCampos = formulario.querySelectorAll('.form-control, .form-select');
-  for (var i = 0; i < todosCampos.length; i++) {
-    todosCampos[i].classList.remove('correcto', 'error');
-  }
+        return partes[1] + "/" + partes[2] + "/" + partes[0];
+    }
 
-  // Borramos todas las pastillas de horario
-  var pastillas = document.querySelectorAll('.pastilla');
-  for (var j = 0; j < pastillas.length; j++) {
-    pastillas[j].remove();
-  }
-  listaHorarios = [];
-  cajaHorarios.classList.remove('correcto', 'error');
+    //
 
-  // Desmarcamos todos los dias
-  var botonesDia = document.querySelectorAll('.boton-dia');
-  for (var k = 0; k < botonesDia.length; k++) {
-    botonesDia[k].classList.remove('seleccionado');
-  }
-  listaDias = [];
+    // Cuando el usuario hace clic en guardar
+    document.getElementById('formulario').addEventListener('submit', async function (evento) {
+        evento.preventDefault();
+        ocultarAlertaGeneral();
 
-  // Ocultamos la seccion de dias
-  seccionDias.style.display = 'none';
+        var selectorPaciente = document.getElementById('paciente');
 
-  // Reiniciamos el contador de instrucciones
-  document.getElementById('contadorLetras').textContent = '0';
+        if (selectorPaciente.disabled) {
+            mostrarAlertaGeneral('No puedes registrar un medicamento hasta que los pacientes se carguen correctamente.');
+            mostrarNotificacion('Debes esperar a que se carguen los pacientes.', true);
+            return;
+        }
 
-  // Volvemos a poner la fecha de hoy
-  document.getElementById('fechaInicio').value = fechaHoy;
+        // Validamos todos los campos obligatorios
+        var formularioValido = true;
+        for (var n = 0; n < camposObligatorios.length; n++) {
+            var campo = document.getElementById(camposObligatorios[n][0]);
+            if (!validarCampo(campo, camposObligatorios[n][1])) {
+                formularioValido = false;
+            }
+        }
 
-  // Ocultamos la alerta de error
-  alertaError.classList.remove('visible');
-}
+        // Verificamos que haya al menos un horario agregado
+        if (listaHorarios.length === 0) {
+            cajaHorarios.classList.add('error');
+            document.getElementById('error-horarios').classList.add('visible');
+            formularioValido = false;
+        }
+
+        // Verificamos que la fecha de fin no sea anterior a la de inicio
+        var fechaInicio = document.getElementById('fechaInicio').value;
+        var campoFechaFin = document.getElementById('fechaFin');
+        campoFechaFin.classList.remove('error', 'correcto');
+
+        if (campoFechaFin.value && campoFechaFin.value < fechaInicio) {
+            campoFechaFin.classList.add('error');
+            document.getElementById('error-fechaFin').classList.add('visible');
+            formularioValido = false;
+        }
+
+        // Si la seccion de dias esta visible, debe tener al menos un dia seleccionado
+        if (seccionDias.style.display !== 'none' && listaDias.length === 0) {
+            document.getElementById('error-dias').classList.add('visible');
+            formularioValido = false;
+        }
+
+        // Si algo fallo, avisamos y hacemos scroll al primer campo con error
+        if (!formularioValido) {
+            mostrarNotificacion('Revisa los campos marcados en rojo.', true);
+            var primerError = formulario.querySelector('.error');
+            if (primerError) {
+                primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
+
+        // Construimos un payload compatible con el backend
+        var frecuenciaSelect = document.getElementById('frecuencia');
+        var frecuenciaTexto = frecuenciaSelect.options[frecuenciaSelect.selectedIndex].text;
+
+        var payload = {
+            nombre: document.getElementById('nombre').value.trim(),
+            dosis: document.getElementById('dosis').value + ' ' + document.getElementById('unidad').value,
+            frecuencia: frecuenciaTexto,
+            horario: listaHorarios.join(', '),
+            fecha_inicio: convertirFechaAFormatoBackend(fechaInicio),
+            observaciones: document.getElementById('instrucciones').value.trim(),
+            paciente_id: parseInt(document.getElementById('paciente').value)
+        };
+
+        console.log('Payload a enviar:', payload);
+
+        var selectorPaciente = document.getElementById('paciente');
+        var nombrePaciente = 'el paciente';
+
+        if (selectorPaciente.selectedIndex >= 0) {
+            nombrePaciente = selectorPaciente.options[selectorPaciente.selectedIndex].text;
+        }
+
+        try {
+            establecerEstadoBotonGuardado(true);
+
+            const respuesta = await fetch(`${BASE_URL}/medicamentos/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const resultado = await respuesta.json().catch(() => ({}));
+
+            if (!respuesta.ok) {
+                var mensajeError = 'No se pudo registrar el medicamento.';
+
+                if (Array.isArray(resultado.detail)) {
+                    mensajeError = resultado.detail.join(' ');
+                } else if (typeof resultado.detail === 'string') {
+                    mensajeError = resultado.detail;
+                }
+
+                throw new Error(mensajeError);
+            }
+
+            mostrarNotificacion('"' + payload.nombre + '" registrado para ' + nombrePaciente + '.', false);
+            limpiarFormulario();
+
+        } catch (error) {
+            console.error('Error al registrar medicamento:', error);
+            var mensajeError = error.message || 'Ocurrio un error al registrar el medicamento.';
+            mostrarAlertaGeneral(mensajeError);
+            mostrarNotificacion(mensajeError, true);
+
+        } finally {
+            establecerEstadoBotonGuardado(false);
+        }
+    });
+
+    //
+    function limpiarFormulario() {
+        formulario.reset();
+
+        // Quitamos los colores de validacion de todos los campos
+        var todosCampos = formulario.querySelectorAll('.form-control, .form-select');
+        for (var i = 0; i < todosCampos.length; i++) {
+            todosCampos[i].classList.remove('correcto', 'error');
+        }
+
+        // Borramos todas las pastillas de horario
+        var pastillas = document.querySelectorAll('.pastilla');
+        for (var j = 0; j < pastillas.length; j++) {
+            pastillas[j].remove();
+        }
+        listaHorarios = [];
+        cajaHorarios.classList.remove('correcto', 'error');
+
+        // Desmarcamos todos los dias
+        var botonesDia = document.querySelectorAll('.boton-dia');
+        for (var k = 0; k < botonesDia.length; k++) {
+            botonesDia[k].classList.remove('seleccionado');
+        }
+        listaDias = [];
+
+        // Ocultamos la seccion de dias
+        seccionDias.style.display = 'none';
+
+        // Reiniciamos el contador de instrucciones
+        document.getElementById('contadorLetras').textContent = '0';
+
+        // Volvemos a poner la fecha de hoy
+        document.getElementById('fechaInicio').value = fechaHoy;
+
+        // Ocultamos la alerta de error
+        ocultarAlertaGeneral();
+    }
 
 
-  // Muestra una notificacion en la esquina que desaparece sola
-  function mostrarNotificacion(mensaje, esError) {
-    var contenedor = document.getElementById('contenedorNotificaciones');
-    var notificacion = document.createElement('div');
-    notificacion.className = 'notificacion' + (esError ? ' error' : '');
-    notificacion.textContent = mensaje;
-    contenedor.appendChild(notificacion);
-    setTimeout(function() { notificacion.remove(); }, 3500);
-  }
-  
-  document.addEventListener("DOMContentLoaded", function (){
-	cargarPacientes();
-  });  
+    // Muestra una notificacion en la esquina que desaparece sola
+    function mostrarNotificacion(mensaje, esError) {
+        var contenedor = document.getElementById('contenedorNotificaciones');
+        var notificacion = document.createElement('div');
+        notificacion.className = 'notificacion' + (esError ? ' error' : '');
+        notificacion.textContent = mensaje;
+        contenedor.appendChild(notificacion);
+        setTimeout(function () { notificacion.remove(); }, 3500);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        cargarPacientes();
+    });
 </script>
 
 </body>

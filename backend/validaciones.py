@@ -84,57 +84,64 @@ def verificar_duplicado(numero_documento: str, tipo_documento: str, conn) -> boo
     return resultado is not None
 # Validaciones adicionales de formato para medicamento — issue #195
 def validar_formato_medicamento(data: dict) -> list:
-    """
-    Complementa validar_medicamento() con reglas de formato:
-      - El nombre debe tener al menos 2 caracteres
-      - La fecha_inicio debe tener formato mm/dd/yyyy y no ser anterior al 2000
-    Devuelve lista de errores; vacía si todo está bien.
-    """
     errores = []
 
-    # El nombre no puede ser un solo carácter
-    nombre = str(data.get("nombre", "")).strip()
+    nombre = str(data.get("nombre_medicamento", "")).strip()
     if nombre and len(nombre) < 2:
         errores.append("El nombre del medicamento debe tener al menos 2 caracteres")
 
-    # La fecha debe tener formato mm/dd/yyyy y no ser anterior al año 2000
     fecha = str(data.get("fecha_inicio", "")).strip()
     if fecha:
         try:
-            fecha_parsed = datetime.strptime(fecha, "%m/%d/%Y")
-            if fecha_parsed < datetime(2000, 1, 1):
-                errores.append("La fecha de inicio no puede ser anterior al año 2000")
+            datetime.strptime(fecha, "%m/%d/%Y")
         except ValueError:
             errores.append("La fecha de inicio debe tener formato mm/dd/yyyy")
 
     return errores
 
-
 # Lógica de creación de esquema de validación de medicamentos (HU'09)
 def validar_medicamento(data: dict) -> list:
-    errores = [] # Si en la data pasada por parámetro no hay errores, devuelve  [], de lo contrario devuelve la lista con los errores
-    campos_obligatorios = { # campos_obligatorios es un diccionario en el que est'an definidos los campos que no pueden faltar
-        "nombre": "El nombre del medicamento es obligatorio",
-        "dosis": "La dosis es obligatoria",
+    errores = []
+
+    campos_obligatorios = {
+        "nombre_medicamento": "El nombre del medicamento es obligatorio",
+        "concentracion": "La concentración es obligatoria",
+        "forma_farmaceutica": "La forma farmacéutica es obligatoria",
+        "dosis_cantidad": "La dosis es obligatoria",
+        "dosis_unidad": "La unidad de la dosis es obligatoria",
         "frecuencia": "La frecuencia es obligatoria",
-        "horario": "El horario de toma es obligatorio",
         "fecha_inicio": "La fecha de inicio es obligatoria",
         "paciente_id": "El paciente_id es obligatorio"
     }
+
     for campo, mensaje in campos_obligatorios.items():
-        valor = data.get(campo, "") # Busca el valor del campo en el JSON y si no existe, devuelve ""
-        if valor is None or str(valor).strip() == "": # str(valor).strip() == "" sirve para detectar: vacío, espacios o None
+        valor = data.get(campo, "")
+        if valor is None or str(valor).strip() == "":
             errores.append(mensaje)
+
+    horarios = data.get("horarios", [])
+    if not isinstance(horarios, list) or len(horarios) == 0:
+        errores.append("Debe ingresar al menos un horario")
+
     if errores:
         return errores
+
     try:
-        paciente_id = int(data["paciente_id"]) # int(data["paciente_id"]) convierte el paciente_id a entero. Si falla, significa que llegó mal.
-        if paciente_id <= 0: # Evita errores con id's de pacientes que sean cero o negativos (no válidos)
+        dosis_cantidad = float(data["dosis_cantidad"])
+        if dosis_cantidad <= 0:
+            errores.append("La dosis debe ser un número mayor que 0")
+    except (ValueError, TypeError):
+        errores.append("La dosis debe ser un número válido")
+
+    try:
+        paciente_id = int(data["paciente_id"])
+        if paciente_id <= 0:
             errores.append("El paciente_id debe ser un número mayor que 0")
     except (ValueError, TypeError):
         errores.append("El paciente_id debe ser un número entero válido")
-    return errores
 
+    errores.extend(validar_formato_medicamento(data))
+    return errores
 def verificar_paciente_existe(paciente_id: int, conn) -> bool:
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))

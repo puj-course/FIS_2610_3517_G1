@@ -522,6 +522,8 @@
             }
 
             const datos = await respuesta.json();
+            // temporal linea para revisar la respuesta del backend, luego se borra
+            console.log('Respuesta del backend:', datos);
             const pacientes = datos.pacientes || datos;
 
             if (!pacientes || pacientes.length === 0) {
@@ -711,15 +713,8 @@
     // Cuando el usuario hace clic en guardar
     document.getElementById('formulario').addEventListener('submit', async function (evento) {
         evento.preventDefault();
-        ocultarAlertaGeneral();
-
-        var selectorPaciente = document.getElementById('paciente');
-
-        if (selectorPaciente.disabled) {
-            mostrarAlertaGeneral('No puedes registrar un medicamento hasta que los pacientes se carguen correctamente.');
-            mostrarNotificacion('Debes esperar a que se carguen los pacientes.', true);
-            return;
-        }
+        alertaError.classList.remove('visible');
+        alertaError.textContent = '';
 
         // Validamos todos los campos obligatorios
         var formularioValido = true;
@@ -746,15 +741,18 @@
             campoFechaFin.classList.add('error');
             document.getElementById('error-fechaFin').classList.add('visible');
             formularioValido = false;
+        } else {
+            document.getElementById('error-fechaFin').classList.remove('visible');
         }
 
         // Si la seccion de dias esta visible, debe tener al menos un dia seleccionado
         if (seccionDias.style.display !== 'none' && listaDias.length === 0) {
             document.getElementById('error-dias').classList.add('visible');
             formularioValido = false;
+        } else {
+            document.getElementById('error-dias').classList.remove('visible');
         }
 
-        // Si algo fallo, avisamos y hacemos scroll al primer campo con error
         if (!formularioValido) {
             mostrarNotificacion('Revisa los campos marcados en rojo.', true);
             var primerError = formulario.querySelector('.error');
@@ -764,65 +762,84 @@
             return;
         }
 
-        // Construimos un payload compatible con el backend
-        var frecuenciaSelect = document.getElementById('frecuencia');
-        var frecuenciaTexto = frecuenciaSelect.options[frecuenciaSelect.selectedIndex].text;
-
-        var payload = {
-            nombre: document.getElementById('nombre').value.trim(),
-            dosis: document.getElementById('dosis').value + ' ' + document.getElementById('unidad').value,
-            frecuencia: frecuenciaTexto,
-            horario: listaHorarios.join(', '),
+        // Armamos el payload real para el backend
+        var datos = {
+            nombre_medicamento: document.getElementById('nombre').value.trim(),
+            concentracion: document.getElementById('concentracion').value.trim(),
+            forma_farmaceutica: document.getElementById('forma').value,
+            dosis_cantidad: parseFloat(document.getElementById('dosis').value),
+            dosis_unidad: document.getElementById('unidad').value,
+            frecuencia: document.getElementById('frecuencia').value,
+            relacion_comida: document.getElementById('comida').value || "",
+            horarios: listaHorarios,
+            dias: listaDias,
             fecha_inicio: convertirFechaAFormatoBackend(fechaInicio),
-            observaciones: document.getElementById('instrucciones').value.trim(),
-            paciente_id: parseInt(document.getElementById('paciente').value)
+            fecha_fin: campoFechaFin.value ? convertirFechaAFormatoBackend(campoFechaFin.value) : null,
+            paciente_id: parseInt(document.getElementById('paciente').value),
+            via_administracion: document.getElementById('via').value || "",
+            medico_receto: document.getElementById('medico').value.trim(),
+            instrucciones: document.getElementById('instrucciones').value.trim()
         };
 
-        console.log('Payload a enviar:', payload);
-
-        var selectorPaciente = document.getElementById('paciente');
-        var nombrePaciente = 'el paciente';
-
-        if (selectorPaciente.selectedIndex >= 0) {
-            nombrePaciente = selectorPaciente.options[selectorPaciente.selectedIndex].text;
-        }
+        console.log('Datos a guardar:', datos);
 
         try {
-            establecerEstadoBotonGuardado(true);
+            botonGuardar.disabled = true;
+            botonGuardar.innerHTML = 'Guardando...';
 
             const respuesta = await fetch(`${BASE_URL}/medicamentos/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(datos)
             });
 
-            const resultado = await respuesta.json().catch(() => ({}));
+            const resultado = await respuesta.json();
+            console.log('Respuesta del backend:', resultado);
 
             if (!respuesta.ok) {
-                var mensajeError = 'No se pudo registrar el medicamento.';
+                let detalle = resultado.detail ?? resultado;
+                let mensajeError = 'No se pudo registrar el medicamento.';
 
-                if (Array.isArray(resultado.detail)) {
-                    mensajeError = resultado.detail.join(' ');
-                } else if (typeof resultado.detail === 'string') {
-                    mensajeError = resultado.detail;
+                if (typeof detalle === 'string') {
+                    mensajeError = detalle;
+                } else if (Array.isArray(detalle)) {
+                    mensajeError = detalle.map(item => {
+                        if (typeof item === 'string') return item;
+                        if (item && typeof item === 'object') {
+                            return item.msg || JSON.stringify(item);
+                        }
+                        return String(item);
+                    }).join(' | ');
+                } else if (detalle && typeof detalle === 'object') {
+                    mensajeError = detalle.msg || detalle.message || JSON.stringify(detalle);
                 }
 
-                throw new Error(mensajeError);
+                alertaError.textContent = mensajeError;
+                alertaError.classList.add('visible');
+                mostrarNotificacion('Error al registrar el medicamento.', true);
+                return;
             }
 
-            mostrarNotificacion('"' + payload.nombre + '" registrado para ' + nombrePaciente + '.', false);
+            var selectorPaciente = document.getElementById('paciente');
+            var nombrePaciente = 'el paciente';
+
+            if (selectorPaciente.selectedIndex >= 0) {
+                nombrePaciente = selectorPaciente.options[selectorPaciente.selectedIndex].text;
+            }
+
+            mostrarNotificacion('"' + datos.nombre_medicamento + '" registrado para ' + nombrePaciente + '.', false);
             limpiarFormulario();
 
         } catch (error) {
-            console.error('Error al registrar medicamento:', error);
-            var mensajeError = error.message || 'Ocurrio un error al registrar el medicamento.';
-            mostrarAlertaGeneral(mensajeError);
-            mostrarNotificacion(mensajeError, true);
-
+            console.error('Error al enviar medicamento:', error);
+            alertaError.textContent = 'No se pudo conectar con el servidor.';
+            alertaError.classList.add('visible');
+            mostrarNotificacion('No se pudo conectar con el backend.', true);
         } finally {
-            establecerEstadoBotonGuardado(false);
+            botonGuardar.disabled = false;
+            botonGuardar.innerHTML = textoOriginalBoton;
         }
     });
 

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registrar Recordatorio - MedTrack</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      margin: 0;
+      padding: 0;
+    }
+
+    .contenedor {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+
+    .tarjeta {
+      background: #1e293b;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #22c55e;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #16a34a;
+    }
+
+    .error-text {
+      color: #f87171;
+      font-size: 12px;
+      display: none;
+    }
+
+    .visible {
+      display: block;
+    }
+
+    .alerta {
+      background: #7f1d1d;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .notificacion {
+      background: #16a34a;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+    }
+
+    .error {
+      border: 2px solid red;
+    }
+
+    .correcto {
+      border: 2px solid green;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="contenedor">
+  <div class="tarjeta">
+
+    <h2>Registrar Recordatorio</h2>
+
+    <form id="formulario" novalidate>
+
+      <label>ID del medicamento *</label>
+      <input type="number" id="medicamentoId">
+      <div id="error-medicamentoId" class="error-text">Campo obligatorio</div>
+
+      <label>Hora del recordatorio *</label>
+      <input type="time" id="horaRecordatorio">
+      <div id="error-horaRecordatorio" class="error-text">Campo obligatorio</div>
+
+      <label>Fecha de inicio *</label>
+      <input type="date" id="fechaInicio">
+      <div id="error-fechaInicio" class="error-text">Campo obligatorio</div>
+
+      <label>Estado</label>
+      <select id="activo">
+        <option value="1">Activo</option>
+        <option value="0">Inactivo</option>
+      </select>
+
+      <label>Observaciones</label>
+      <textarea id="observaciones"></textarea>
+
+      <button type="submit">Guardar Recordatorio</button>
+
+      <div id="alertaError" class="alerta"></div>
+
+    </form>
+
+    <div id="contenedorNotificaciones"></div>
+
+  </div>
+</div>
+
+<script>
+  const formulario = document.getElementById('formulario');
+  const medicamentoId = document.getElementById('medicamentoId');
+  const horaRecordatorio = document.getElementById('horaRecordatorio');
+  const fechaInicio = document.getElementById('fechaInicio');
+  const activo = document.getElementById('activo');
+  const observaciones = document.getElementById('observaciones');
+  const alertaError = document.getElementById('alertaError');
+
+  function validarCampo(campo, idError) {
+    campo.classList.remove('error', 'correcto');
+    const valor = campo.value.trim();
+
+    if (!valor) {
+      campo.classList.add('error');
+      document.getElementById(idError).classList.add('visible');
+      return false;
+    }
+
+    campo.classList.add('correcto');
+    document.getElementById(idError).classList.remove('visible');
+    return true;
+  }
+
+  function formatearFechaBackend(fechaISO) {
+    const partes = fechaISO.split('-');
+    return partes[1] + '/' + partes[2] + '/' + partes[0];
+  }
+
+  function mostrarNotificacion(mensaje, esError = false) {
+    const contenedor = document.getElementById('contenedorNotificaciones');
+    const notificacion = document.createElement('div');
+    notificacion.className = 'notificacion' + (esError ? ' error' : '');
+    notificacion.textContent = mensaje;
+    contenedor.appendChild(notificacion);
+
+    setTimeout(() => {
+      notificacion.remove();
+    }, 3000);
+  }
+
+  formulario.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    alertaError.style.display = "none";
+
+    let valido = true;
+
+    if (!validarCampo(medicamentoId, 'error-medicamentoId')) valido = false;
+    if (!validarCampo(horaRecordatorio, 'error-horaRecordatorio')) valido = false;
+    if (!validarCampo(fechaInicio, 'error-fechaInicio')) valido = false;
+
+    if (!valido) {
+      mostrarNotificacion("Revisa los campos", true);
+      return;
+    }
+
+    const datos = {
+      medicamento_id: parseInt(medicamentoId.value),
+      hora_recordatorio: horaRecordatorio.value,
+      fecha_inicio: formatearFechaBackend(fechaInicio.value),
+      activo: parseInt(activo.value),
+      observaciones: observaciones.value
+    };
+
+    try {
+      const res = await fetch('http://127.0.0.1:8000/recordatorios/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(datos)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        mostrarNotificacion("Recordatorio creado correctamente");
+
+        setTimeout(() => {
+          window.location.href = "listaRecordatorios.html";
+        }, 1200);
+      } else {
+        alertaError.textContent = data.detail;
+        alertaError.style.display = "block";
+      }
+
+    } catch (err) {
+      alertaError.textContent = "Error de conexión con el servidor";
+      alertaError.style.display = "block";
+    }
+  });
+</script>
+
+</body>
+</html>

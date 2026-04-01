@@ -1,56 +1,93 @@
-from fastapi import FastAPI, status, HTTPException
-from pydantic import BaseModel
-from backend.auth import hash_password, verify_password_hash
-from backend.models import get_connection
+from fastapi              import APIRouter, status, HTTPException
+from pydantic             import BaseModel
+from backend.auth         import hash_password, verify_password_hash, generate_jwt
+from backend.models       import get_connection
 
-# Aquí se crea la instancia principal de la aplicación.
-# Esta app es la que registra rutas/endpoints y gestiona las peticiones HTTP
-app = FastAPI()
+# Creamos el router en vez de una app separada.
+# Esto permite que main.py lo registre y use el CORS que ya tiene configurado.
+router = APIRouter()
 
-# Cuando llega una petición, FastAPI usa este modelo para validar
-# que existan username y password y que ambos sean strings
+
+# Modelo para el inicio de sesión (solo correo y contraseña)
 class UserCreate(BaseModel):
     username: str
     password: str
 
-@app.post("/signin")
-# Define una función asíncrona que manejará la petición de inicio de sesión
+
+# Modelo para el registro (todos los campos)
+class UserRegister(BaseModel):
+    nombre:   str
+    username: str
+    password: str
+    rol:      str
+
+
+@router.post("/signin")
 async def login_user(user_data: UserCreate):
     username = user_data.username
     password = user_data.password
 
-    # Busca el usuario en la base de datos por correo
-    conn = get_connection()
+    # Buscamos el usuario en la base de datos por correo
+    conn   = get_connection()
     cursor = conn.cursor()
-    cursor.execute(f"SELECT contrasena FROM usuarios WHERE correo = '{username}'")
+    cursor.execute("SELECT * FROM usuarios WHERE correo = ?", (username,))
     usuario = cursor.fetchone()
+
+    # Si no existe el usuario o la contraseña no coincide, error 401
+    if not usuario or not verify_password_hash(password, usuario["contrasena"]):
+        conn.close()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario o contraseña incorrectos"
+        )
+
     conn.close()
 
-    # Si no existe el usuario o la contraseña no coincide, lanza 401
-    if not usuario or not verify_password_hash(password, usuario["contrasena"]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario o contraseña incorrectos")
+    # Generamos el token JWT con los datos del usuario
+    token = generate_jwt(usuario["id"], usuario["correo"], usuario["rol"])
 
-    return {"detail": "Inicio de sesión exitoso"}
+    # Devolvemos el token y los datos del usuario al frontend
+    return {
+        "detail": "Inicio de sesión exitoso",
+        "token":  token,
+        "usuario": {
+            "id":     usuario["id"],
+            "nombre": usuario["nombre"],
+            "correo": usuario["correo"],
+            "rol":    usuario["rol"]
+        }
+    }
 
 
-@app.post("/signup")
-# Registra el endpoint HTTP POST /signup para registro de usuarios
-async def create_user(user_data: UserCreate):
+@router.post("/signup", status_code=status.HTTP_201_CREATED)
+async def create_user(user_data: UserRegister):
+    nombre   = user_data.nombre
     username = user_data.username
     password = user_data.password
+    rol      = user_data.rol
 
-    conn = get_connection()
+    # Validamos que el rol sea válido
+    if rol not in ("cuidador", "administrador"):
+        raise HTTPException(status_code=400, detail="Rol inválido.")
+
+    conn   = get_connection()
     cursor = conn.cursor()
 
-    # Verifica si el correo ya está registrado
-    cursor.execute(f"SELECT id FROM usuarios WHERE correo = '{username}'")
+    # Verificamos si el correo ya está registrado
+    cursor.execute("SELECT id FROM usuarios WHERE correo = ?", (username,))
     if cursor.fetchone():
         conn.close()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El usuario ya existe")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El usuario ya existe"
+        )
 
-    # Guarda el usuario con la contraseña hasheada
+    # Guardamos el usuario con la contraseña hasheada
     hashed = hash_password(password)
-    cursor.execute(f"INSERT INTO usuarios (nombre, correo, contrasena, rol) VALUES ('Usuario', '{username}', '{hashed}', 'cuidador')")
+    cursor.execute(
+        "INSERT INTO usuarios (nombre, correo, contrasena, rol) VALUES (?, ?, ?, ?)",
+        (nombre, username, hashed, rol)
+    )
     conn.commit()
     conn.close()
 

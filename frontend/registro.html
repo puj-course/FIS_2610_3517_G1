@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Registro</title>
+
+  <!-- Bootstrap para componentes visuales -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Fuentes tipográficas del proyecto -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    /* Colores del proyecto */
+    :root {
+      --color-menta:        #2DD4BF;
+      --color-menta-oscuro: #0F9D8A;
+      --color-fondo:        #0F1B2D;
+      --color-campo:        #1E2D3D;
+      --color-tarjeta:      #162030;
+      --color-borde:        #243447;
+      --color-texto:        #E2EAF4;
+      --color-texto-suave:  #7A95B0;
+      --color-error:        #F4726A;
+      --color-exito:        #4ADE80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* Fondo oscuro centrado con degradados decorativos */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.13) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    /* Tarjeta que contiene el formulario */
+    .tarjeta {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 460px;
+      padding: 2.5rem 2.5rem 2rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: aparecer .45s ease both;
+    }
+
+    /* La tarjeta aparece subiendo suavemente */
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Logo y nombre */
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.75rem;
+    }
+    .marca-icono {
+      width: 38px; height: 38px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .marca-icono svg { width: 22px; height: 22px; color: var(--color-fondo); }
+    .marca-nombre { font-family: 'DM Serif Display', serif; font-size: 1.45rem; }
+
+    /* Título y subtítulo */
+    .titulo    { font-family: 'DM Serif Display', serif; font-size: 1.75rem; margin: 0 0 .25rem; }
+    .subtitulo { font-size: .88rem; color: var(--color-texto-suave); margin: 0 0 1.75rem; }
+
+    /* Etiqueta de cada campo */
+    .etiqueta {
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--color-texto-suave);
+      margin-bottom: .4rem;
+      display: block;
+    }
+    .etiqueta .obligatorio { color: var(--color-menta); }
+
+    /* Inputs y selects */
+    .form-control,
+    .form-select {
+      background: var(--color-campo);
+      border: 1.5px solid var(--color-borde);
+      color: var(--color-texto);
+      border-radius: 10px;
+      padding: .65rem .9rem;
+      font-size: .92rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color .2s, box-shadow .2s;
+      width: 100%;
+    }
+    .form-control:focus,
+    .form-select:focus {
+      background: var(--color-campo);
+      border-color: var(--color-menta);
+      color: var(--color-texto);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.18);
+      outline: none;
+    }
+    .form-control::placeholder { color: #4A6278; }
+    .form-select option { background: var(--color-campo); }
+
+    /* Borde rojo si hay error, verde si está correcto */
+    .form-control.invalido,
+    .form-select.invalido { border-color: var(--color-error); box-shadow: none; }
+    .form-control.valido,
+    .form-select.valido   { border-color: var(--color-exito); box-shadow: none; }
+
+    /* Mensaje de error debajo de un campo */
+    .mensaje-error {
+      font-size: .78rem;
+      color: var(--color-error);
+      margin-top: .3rem;
+      display: none;
+    }
+    .mensaje-error.visible { display: block; }
+
+    /* Caja roja para errores generales */
+    .alerta-error {
+      background: rgba(244,114,106,.12);
+      border: 1px solid rgba(244,114,106,.4);
+      color: var(--color-error);
+      border-radius: 10px;
+      padding: .7rem 1rem;
+      font-size: .85rem;
+      margin-top: 1rem;
+      display: none;
+    }
+    .alerta-error.visible { display: block; }
+
+    /* Caja verde para éxito */
+    .alerta-exito {
+      background: rgba(74,222,128,.12);
+      border: 1px solid rgba(74,222,128,.4);
+      color: var(--color-exito);
+      border-radius: 10px;
+      padding: .7rem 1rem;
+      font-size: .85rem;
+      margin-top: 1rem;
+      display: none;
+    }
+    .alerta-exito.visible { display: block; }
+
+    /* Botón principal verde */
+    .boton-principal {
+      background: var(--color-menta);
+      color: var(--color-fondo);
+      border: none;
+      border-radius: 12px;
+      padding: .75rem;
+      font-size: .95rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      width: 100%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      transition: background .2s, box-shadow .2s, transform .1s;
+      margin-top: 1.25rem;
+    }
+    .boton-principal:hover    { background: var(--color-menta-oscuro); box-shadow: 0 8px 24px rgba(45,212,191,.3); }
+    .boton-principal:active   { transform: scale(.98); }
+    .boton-principal:disabled { opacity: .6; cursor: not-allowed; }
+
+    /* Texto de "¿Ya tienes cuenta?" */
+    .pie-formulario {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: .88rem;
+      color: var(--color-texto-suave);
+    }
+    .enlace {
+      color: var(--color-menta);
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 0;
+    }
+    .enlace:hover { color: var(--color-menta-oscuro); }
+
+    @media (max-width: 480px) {
+      .tarjeta { padding: 1.75rem 1.25rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="tarjeta">
+
+  <!-- Logo y nombre -->
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <h1 class="titulo">Crear cuenta</h1>
+  <p class="subtitulo">Completa los datos para registrarte en MedTrack.</p>
+
+  <!-- Formulario de registro -->
+  <form id="formularioRegistro" novalidate>
+
+    <!-- Campo nombre -->
+    <div class="mb-3">
+      <label class="etiqueta" for="nombre">
+        Nombre completo <span class="obligatorio">*</span>
+      </label>
+      <input
+        type="text"
+        class="form-control"
+        id="nombre"
+        placeholder="Tu nombre completo"
+        required
+      />
+      <div class="mensaje-error" id="errorNombre">Ingresa tu nombre completo.</div>
+    </div>
+
+    <!-- Campo correo -->
+    <div class="mb-3">
+      <label class="etiqueta" for="correo">
+        Correo electrónico <span class="obligatorio">*</span>
+      </label>
+      <input
+        type="email"
+        class="form-control"
+        id="correo"
+        placeholder="tu@correo.com"
+        required
+      />
+      <div class="mensaje-error" id="errorCorreo">Ingresa un correo válido.</div>
+    </div>
+
+    <!-- Campo contraseña -->
+    <div class="mb-3">
+      <label class="etiqueta" for="contrasena">
+        Contraseña <span class="obligatorio">*</span>
+      </label>
+      <input
+        type="password"
+        class="form-control"
+        id="contrasena"
+        placeholder="Mínimo 6 caracteres"
+        required
+        minlength="6"
+      />
+      <div class="mensaje-error" id="errorContrasena">La contraseña debe tener mínimo 6 caracteres.</div>
+    </div>
+
+    <!-- Campo confirmar contraseña -->
+    <div class="mb-3">
+      <label class="etiqueta" for="confirmarContrasena">
+        Confirmar contraseña <span class="obligatorio">*</span>
+      </label>
+      <input
+        type="password"
+        class="form-control"
+        id="confirmarContrasena"
+        placeholder="Repite tu contraseña"
+        required
+      />
+      <div class="mensaje-error" id="errorConfirmar">Las contraseñas no coinciden.</div>
+    </div>
+
+    <!-- Campo rol -->
+    <div class="mb-3">
+      <label class="etiqueta" for="rol">
+        Rol <span class="obligatorio">*</span>
+      </label>
+      <select class="form-select" id="rol" required>
+        <option value="" disabled selected>Selecciona tu rol...</option>
+        <option value="cuidador">Cuidador</option>
+      </select>
+      <div class="mensaje-error" id="errorRol">Selecciona un rol.</div>
+    </div>
+
+    <!-- Alertas -->
+    <div class="alerta-error" id="alertaError"></div>
+    <div class="alerta-exito" id="alertaExito"></div>
+
+    <!-- Botón de registro -->
+    <button type="submit" class="boton-principal" id="botonRegistro">
+      Crear cuenta
+    </button>
+
+  </form>
+
+  <!-- Enlace para volver al login -->
+  <p class="pie-formulario">
+    ¿Ya tienes cuenta?
+    <button class="enlace" onclick="window.location.href='login.html'">Inicia sesión aquí</button>
+  </p>
+
+</div>
+
+<script>
+
+  /*
+  Referencias a los elementos del formulario
+  */
+  const formulario          = document.getElementById('formularioRegistro');
+  const campoNombre         = document.getElementById('nombre');
+  const campoCorreo         = document.getElementById('correo');
+  const campoContrasena     = document.getElementById('contrasena');
+  const campoConfirmar      = document.getElementById('confirmarContrasena');
+  const campoRol            = document.getElementById('rol');
+  const alertaError         = document.getElementById('alertaError');
+  const alertaExito         = document.getElementById('alertaExito');
+  const botonRegistro       = document.getElementById('botonRegistro');
+
+
+  /*
+  Valida un campo y lo marca verde o rojo.
+  Devuelve true si está bien, false si tiene error.
+  */
+  function validarCampo(campo, idError) {
+    campo.classList.remove('invalido', 'valido');
+    const mensajeError = document.getElementById(idError);
+    const valor = campo.value.trim();
+
+    if (!valor) {
+      campo.classList.add('invalido');
+      mensajeError.classList.add('visible');
+      return false;
+    }
+
+    /* Validación especial para el correo */
+    if (campo.type === 'email') {
+      const formatoCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!formatoCorreo.test(valor)) {
+        campo.classList.add('invalido');
+        mensajeError.classList.add('visible');
+        return false;
+      }
+    }
+
+    /* Validación especial para la contraseña */
+    if (campo.id === 'contrasena' && valor.length < 6) {
+      campo.classList.add('invalido');
+      mensajeError.classList.add('visible');
+      return false;
+    }
+
+    /* Validación especial para confirmar contraseña */
+    if (campo.id === 'confirmarContrasena') {
+      if (valor !== campoContrasena.value) {
+        campo.classList.add('invalido');
+        mensajeError.classList.add('visible');
+        return false;
+      }
+    }
+
+    campo.classList.add('valido');
+    mensajeError.classList.remove('visible');
+    return true;
+  }
+
+
+  /*
+  Validación en tiempo real para cada campo
+  */
+  campoNombre.addEventListener('blur',     () => validarCampo(campoNombre,     'errorNombre'));
+  campoCorreo.addEventListener('blur',     () => validarCampo(campoCorreo,     'errorCorreo'));
+  campoContrasena.addEventListener('blur', () => validarCampo(campoContrasena, 'errorContrasena'));
+  campoConfirmar.addEventListener('blur',  () => validarCampo(campoConfirmar,  'errorConfirmar'));
+  campoRol.addEventListener('change',      () => validarCampo(campoRol,        'errorRol'));
+
+
+  /*
+  Cuando el usuario hace clic en "Crear cuenta"
+  */
+  formulario.addEventListener('submit', async function(evento) {
+    evento.preventDefault();
+
+    /* Ocultamos alertas anteriores */
+    alertaError.classList.remove('visible');
+    alertaExito.classList.remove('visible');
+
+    /* Validamos todos los campos */
+    const nombreValido     = validarCampo(campoNombre,     'errorNombre');
+    const correoValido     = validarCampo(campoCorreo,     'errorCorreo');
+    const contrasenaValida = validarCampo(campoContrasena, 'errorContrasena');
+    const confirmarValido  = validarCampo(campoConfirmar,  'errorConfirmar');
+    const rolValido        = validarCampo(campoRol,        'errorRol');
+
+    /* Si alguno está mal, no seguimos */
+    if (!nombreValido || !correoValido || !contrasenaValida || !confirmarValido || !rolValido) return;
+
+    /* Deshabilitamos el botón mientras esperamos */
+    botonRegistro.disabled     = true;
+    botonRegistro.textContent  = 'Creando cuenta...';
+
+    try {
+      /*
+      Enviamos los datos al backend FastAPI.
+      El endpoint es POST /signup en el puerto 8000.
+      */
+      const respuesta = await fetch('http://localhost:8000/signup', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre:   campoNombre.value.trim(),
+          username: campoCorreo.value.trim(),
+          password: campoContrasena.value,
+          rol:      campoRol.value
+        })
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        /* El servidor respondió con error */
+        alertaError.textContent = datos.detail;
+        alertaError.classList.add('visible');
+        return;
+      }
+
+      /*
+      Todo salió bien entonces mostramos mensaje de éxito
+      y redirigimos al login después de 2 segundos
+      */
+      alertaExito.textContent = '¡Cuenta creada exitosamente! Redirigiendo al login...';
+      alertaExito.classList.add('visible');
+
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 2000);
+
+    } catch (error) {
+      /* Si el servidor no está corriendo */
+      alertaError.textContent = 'No se pudo conectar al servidor.';
+      alertaError.classList.add('visible');
+
+    } finally {
+      /* Siempre volvemos a habilitar el botón */
+      botonRegistro.disabled    = false;
+      botonRegistro.textContent = 'Crear cuenta';
+    }
+  });
+
+</script>
+
+</body>
+</html>

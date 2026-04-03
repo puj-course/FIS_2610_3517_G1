@@ -470,6 +470,7 @@
   </form>
 </div>
 
+  <script src="Api.js"></script>
 <script>
   /*
     referencias a los elementos html
@@ -650,14 +651,8 @@
     const partes = datosPaciente.fecha_nacimiento.split('-');
     datosPaciente.fecha_nacimiento = `${partes[1]}/${partes[2]}/${partes[0]}`;
   }
-  fetch('http://localhost:8000/pacientes', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(datosPaciente)
-  })
-  .then(function(r) {
-    return r.json().then(function(b) { return { ok: r.ok, body: b }; });
-  })
+ 
+api.registrarPaciente(datosPaciente)
   .then(function(resultado) {
     if (!resultado.ok) {
       const mensajes = Array.isArray(resultado.body.detail)
@@ -681,9 +676,11 @@
     botonGuardar.textContent = 'Guardar paciente';
   });
 
-  });
+  });  // ← esta cierra el formulario.addEventListener
 
-</script>
+  </script>
+
+  
 
 </body>
 </html>

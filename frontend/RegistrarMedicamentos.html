@@ -388,6 +388,8 @@
   </form>
 </div>
 
+ <script src="Api.js"></script>
+ 
 <script>
   /*
     Referencias a los elementos del formulario.
@@ -524,12 +526,7 @@
     botonGuardar.disabled = true;
     botonGuardar.textContent = 'Guardando...';
 
-    fetch('http://localhost:8000/medicamentos/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(datosMedicamento)
-    })
-    .then(function(r) { return r.json().then(function(b) { return { ok: r.ok, body: b }; }); })
+    api.registrarMedicamento(datosMedicamento)
     .then(function(resultado) {
       if (!resultado.ok) {
         // El backend devolvió errores de validación, los mostramos al usuario

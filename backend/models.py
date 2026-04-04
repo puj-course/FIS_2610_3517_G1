@@ -49,18 +49,28 @@ def init_db():
     # Campos obligatorios: nombre, dosis, frecuencia, horario, fecha_inicio, paciente_id
     # Campo opcional: observaciones
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS medicamentos (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre           TEXT    NOT NULL,
-            dosis            TEXT    NOT NULL,
-            frecuencia       TEXT    NOT NULL,
-            horario          TEXT    NOT NULL,
-            fecha_inicio     TEXT    NOT NULL,
-            observaciones    TEXT,
-            paciente_id      INTEGER NOT NULL,
-            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS medicamentos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        concentracion TEXT,
+        forma_farmaceutica TEXT,
+        dosis TEXT NOT NULL,
+        dosis_cantidad REAL,
+        dosis_unidad TEXT,
+        frecuencia TEXT NOT NULL,
+        relacion_comida TEXT,
+        horario TEXT NOT NULL,
+        dias TEXT,
+        fecha_inicio TEXT NOT NULL,
+        fecha_fin TEXT,
+        via_administracion TEXT,
+        medico_receto TEXT,
+        instrucciones TEXT,
+        observaciones TEXT,
+        paciente_id INTEGER NOT NULL,
+        FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+    )
+""")
 
 
     # Tabla de recordatorios

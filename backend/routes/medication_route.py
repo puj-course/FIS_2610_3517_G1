@@ -1,114 +1,175 @@
-#############################################################################
 #	medication_route.py
 #	APIRouter: Para crear rutas en FastAPI
 #	HTTPException: Para devolver errores HTTP
-#	Se importa la cuncion validar_medicamento de validaciones.py
-#
-#############################################################################
+#	Se importa la funcion validar_medicamento de validaciones.py
 
 from pathlib import Path
 import sqlite3 # Para conectarse a la BD SQLite
 from fastapi import APIRouter, HTTPException
 from backend.validaciones import validar_medicamento, verificar_paciente_existe, verificar_medicamento_duplicado
 
-
 # Crea el grupo de rutas de medicamentos
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
 DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
 
+def limpiar_texto(valor):
+    if valor is None:
+        return ""
+    return str(valor).strip()
+
 # Creacion del endpoint POST
 # La funcion responde a una peticion POST en la ruta base de medicamentos
 @router.post("/")
+def registrar_medicamento(data: dict):
+    errores = validar_medicamento(data)
 
-def registrar_medicamento(data: dict): # La funcion recibe un diccionario con los datos enviados en el body de request
-	errores = validar_medicamento(data) # Se llama a la funcion para validar
+    if errores:
+        raise HTTPException(status_code=400, detail=errores)
 
-	if errores:
-		# Responde con error 400 (datos invalidos)
-		raise HTTPException(status_code=400, detail=errores)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
 
-	conn = sqlite3.connect(DB_PATH) # Abrir conexion con la BD
-	cursor = conn.cursor()
+    try:
+        paciente_id = int(data["paciente_id"])
+        nombre = data["nombre_medicamento"].strip()
+        dosis_cantidad = float(data["dosis_cantidad"])
+        dosis_unidad = data["dosis_unidad"].strip()
+        dosis = f"{dosis_cantidad} {dosis_unidad}"
+        horario = ", ".join([h.strip() for h in data.get("horarios", []) if str(h).strip()])
+        dias = ", ".join(data.get("dias", [])) if isinstance(data.get("dias", []), list) else ""
 
-	try:
-		# Verificar que el paciente exista
-		if not verificar_paciente_existe(int(data["paciente_id"]), conn):
-			raise HTTPException(status_code=404, detail="El paciente no existe")
-		# Verificar que no se está insertando un medicamento doble
-		if verificar_medicamento_duplicado(
-    			data["nombre"].strip(),
-    			int(data["paciente_id"]),
-    			conn
-		):
-    			raise HTTPException(
-        			status_code=400,
-        			detail="El paciente ya tiene registrado este medicamento"
-    			)
+        if not verificar_paciente_existe(paciente_id, conn):
+            raise HTTPException(status_code=404, detail="El paciente no existe")
 
-		# Insertar medicamento en la tabla
-		cursor.execute(
-			"""
+        if verificar_medicamento_duplicado(nombre, paciente_id, conn):
+            raise HTTPException(
+                status_code=400,
+                detail="El paciente ya tiene registrado este medicamento"
+            )
+        
+        # Se limpian y preparan los datos para la inserción
+        nombre = limpiar_texto(data.get("nombre_medicamento"))
+        concentracion = limpiar_texto(data.get("concentracion"))
+        forma_farmaceutica = limpiar_texto(data.get("forma_farmaceutica"))
+        frecuencia = limpiar_texto(data.get("frecuencia"))
+        relacion_comida = limpiar_texto(data.get("relacion_comida"))
+        fecha_inicio = limpiar_texto(data.get("fecha_inicio"))
+        fecha_fin = limpiar_texto(data.get("fecha_fin")) or None
+        via_administracion = limpiar_texto(data.get("via_administracion"))
+        medico_receto = limpiar_texto(data.get("medico_receto"))
+        instrucciones = limpiar_texto(data.get("instrucciones"))
+        observaciones = limpiar_texto(data.get("observaciones"))
 
-			INSERT INTO medicamentos (nombre, dosis, frecuencia, horario, fecha_inicio, observaciones, paciente_id)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-			""",
-			(
-				data["nombre"].strip(),
-				data["dosis"].strip(),
-				data["frecuencia"].strip(),
-				data["horario"].strip(),
-				data["fecha_inicio"].strip(),
-				data.get("observaciones", "").strip(),
-				int(data["paciente_id"])
-			)
-		)
+        dosis_cantidad = float(data["dosis_cantidad"])
+        dosis_unidad = limpiar_texto(data.get("dosis_unidad"))
+        dosis = f"{dosis_cantidad} {dosis_unidad}"
 
-		conn.commit() # Confirmar los cambios en la BD (guardar el INSERT que se acaba de hacer)
+        horario = ", ".join([limpiar_texto(h) for h in data.get("horarios", []) if limpiar_texto(h)])
+        dias = ", ".join([limpiar_texto(d) for d in data.get("dias", []) if limpiar_texto(d)])
 
-		return {"mensaje": "Medicamento registrado existosamente"}
+        paciente_id = int(data["paciente_id"])
+    
+        cursor.execute(
+            """
+            INSERT INTO medicamentos (
+                nombre,
+                concentracion,
+                forma_farmaceutica,
+                dosis,
+                dosis_cantidad,
+                dosis_unidad,
+                frecuencia,
+                relacion_comida,
+                horario,
+                dias,
+                fecha_inicio,
+                fecha_fin,
+                via_administracion,
+                medico_receto,
+                instrucciones,
+                observaciones,
+                paciente_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                nombre,
+                concentracion,
+                forma_farmaceutica,
+                dosis,
+                dosis_cantidad,
+                dosis_unidad,
+                frecuencia,
+                relacion_comida,
+                horario,
+                dias,
+                fecha_inicio,
+                fecha_fin,
+                via_administracion,
+                medico_receto,
+                instrucciones,
+                observaciones,
+                paciente_id
+            )
+        )
+        conn.commit()
+        return {"mensaje": "Medicamento registrado exitosamente"}
 
-	except HTTPException:
-		raise
+    except HTTPException:
+        raise
 
-	except sqlite3.Error as e:
-		raise HTTPException(
-			status_code=500, 
-			detail=f"Error al registrar el medicamento: {str(e)}"
-		)
-
-	finally:
-		conn.close() # cerrar la conexion
+    except sqlite3.Error as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al registrar el medicamento: {str(e)}"
+        )
+    finally:
+        conn.close()
 # Endpoint para consultar medicamentos de un paciente
 @router.get("/{paciente_id}")
 def obtener_medicamentos(paciente_id: int):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    # Verificamos que el paciente existe
-    cursor.execute(f"SELECT id FROM pacientes WHERE id = {paciente_id}")
+    cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))
     paciente = cursor.fetchone()
 
     if not paciente:
         conn.close()
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
 
-    # Consultamos los medicamentos del paciente
-    cursor.execute(f"SELECT * FROM medicamentos WHERE paciente_id = {paciente_id}")
+    cursor.execute("""
+        SELECT
+            id, nombre, concentracion, forma_farmaceutica, dosis, dosis_cantidad,
+            dosis_unidad, frecuencia, relacion_comida, horario, dias, fecha_inicio,
+            fecha_fin, via_administracion, medico_receto, instrucciones, observaciones, paciente_id
+        FROM medicamentos
+        WHERE paciente_id = ?
+    """, (paciente_id,))
+
     medicamentos = cursor.fetchall()
     conn.close()
 
-    # Convertimos a lista de diccionarios
     resultado = []
     for m in medicamentos:
         resultado.append({
             "id": m[0],
             "nombre": m[1],
-            "dosis": m[2],
-            "frecuencia": m[3],
-            "horario": m[4],
-            "fecha_inicio": m[5],
-            "observaciones": m[6],
-            "paciente_id": m[7]
+            "concentracion": m[2],
+            "forma_farmaceutica": m[3],
+            "dosis": m[4],
+            "dosis_cantidad": m[5],
+            "dosis_unidad": m[6],
+            "frecuencia": m[7],
+            "relacion_comida": m[8],
+            "horario": m[9],
+            "dias": m[10],
+            "fecha_inicio": m[11],
+            "fecha_fin": m[12],
+            "via_administracion": m[13],
+            "medico_receto": m[14],
+            "instrucciones": m[15],
+            "observaciones": m[16],
+            "paciente_id": m[17]
         })
-
     return resultado

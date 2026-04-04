@@ -44,25 +44,6 @@ def init_db():
             UNIQUE (tipo_documento, numero_documento)
         )
     """)
-<<<<<<< HEAD
-# Tabla de medicamentos 
-    # Campos obligatorios: nombre, dosis, frecuencia, horario, fecha_inicio, paciente_id
-    # Campo opcional: observaciones
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS medicamentos (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre           TEXT    NOT NULL,
-            dosis            TEXT    NOT NULL,
-            frecuencia       TEXT    NOT NULL,
-            horario          TEXT    NOT NULL,
-            fecha_inicio     TEXT    NOT NULL,
-            observaciones    TEXT,
-            paciente_id      INTEGER NOT NULL,
-            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
-        )
-    """)
-=======
->>>>>>> 5cf1d30f2a012cfec07fd67f669f963e9c6fc93d
 
     # Tabla de medicamentos
     # Campos obligatorios: nombre, dosis, frecuencia, horario, fecha_inicio, paciente_id

@@ -74,42 +74,65 @@ def verificar_duplicado(numero_documento: str, tipo_documento: str, conn) -> boo
     cursor = conn.cursor()
 
     # Arma la consulta con los datos recibidos
-    query = f"SELECT id FROM pacientes WHERE numero_documento = '{numero_documento}' AND tipo_documento = '{tipo_documento}'"
-    cursor.execute(query)
+    cursor.execute(
+        "SELECT id FROM pacientes WHERE numero_documento = ? AND tipo_documento = ?",
+        (numero_documento, tipo_documento)
+    )
 
     # Si encontró algo, es duplicado
     resultado = cursor.fetchone()
     return resultado is not None
+# Validaciones adicionales de formato para medicamento — issue #195
+def validar_formato_medicamento(data: dict) -> list:
+    errores = []
 
+    nombre = str(data.get("nombre_medicamento", "")).strip()
+    if nombre and len(nombre) < 2:
+        errores.append("El nombre del medicamento debe tener al menos 2 caracteres")
+
+    fecha = str(data.get("fecha_inicio", "")).strip()
+    if fecha:
+        try:
+            datetime.strptime(fecha, "%m/%d/%Y")
+        except ValueError:
+            errores.append("La fecha de inicio debe tener formato mm/dd/yyyy")
+
+    return errores
 
 # Lógica de creación de esquema de validación de medicamentos (HU'09)
 def validar_medicamento(data: dict) -> list:
-    # data es el diccionario con los datos del medicamento
-    # la función devuelve una lista de errores; si está vacía, todo está bien
     errores = []
 
-    # Campos obligatorios del medicamento
-    
     campos_obligatorios = {
-    	"nombre": "El nombre del medicamento es obligatorio",
-    	"dosis": "La dosis es obligatoria",
-    	"frecuencia": "La frecuencia es obligatoria",
-    	"horario": "El horario de toma es obligatorio",
-    	"fecha_inicio": "La fecha de inicio es obligatoria",
-    	"paciente_id": "El paciente_id es obligatorio"
+        "nombre_medicamento": "El nombre del medicamento es obligatorio",
+        "concentracion": "La concentración es obligatoria",
+        "forma_farmaceutica": "La forma farmacéutica es obligatoria",
+        "dosis_cantidad": "La dosis es obligatoria",
+        "dosis_unidad": "La unidad de la dosis es obligatoria",
+        "frecuencia": "La frecuencia es obligatoria",
+        "fecha_inicio": "La fecha de inicio es obligatoria",
+        "paciente_id": "El paciente_id es obligatorio"
     }
 
-    # Revisa que los campos obligatorios hayan llegado y no estén vacíos
     for campo, mensaje in campos_obligatorios.items():
         valor = data.get(campo, "")
         if valor is None or str(valor).strip() == "":
             errores.append(mensaje)
 
-    # Si faltan campos, no seguimos validando lo demás
+    horarios = data.get("horarios", [])
+    if not isinstance(horarios, list) or len(horarios) == 0:
+        errores.append("Debe ingresar al menos un horario")
+
     if errores:
         return errores
 
-    # Verifica que paciente_id sea numérico
+    try:
+        dosis_cantidad = float(data["dosis_cantidad"])
+        if dosis_cantidad <= 0:
+            errores.append("La dosis debe ser un número mayor que 0")
+    except (ValueError, TypeError):
+        errores.append("La dosis debe ser un número válido")
+
     try:
         paciente_id = int(data["paciente_id"])
         if paciente_id <= 0:
@@ -117,26 +140,82 @@ def validar_medicamento(data: dict) -> list:
     except (ValueError, TypeError):
         errores.append("El paciente_id debe ser un número entero válido")
 
+    errores.extend(validar_formato_medicamento(data))
     return errores
-
 def verificar_paciente_existe(paciente_id: int, conn) -> bool:
-    # Busca si el paciente existe en la base de datos
-    # Devuelve True si existe, False si no
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))
-    resultado = cursor.fetchone() # fechone() trae una sola fila
-    return resultado is not None
-# Funcion para evitar que se ingresen medicamentos duplicados
+    return cursor.fetchone() is not None # Devuelve true o false dependiendo si el paciente existe en la database
+#
 def verificar_medicamento_duplicado(nombre: str, paciente_id: int, conn) -> bool:
-    # Busca si el paciente ya tiene registrado un medicamento con el mismo nombre
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id
-        FROM medicamentos
+        SELECT id FROM medicamentos
         WHERE paciente_id = ? AND LOWER(TRIM(nombre)) = LOWER(TRIM(?))
         """,
         (paciente_id, nombre)
     )
-    resultado = cursor.fetchone()
-    return resultado is not None
+    return cursor.fetchone() is not None
+# Función asociada a los recordatorios (HU'15, SUB #251)
+
+def validar_recordatorio(data: dict) -> list:
+	# data es el diccionario con los datos del rcordatorio
+	# la función devuelve una lista de errores; si está vacía, todo OK
+	errores = []
+
+	# Campos obligatorios del recordatorio
+	campos_obligatorios = {
+		"medicamento_id": "La id del medicamento es obligatoria",
+		"hora_recordatorio": "Favor ingresar la hora del recordatorio",
+		"fecha_inicio": "Se requiere la fecha de inicio"
+	}
+
+	# Para revisar que los campos obligatorios hayan llegado y no estén vacíos
+	for campo, mensaje in campos_obligatorios.items():
+		valor = data.get(campo, "")
+		if valor is None or str(valor).strip() == "":
+			errores.append(mensaje)
+
+	# No se sigue validando lo demás si faltan campos obligatorios
+	if errores:
+		return errores
+
+	# Validar que la id del medicamento sea un entero válido > 0
+	try:
+		medicamento_id = int(data["medicamento_id"])
+		if medicamento_id <= 0:
+			errores.append("La id del medicamento debe ser un número > 0")
+	except (ValueError, TypeError):
+		errores.append("La id del del medicamento debe ser un entero válido")
+
+	# Validar formato de hora_recordatorio: HH:MM
+	try:
+		datetime.strptime(data["hora_recordatorio"], "%H:%M")
+	except ValueError:
+		errores.append("La hora del recordatorio debe tener formato HH:MM")
+
+	# Validar formato de fecha_inicio mm/dd/yyyy
+	try:
+		datetime.strptime(data["fecha_inicio"], "%m/%d/%Y")
+	except ValueError:
+		errores.append("La fecha de inicio debe tener formato mm/dd/yyyy")
+
+
+	# Validar activo solo si llega en el JSON
+	if "activo" in data and str(data["activo"]).strip() != "":
+		try:
+			activo = int(data["activo"])
+			if activo not in [0, 1]:
+				errores.append("El campo activo debe ser 0 o 1")
+		except (ValueError, TypeError):
+			errores.append("El campo activo debe ser un número entero válido")
+	return errores
+
+	# Verificar la existencia del medicamento en la BD
+	# Devuelve True si existe, False si no
+def verificar_medicamento_existe(medicamento_id: int, conn) -> bool:
+	cursor = conn.cursor() # conn recibe la conexion a SQLite
+	cursor.execute("SELECT id FROM medicamentos WHERE id = ?", (medicamento_id,))
+	resultado = cursor.fetchone() # fetchone trae una sola fila
+	return resultado is not None

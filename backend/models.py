@@ -25,14 +25,14 @@ def init_db():
             rol TEXT NOT NULL CHECK(rol IN ('cuidador', 'administrador'))
         )
     """)
-   # solo 2 subissues estan aqui
+
     # Tabla de pacientes
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pacientes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombres TEXT NOT NULL,
             apellidos TEXT NOT NULL,
-            fecha_nacimiento TEXT NOT NULL, -- mm/dd/yyyy
+            fecha_nacimiento TEXT NOT NULL,
             genero TEXT NOT NULL,
             tipo_documento TEXT NOT NULL,
             numero_documento TEXT NOT NULL,
@@ -44,6 +44,7 @@ def init_db():
             UNIQUE (tipo_documento, numero_documento)
         )
     """)
+<<<<<<< HEAD
 # Tabla de medicamentos 
     # Campos obligatorios: nombre, dosis, frecuencia, horario, fecha_inicio, paciente_id
     # Campo opcional: observaciones
@@ -60,14 +61,82 @@ def init_db():
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
         )
     """)
+=======
+>>>>>>> 5cf1d30f2a012cfec07fd67f669f963e9c6fc93d
 
+    # Tabla de medicamentos
+    # Campos obligatorios: nombre, dosis, frecuencia, horario, fecha_inicio, paciente_id
+    # Campo opcional: observaciones
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS medicamentos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        concentracion TEXT,
+        forma_farmaceutica TEXT,
+        dosis TEXT NOT NULL,
+        dosis_cantidad REAL,
+        dosis_unidad TEXT,
+        frecuencia TEXT NOT NULL,
+        relacion_comida TEXT,
+        horario TEXT NOT NULL,
+        dias TEXT,
+        fecha_inicio TEXT NOT NULL,
+        fecha_fin TEXT,
+        via_administracion TEXT,
+        medico_receto TEXT,
+        instrucciones TEXT,
+        observaciones TEXT,
+        paciente_id INTEGER NOT NULL,
+        FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+    )
+""")
+
+
+    # Tabla de recordatorios
+
+    # AUTOINCREMENT hace que el sistema de BD genere las id 
+    cursor.execute("""
+	CREATE TABLE IF NOT EXISTS recordatorios (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		medicamento_id INTEGER NOT NULL,
+		hora_recordatorio TEXT NOT NULL,
+		fecha_inicio TEXT NOT NULL,
+		activo INTEGER NOT NULL DEFAULT 1,
+		observaciones TEXT,
+		FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
+	)
+    """)
     conn.commit()
     conn.close()
     print("Base de datos inicializada correctamente.")
 
+def get_recordatorios_activos(medicamento_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM recordatorios 
+        WHERE medicamento_id = ? AND activo = 1
+    """, (medicamento_id,))
+    recordatorios = cursor.fetchall()
+    conn.close()
+    return recordatorios
+
+    recordatorios = cursor.fetchall()
+    conn.close()
+    return recordatorios
+
+def insertar_recordatorio(medicamento_id, hora, dias, activo=1):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO recordatorios (medicamento_id, hora, dias, activo)
+        VALUES (?, ?, ?, ?)
+    """, (medicamento_id, hora, dias, activo))
+    conn.commit()
+    conn.close()
 
 if __name__ == "__main__":
     init_db()
     # aumentara la implementacion
-    
+
 

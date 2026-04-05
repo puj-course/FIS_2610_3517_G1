@@ -4,9 +4,9 @@
 #	 y que obligan a las subclases a implementar ciertos métodos. 
 ###############################################################################
 
-from abc import ABC, abstracmethod
+from abc import ABC, abstractmethod
 
 class IAlertObserver(ABC):
     @abstractmethod
     def update(self, event: dict):
-        pass #hay que completar
+        pass 

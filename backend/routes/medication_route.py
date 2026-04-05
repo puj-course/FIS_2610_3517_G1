@@ -11,6 +11,9 @@ import sqlite3 # Para conectarse a la BD SQLite
 from fastapi import APIRouter, HTTPException
 from backend.validaciones import validar_medicamento, verificar_paciente_existe, verificar_medicamento_duplicado
 
+# Relacionado al patron observer
+from backend.alertas.bootstrap import publisher
+
 
 # Crea el grupo de rutas de medicamentos
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
@@ -118,9 +121,26 @@ def registrar_medicamento(data: dict):
                 paciente_id
             )
         )
-
+		nuevo_medicamento_id = cursor.lastrowid
         conn.commit()
-        return {"mensaje": "Medicamento registrado exitosamente"}
+
+		# Para Observer
+		publisher.notify({
+    		"type": "medication_registered",
+    		"medicamento_id": nuevo_medicamento_id,
+    		"paciente_id": paciente_id,
+    		"nombre": nombre,
+    		"dosis": dosis,
+    		"frecuencia": frecuencia,
+    		"horario": horario,
+    		"dias": dias,
+    		"fecha_inicio": fecha_inicio
+		})
+
+        return {
+			"mensaje": "Medicamento registrado exitosamente"
+			"medicamento_id": nuevo_medicamento_id
+		}
 
     except HTTPException:
         raise

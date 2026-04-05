@@ -1,25 +1,22 @@
-#############################################################################
 #	medication_route.py
 #	APIRouter: Para crear rutas en FastAPI
 #	HTTPException: Para devolver errores HTTP
-#	Se importa la cuncion validar_medicamento de validaciones.py
-#
-#############################################################################
+#	Se importa la funcion validar_medicamento de validaciones.py
 
 from pathlib import Path
 import sqlite3 # Para conectarse a la BD SQLite
 from fastapi import APIRouter, HTTPException
 from backend.validaciones import validar_medicamento, verificar_paciente_existe, verificar_medicamento_duplicado
 
+
 # Relacionado al patron observer
 from backend.alertas.bootstrap import publisher
+
 
 
 # Crea el grupo de rutas de medicamentos
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
 DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
-
-
 
 def limpiar_texto(valor):
     if valor is None:
@@ -121,6 +118,7 @@ def registrar_medicamento(data: dict):
                 paciente_id
             )
         )
+
 		nuevo_medicamento_id = cursor.lastrowid
         conn.commit()
 
@@ -150,7 +148,6 @@ def registrar_medicamento(data: dict):
             status_code=500,
             detail=f"Error al registrar el medicamento: {str(e)}"
         )
-
     finally:
         conn.close()
 # Endpoint para consultar medicamentos de un paciente
@@ -201,4 +198,7 @@ def obtener_medicamentos(paciente_id: int):
             "paciente_id": m[17]
         })
 
+
+    
     return resultado
+

@@ -3,6 +3,9 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from backend.validaciones import validar_recordatorio, verificar_medicamento_existe
 
+# Relacionado a la implementación del patron Observer
+from backend.alertas.bootstrap import publisher
+
 router = APIRouter(prefix="/recordatorios", tags=["Recordatorios"])
 
 DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
@@ -52,6 +55,25 @@ def crear_recordatorio(data: dict):
             raise HTTPException(status_code=404, detail="El medicamento no existe")
 
         nuevo_id = insertar_recordatorio(data)
+
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT paciente_id FROM medicamentos WHERE id = ?",
+            (int(data["medicamento_id"]),)
+        )
+        fila = cursor.fetchone()
+        paciente_id = fila[0] if fila else None
+
+        publisher.notify({
+            "type": "reminder_created",
+            "recordatorio_id": nuevo_id,
+            "medicamento_id": int(data["medicamento_id"]),
+            "paciente_id": paciente_id,
+            "hora_recordatorio": data["hora_recordatorio"].strip(),
+            "fecha_inicio": data["fecha_inicio"].strip(),
+            "activo": int(data.get("activo", 1)),
+            "observaciones": data.get("observaciones", "").strip()
+        })
 
         return {
             "mensaje": "Recordatorio creado correctamente",

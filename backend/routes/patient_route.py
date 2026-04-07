@@ -6,7 +6,6 @@
 from fastapi import APIRouter, HTTPException, status 
 from backend.models import get_connection
 from backend.validaciones import validar_paciente, verificar_duplicado
-from backend.factories.paciente_factory import PacienteGeneralFactory
 
 router = APIRouter() #Creación del router
 
@@ -34,12 +33,6 @@ def registrar_paciente(data: dict): # El cuerpo de la petición debe llegar como
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Ya existe un paciente con ese documento"
             )
-        
-        #la fabrica construye y valida el objeto
-        #el endpoint no sabe de los campos o validaciones
-        fabrica= PacienteGeneralFactory()
-        paciente = fabrica.crear(data) 
-
 	# cursor es el objeto que realmente ejecutas consultas SQL
         cursor = conn.cursor()
 
@@ -59,7 +52,19 @@ def registrar_paciente(data: dict): # El cuerpo de la petición debe llegar como
                 observaciones_adicionales
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, paciente.como_tupla())
+        """, (
+            data["nombres"],
+            data["apellidos"],
+            data["fecha_nacimiento"],
+            data["genero"],
+            data["tipo_documento"],
+            data["numero_documento"],
+            data["telefono_contacto"],
+            data["eps_aseguradora"],
+            data["diagnostico_principal"],
+            data.get("alergias_conocidas", ""),
+            data.get("observaciones_adicionales", "")
+        ))
 
         conn.commit() # Confirmar la transaccion en la BD
         paciente_id = cursor.lastrowid # lastrowid devuelve el id recién generado
@@ -98,4 +103,5 @@ def obtener_pacientes():
             "alergias_conocidas": p["alergias_conocidas"],
             "observaciones_adicionales": p["observaciones_adicionales"]
         })
+
     return resultado

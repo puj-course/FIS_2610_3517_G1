@@ -1,7 +1,10 @@
+#############################################################################
 #	medication_route.py
 #	APIRouter: Para crear rutas en FastAPI
 #	HTTPException: Para devolver errores HTTP
-#	Se importa la funcion validar_medicamento de validaciones.py
+#	Se importa la cuncion validar_medicamento de validaciones.py
+#
+#############################################################################
 
 from pathlib import Path
 import sqlite3 # Para conectarse a la BD SQLite
@@ -9,14 +12,11 @@ from fastapi import APIRouter, HTTPException
 from backend.validaciones import validar_medicamento, verificar_paciente_existe, verificar_medicamento_duplicado
 
 
-# Relacionado al patron observer
-from backend.alertas.bootstrap import publisher
-
-
-
 # Crea el grupo de rutas de medicamentos
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
 DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
+
+
 
 def limpiar_texto(valor):
     if valor is None:
@@ -38,6 +38,11 @@ def registrar_medicamento(data: dict):
     try:
         paciente_id = int(data["paciente_id"])
         nombre = data["nombre_medicamento"].strip()
+        dosis_cantidad = float(data["dosis_cantidad"])
+        dosis_unidad = data["dosis_unidad"].strip()
+        dosis = f"{dosis_cantidad} {dosis_unidad}"
+        horario = ", ".join([h.strip() for h in data.get("horarios", []) if str(h).strip()])
+        dias = ", ".join(data.get("dias", [])) if isinstance(data.get("dias", []), list) else ""
 
         if not verificar_paciente_existe(paciente_id, conn):
             raise HTTPException(status_code=404, detail="El paciente no existe")
@@ -47,7 +52,8 @@ def registrar_medicamento(data: dict):
                 status_code=400,
                 detail="El paciente ya tiene registrado este medicamento"
             )
-
+        
+        # Se limpian y preparan los datos para la inserción
         nombre = limpiar_texto(data.get("nombre_medicamento"))
         concentracion = limpiar_texto(data.get("concentracion"))
         forma_farmaceutica = limpiar_texto(data.get("forma_farmaceutica"))
@@ -64,13 +70,11 @@ def registrar_medicamento(data: dict):
         dosis_unidad = limpiar_texto(data.get("dosis_unidad"))
         dosis = f"{dosis_cantidad} {dosis_unidad}"
 
-        horario = ", ".join(
-            [limpiar_texto(h) for h in data.get("horarios", []) if limpiar_texto(h)]
-        )
-        dias = ", ".join(
-            [limpiar_texto(d) for d in data.get("dias", []) if limpiar_texto(d)]
-        )
+        horario = ", ".join([limpiar_texto(h) for h in data.get("horarios", []) if limpiar_texto(h)])
+        dias = ", ".join([limpiar_texto(d) for d in data.get("dias", []) if limpiar_texto(d)])
 
+        paciente_id = int(data["paciente_id"])
+    
         cursor.execute(
             """
             INSERT INTO medicamentos (
@@ -115,25 +119,8 @@ def registrar_medicamento(data: dict):
             )
         )
 
-        nuevo_medicamento_id = cursor.lastrowid
         conn.commit()
-
-        publisher.notify({
-            "type": "medication_registered",
-            "medicamento_id": nuevo_medicamento_id,
-            "paciente_id": paciente_id,
-            "nombre": nombre,
-            "dosis": dosis,
-            "frecuencia": frecuencia,
-            "horario": horario,
-            "dias": dias,
-            "fecha_inicio": fecha_inicio
-        })
-
-        return {
-            "mensaje": "Medicamento registrado exitosamente",
-            "medicamento_id": nuevo_medicamento_id
-        }
+        return {"mensaje": "Medicamento registrado exitosamente"}
 
     except HTTPException:
         raise
@@ -146,7 +133,6 @@ def registrar_medicamento(data: dict):
 
     finally:
         conn.close()
-
 # Endpoint para consultar medicamentos de un paciente
 @router.get("/{paciente_id}")
 def obtener_medicamentos(paciente_id: int):
@@ -195,7 +181,4 @@ def obtener_medicamentos(paciente_id: int):
             "paciente_id": m[17]
         })
 
-
-    
     return resultado
-

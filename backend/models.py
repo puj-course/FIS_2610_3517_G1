@@ -77,7 +77,7 @@ def init_db():
 
     # AUTOINCREMENT hace que el sistema de BD genere las id 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS recordatorios (
+	CREATE TABLE IF NOT EXISTS recordatorios (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		medicamento_id INTEGER NOT NULL,
 		hora_recordatorio TEXT NOT NULL,
@@ -86,24 +86,6 @@ def init_db():
 		observaciones TEXT,
 		FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
 	)
-    """)
-
-    # Tabla de alertas
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS alertas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tipo TEXT NOT NULL,
-        mensaje TEXT NOT NULL,
-        severidad TEXT NOT NULL,
-        paciente_id INTEGER NOT NULL,
-        medicamento_id INTEGER,
-        recordatorio_id INTEGER,
-        fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        atendida INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
-        FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
-        FOREIGN KEY (recordatorio_id) REFERENCES recordatorios(id)
-    )
     """)
     conn.commit()
     conn.close()

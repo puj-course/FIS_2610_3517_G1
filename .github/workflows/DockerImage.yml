@@ -1,0 +1,36 @@
+name: CD - Build Docker Image
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Descarga el código
+      - name: Checkout del código
+        uses: actions/checkout@v3
+
+      # Construye la imagen Docker
+      # Esto verifica que el Dockerfile funciona y que todas
+      # las dependencias instalan correctamente
+      - name: Build de imagen Docker
+        run: docker build -t proyecto-medicamentos:latest .
+
+      # Verifica que el contenedor arranca sin errores
+      - name: Verificar que el contenedor inicia correctamente
+        run: |
+          docker run --rm -d \
+            --name test-container \
+            -p 8000:8000 \
+            proyecto-medicamentos:latest
+          sleep 5
+          curl --fail http://localhost:8000/docs || exit 1
+          docker stop test-container

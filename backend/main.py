@@ -4,8 +4,6 @@ from backend.routes.auth_route     import router as auth_router
 from backend.routes.patient_route  import router as patient_router
 from backend.routes.medication_route import router as medication_router
 from backend.routes.reminder_route import router as reminder_router
-from backend.models import init_db
-init_db()
 
 app = FastAPI()
 

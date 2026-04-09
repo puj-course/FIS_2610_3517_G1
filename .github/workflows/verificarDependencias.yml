@@ -34,6 +34,6 @@ jobs:
       # 4. Verifica que los módulos principales importan sin error
       - name: Verificar imports del proyecto
         run: |
-python -c "import fastapi; print('FastAPI sirve')"
-python -c "import jwt; print('PyJWT sirve')"
-python -c "import uvicorn; print('Uvicorn sirve')"
+          python -c "import fastapi; print('FastAPI sirve')"
+          python -c "import jwt; print('PyJWT sirve')"
+          python -c "import uvicorn; print('Uvicorn sirve')"

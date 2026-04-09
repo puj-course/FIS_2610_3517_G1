@@ -1,4 +1,4 @@
-name: CI - Verificación de dependencias
+name: CD - Verificación de dependencias
 
 on:
   pull_request:

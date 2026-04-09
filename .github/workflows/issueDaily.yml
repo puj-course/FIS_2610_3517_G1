@@ -2,7 +2,8 @@ name: Daily
 
 on:
   schedule:
-    - cron: '15 18 * * *'
+    - cron: '41 18 * * *'
+  workflow_dispatch:   # 👈 AGREGA ESTO
 
 permissions:
   issues: write

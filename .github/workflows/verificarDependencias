@@ -1,0 +1,39 @@
+name: CI - Verificación de dependencias
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descarga el código del repositorio
+      - name: Checkout del código
+        uses: actions/checkout@v3
+
+      # 2. Instala Python
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 3. Actualiza pip e instala las dependencias
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      # 4. Verifica que los módulos principales importan sin error
+      - name: Verificar imports del proyecto
+        run: |
+python -c "import fastapi; print('FastAPI sirve')"
+python -c "import jwt; print('PyJWT sirve')"
+python -c "import uvicorn; print('Uvicorn sirve')"

@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   my_first_job:
-      name: My first job:
-        runs-on: ubuntu-latest
-        steps:
-          - run: echo prueba pipeline
+      name: My first job
+      runs-on: ubuntu-latest
+      steps:
+        - run: echo prueba pipeline

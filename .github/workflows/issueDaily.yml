@@ -1,0 +1,34 @@
+name: Daily
+
+on:
+  schedule:
+    - cron: '15 18 * * *'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  daily_standup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Today's date
+        run: echo "TODAY=$(date '+%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: New standup issue
+        uses: imjohnbo/issue-bot@3.3.4
+        with:
+          assignees: "Naqz05, TorresVides, Valentina866, rodriguezdiazandres8, sofia-sierra2, vanexalrm"
+          labels: "seguimiento"
+          title: Daily ${{ env.TODAY }}
+          body: |-
+            :wave: Buenos días equipo. Por favor cada integrante, como evidencia del daily, responda las tres preguntas:
+            ## Daily ${{ env.TODAY }}
+            1. ¿En qué trabajaste ayer?
+            2. ¿En qué vas a trabajar hoy?
+            3. ¿Has tenido algún impedimento?
+          pinned: true
+          close-previous: true
+          linked-comments: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

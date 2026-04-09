@@ -4,7 +4,7 @@
 name: Daily 
 on:
   schedule:
-    - cron: 38 17 * * *
+    - cron: 55 17 * * *
 jobs:
   daily_standup:
     name: Daily

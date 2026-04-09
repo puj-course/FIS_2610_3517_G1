@@ -1,0 +1,29 @@
+#
+# Daily, powered by imjohnbo/issue-bot
+#
+name: Daily 
+on:
+  schedule:
+    - cron: 32 17 * * *
+jobs:
+  daily_standup:
+    name: Daily
+    runs-on: ubuntu-latest
+    steps:
+    - name: Today's date
+      run: echo "TODAY=$(date '+%Y-%m-%d')" >> $GITHUB_ENV
+    - name: New standup issue
+      uses: imjohnbo/issue-bot@v3
+      with:
+        assignees: "Naqz05, TorresVides, Valentina866, rodriguezdiazandres8, sofia-sierra2, vanexalrm"
+        labels: "seguimiento"
+        title: Daily ${{ env.TODAY }}
+        body: |-
+          :wave: Buenos días equipo. Por favor cada integrante, como evidencia del daily, responda las tres preguntas:
+          ## Daily ${{ env.TODAY }}
+          1. ¿En qué trabajaste ayer?
+          2. ¿En qué vas a trabajar hoy?
+          3. ¿Has tenido algún impedimento?
+        pinned: true
+        close-previous: true
+        linked-comments: true

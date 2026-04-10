@@ -189,6 +189,15 @@
 </head>
 
 <body>
+ <!-- Contenedor de alertas de retraso -->
+      <div id="contenedor-alertas" style="
+          position: fixed;
+          top: 1rem;
+          right: 1rem;
+          z-index: 9999;
+          max-width: 350px;
+      "></div>
+
 
   <div class="encabezado-pagina">
     <div class="marca">
@@ -224,6 +233,7 @@
           <tr>
             <td class="vacio" colspan="6">Cargando...</td>
           </tr>
+          
         </tbody>
       </table>
     </div>
@@ -286,6 +296,95 @@
 
     cargarRecordatorios();
   </script>
+    <script>
+      /*
+      Función que consulta los recordatorios retrasados del paciente
+      y muestra una alerta visual por cada uno.
+      */
+      async function verificarRetrasados(pacienteId) {
+          const token = localStorage.getItem("medtrack_token") || "test";
 
+          try {
+              const respuesta = await fetch(`http://localhost:8000/recordatorios/retrasados/${pacienteId}`, {
+                  headers: { "Authorization": `Bearer ${token}` }
+              });
+
+              const datos = await respuesta.json();
+
+              if (!respuesta.ok || datos.retrasados.length === 0) return;
+
+              const contenedor = document.getElementById("contenedor-alertas");
+
+              /* Por cada recordatorio retrasado creamos una alerta visual */
+              datos.retrasados.forEach(r => {
+                  const alerta = document.createElement("div");
+                  alerta.style.cssText = `
+                      background: rgba(244,114,106,.15);
+                      border: 1px solid #F4726A;
+                      border-radius: 12px;
+                      padding: 1rem 1.25rem;
+                      margin-bottom: .75rem;
+                      color: #F4726A;
+                      font-family: 'DM Sans', sans-serif;
+                      font-size: .88rem;
+                      box-shadow: 0 8px 24px rgba(0,0,0,.3);
+                      animation: entrar .35s ease both;
+                  `;
+
+                  alerta.innerHTML = `
+                      <strong>⚠️ Medicamento no tomado</strong><br>
+                      <span style="color:#E2EAF4">${r.paciente}</span> debía tomar
+                      <strong>${r.medicamento_nombre}</strong> a las ${r.hora_recordatorio}.<br>
+                      <button onclick="marcarComoTomado(${r.id}, this.parentElement)"
+                          style="
+                              margin-top: .5rem;
+                              background: #F4726A;
+                              color: white;
+                              border: none;
+                              border-radius: 8px;
+                              padding: .3rem .8rem;
+                              cursor: pointer;
+                              font-size: .82rem;
+                          ">
+                          Marcar como tomado
+                      </button>
+                  `;
+
+                  contenedor.appendChild(alerta);
+              });
+
+          } catch (err) {
+              console.log("No se pudo verificar retrasos:", err);
+          }
+      }
+
+      /*
+      Marca un recordatorio como tomado y elimina la alerta visual.
+      */
+      async function marcarComoTomado(recordatorioId, elementoAlerta) {
+          const token = localStorage.getItem("medtrack_token") || "test";
+
+          try {
+              const respuesta = await fetch(`http://localhost:8000/recordatorios/${recordatorioId}/tomado`, {
+                  method: "PATCH",
+                  headers: { "Authorization": `Bearer ${token}` }
+              });
+
+              if (respuesta.ok) {
+                  /* Si se marcó correctamente, eliminamos la alerta de la pantalla */
+                  elementoAlerta.remove();
+              }
+          } catch (err) {
+              console.log("Error al marcar como tomado:", err);
+          }
+      }
+
+      /*
+      Ejecutamos la verificación al cargar la página.
+      Por ahora usamos paciente_id = 1 de prueba.
+      TODO: reemplazar por el id real del paciente seleccionado.
+      */
+      verificarRetrasados(1);
+      </script>
 </body>
 </html>

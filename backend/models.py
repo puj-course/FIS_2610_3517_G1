@@ -72,9 +72,7 @@ def init_db():
     )
 """)
 
-
     # Tabla de recordatorios
-
     # AUTOINCREMENT hace que el sistema de BD genere las id 
     cursor.execute("""
 	CREATE TABLE IF NOT EXISTS recordatorios (
@@ -88,6 +86,21 @@ def init_db():
 	)
     """)
     conn.commit()
+    # Tabla de tomas
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tomas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        medicamento_id INTEGER NOT NULL,
+        paciente_id INTEGER NOT NULL,
+        fecha TEXT NOT NULL,
+        hora_programada TEXT NOT NULL,
+        hora_tomada TEXT,
+        estado TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente', 'tomado', 'atrasado')),
+        observaciones TEXT,
+        FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
+        FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+    )
+""")
     conn.close()
     print("Base de datos inicializada correctamente.")
 
@@ -98,10 +111,6 @@ def get_recordatorios_activos(medicamento_id):
         SELECT * FROM recordatorios 
         WHERE medicamento_id = ? AND activo = 1
     """, (medicamento_id,))
-    recordatorios = cursor.fetchall()
-    conn.close()
-    return recordatorios
-
     recordatorios = cursor.fetchall()
     conn.close()
     return recordatorios
@@ -119,5 +128,3 @@ def insertar_recordatorio(medicamento_id, hora, dias, activo=1):
 if __name__ == "__main__":
     init_db()
     # aumentara la implementacion
-
-

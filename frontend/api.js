@@ -104,3 +104,29 @@ const api = {
   }
 
 };
+
+// TOMAS
+
+  // Esta función registra una nueva toma de medicamento
+  registrarToma: function(datos) {
+    return fetch(API_URL + '/tomas/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datos)
+    })
+    .then(function(r) {
+      return r.json().then(function(b) {
+        return { ok: r.ok, body: b };
+      });
+    });
+  },
+
+  // Esta función trae todas las tomas del día de un paciente específico
+  obtenerTomas: function(pacienteId, fecha) {
+    return fetch(API_URL + '/tomas/' + pacienteId + (fecha ? '?fecha=' + fecha : ''))
+    .then(function(r) {
+      return r.json().then(function(b) {
+        return { ok: r.ok, body: b };
+      });
+    });
+  }

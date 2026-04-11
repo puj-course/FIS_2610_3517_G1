@@ -238,34 +238,34 @@
       </table>
     </div>
   </div>
+ <script src="api.js"></script>
 
-  <script>
-    const token = localStorage.getItem("medtrack_token") || "test";
-    const pacienteId = 2;
+<script>
+  const pacienteId = 2;
+  const tbody = document.getElementById('tabla-recordatorios');
 
-    async function cargarRecordatorios() {
-      try {
-        const respuesta = await fetch(`http://127.0.0.1:8000/recordatorios/${pacienteId}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
+  function mostrarError(mensaje) {
+    const alerta = document.getElementById('alerta-error');
+    alerta.textContent = mensaje;
+    alerta.style.display = 'block';
+  }
 
-        const datos = await respuesta.json();
-        const tbody = document.getElementById("tabla-recordatorios");
+  api.obtenerRecordatorios(pacienteId)
+    .then(function(resultado) {
+      if (!resultado.ok) {
+        mostrarError('Error al cargar los recordatorios.');
+        tbody.innerHTML = `<tr><td class="vacio" colspan="6">No se pudieron cargar los recordatorios.</td></tr>`;
+        return;
+      }
+      const recordatorios = resultado.body.recordatorios || [];
 
-        if (!respuesta.ok) {
-          mostrarError("Error al cargar los recordatorios.");
-          tbody.innerHTML = `<tr><td class="vacio" colspan="6">No se pudieron cargar los recordatorios.</td></tr>`;
-          return;
-        }
+      if (!recordatorios.length) {
+        tbody.innerHTML = `<tr><td class="vacio" colspan="6">No hay recordatorios registrados aún.</td></tr>`;
+        return;
+      }
 
-        if (!datos.recordatorios || datos.recordatorios.length === 0) {
-          tbody.innerHTML = `<tr><td class="vacio" colspan="6">No hay recordatorios registrados aún.</td></tr>`;
-          return;
-        }
-
-        tbody.innerHTML = datos.recordatorios.map(r => `
+      tbody.innerHTML = recordatorios.map(function(r) {
+        return `
           <tr>
             <td>${r.medicamento_nombre}</td>
             <td>—</td>
@@ -276,8 +276,9 @@
                 ${r.activo ? 'Activo' : 'Inactivo'}
               </span>
             </td>
-            <td>${r.observaciones || "—"}</td>
+            <td>${r.observaciones || '—'}</td>
           </tr>
+          
         `).join("");
 
       } catch (error) {
@@ -378,6 +379,7 @@
               console.log("Error al marcar como tomado:", err);
           }
       }
+
 
       /*
       Ejecutamos la verificación al cargar la página.

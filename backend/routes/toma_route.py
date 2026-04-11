@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from datetime import date
 from backend.models import obtener_historial_tomas
-from toma_repository import TomaRepository
+from backend.toma_repository import TomaRepository
 
 router = APIRouter(prefix="/tomas", tags=["Tomas"])
 

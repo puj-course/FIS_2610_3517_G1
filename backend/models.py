@@ -115,6 +115,7 @@ def insertar_recordatorio(medicamento_id, hora_recordatorio, fecha_inicio, activ
     conn.close()
 
 
+# 🔥 AQUÍ ESTÁ LO IMPORTANTE DE TU HU-35 🔥
 def obtener_historial_tomas(paciente_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -133,7 +134,8 @@ def obtener_historial_tomas(paciente_id):
         FROM tomas t
         JOIN medicamentos m ON t.medicamento_id = m.id
         WHERE t.paciente_id = ?
-        ORDER BY t.fecha DESC, t.hora_programada DESC
+          AND date(t.fecha) >= date('now', '-7 days')
+        ORDER BY date(t.fecha) DESC, t.hora_programada DESC
     """, (paciente_id,))
 
     resultados = cursor.fetchall()

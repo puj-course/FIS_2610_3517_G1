@@ -85,22 +85,23 @@ def init_db():
 		FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
 	)
     """)
-    conn.commit()
+   conn.commit()
     # Tabla de tomas
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS tomas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        medicamento_id INTEGER NOT NULL,
-        paciente_id INTEGER NOT NULL,
-        fecha TEXT NOT NULL,
-        hora_programada TEXT NOT NULL,
-        hora_tomada TEXT,
-        estado TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente', 'tomado', 'atrasado')),
-        observaciones TEXT,
-        FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
-        FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
-    )
-""")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tomas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            medicamento_id INTEGER NOT NULL,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            hora_programada TEXT NOT NULL,
+            hora_tomada TEXT,
+            estado TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente', 'tomado', 'atrasado')),
+            observaciones TEXT,
+            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+        )
+    """)
+    conn.commit()
     conn.close()
     print("Base de datos inicializada correctamente.")
 

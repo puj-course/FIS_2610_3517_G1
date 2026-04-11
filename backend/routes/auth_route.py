@@ -1,7 +1,7 @@
 from fastapi              import APIRouter, status, HTTPException
 from pydantic             import BaseModel
-from backend.auth         import hash_password, verify_password_hash, generate_jwt
-from backend.models       import get_connection
+from auth         import hash_password, verify_password_hash, generate_jwt
+from models       import get_connection
 
 # Creamos el router en vez de una app separada.
 # Esto permite que main.py lo registre y use el CORS que ya tiene configurado.

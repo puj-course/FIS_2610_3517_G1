@@ -85,7 +85,9 @@ def init_db():
 		FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
 	)
     """)
-   conn.commit()
+  
+
+  
     # Tabla de tomas
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tomas (

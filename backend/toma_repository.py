@@ -1,4 +1,4 @@
-from database import get_connection
+from models import get_connection
 
 class TomaRepository:
     """

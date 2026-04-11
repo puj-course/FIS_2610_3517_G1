@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
-from backend.validaciones import validar_recordatorio, verificar_medicamento_existe
+from models import get_connection
 
 router = APIRouter(prefix="/recordatorios", tags=["Recordatorios"])
 

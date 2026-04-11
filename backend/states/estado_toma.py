@@ -16,3 +16,7 @@ class EstadoToma(ABC):
         #estado de una toma que se marca como administrada correctamente
         def obtener_estado(self) -> str:
             return "tomado"
+    class EstadoRetrasado(EstadoToma):
+        #estado de una toma cuando pasaron más de 60 minutos desde la hora programada sin ser marcada como tomada
+        def obtener_estado(self) -> str:
+            return "atrasado"

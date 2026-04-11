@@ -56,6 +56,7 @@ def init_db():
         )
     """)
 
+    # Tabla de recordatorios
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS recordatorios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,18 +69,19 @@ def init_db():
         )
     """)
 
-   
+    # Tabla de tomas
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tomas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            paciente_id INTEGER NOT NULL,
             medicamento_id INTEGER NOT NULL,
-            fecha_programada TEXT NOT NULL,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
             hora_programada TEXT NOT NULL,
-            hora_tomado TEXT,
-            estado TEXT NOT NULL,
-            FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
-            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
+            hora_tomada TEXT,
+            estado TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente', 'tomado', 'atrasado')),
+            observaciones TEXT,
+            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
         )
     """)
 
@@ -113,7 +115,6 @@ def insertar_recordatorio(medicamento_id, hora_recordatorio, fecha_inicio, activ
     conn.close()
 
 
-
 def obtener_historial_tomas(paciente_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -124,14 +125,15 @@ def obtener_historial_tomas(paciente_id):
             t.paciente_id,
             t.medicamento_id,
             m.nombre,
-            t.fecha_programada,
+            t.fecha,
             t.hora_programada,
-            t.hora_tomado,
-            t.estado
+            t.hora_tomada,
+            t.estado,
+            t.observaciones
         FROM tomas t
         JOIN medicamentos m ON t.medicamento_id = m.id
         WHERE t.paciente_id = ?
-        ORDER BY t.fecha_programada DESC, t.hora_programada DESC
+        ORDER BY t.fecha DESC, t.hora_programada DESC
     """, (paciente_id,))
 
     resultados = cursor.fetchall()

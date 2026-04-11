@@ -4,8 +4,8 @@
 #	get_connection es la funcion que abre la conexión con la base de dato
 
 from fastapi import APIRouter, HTTPException, status 
-from backend.models import get_connection
-from backend.validaciones import validar_paciente, verificar_duplicado
+from models import get_connection
+from validaciones import validar_paciente, verificar_duplicado
 
 router = APIRouter() #Creación del router
 

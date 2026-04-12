@@ -87,34 +87,75 @@ def init_db():
 		FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
 	)
     """)
+
+    # Table de tomas/administraciones de medicamentos
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tomas_medicamento (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        paciente_id INTEGER NOT NULL,
+        medicamento_id INTEGER NOT NULL,
+        recordatorio_id INTEGER,
+        fecha_programada TEXT NOT NULL,
+        fecha_hora_toma TEXT,
+        estado TEXT NOT NULL DEFAULT 'tomado',
+        observaciones TEXT,
+        FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
+        FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
+        FOREIGN KEY (recordatorio_id) REFERENCES recordatorios(id),
+        UNIQUE (recordatorio_id, fecha_programada)
+    )
+    """)
     conn.commit()
     conn.close()
     print("Base de datos inicializada correctamente.")
 
-def get_recordatorios_activos(medicamento_id):
+def get_recordatorios_por_paciente(paciente_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT * FROM recordatorios 
-        WHERE medicamento_id = ? AND activo = 1
-    """, (medicamento_id,))
+        SELECT
+            r.id,
+            r.medicamento_id,
+            m.nombre AS medicamento_nombre,
+            m.dosis AS dosis,
+            r.hora_recordatorio,
+            r.fecha_inicio,
+            r.activo,
+            r.observaciones
+        FROM recordatorios r
+        INNER JOIN medicamentos m
+            ON r.medicamento_id = m.id
+        WHERE m.paciente_id = ?
+        ORDER BY r.fecha_inicio ASC, r.hora_recordatorio ASC
+    """, (paciente_id,))
     recordatorios = cursor.fetchall()
     conn.close()
     return recordatorios
 
-    recordatorios = cursor.fetchall()
-    conn.close()
-    return recordatorios
 
-def insertar_recordatorio(medicamento_id, hora, dias, activo=1):
+def insertar_recordatorio(medicamento_id, hora_recordatorio, fecha_inicio, activo=1, observaciones=""):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO recordatorios (medicamento_id, hora, dias, activo)
-        VALUES (?, ?, ?, ?)
-    """, (medicamento_id, hora, dias, activo))
+        INSERT INTO recordatorios (
+            medicamento_id,
+            hora_recordatorio,
+            fecha_inicio,
+            activo,
+            observaciones
+        )
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        medicamento_id,
+        hora_recordatorio,
+        fecha_inicio,
+        activo,
+        observaciones
+    ))
     conn.commit()
+    nuevo_id = cursor.lastrowid
     conn.close()
+    return nuevo_id
 
 if __name__ == "__main__":
     init_db()

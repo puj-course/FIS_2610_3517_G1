@@ -1,4 +1,11 @@
-from fastapi import APIRouter, HTTPException
+﻿from fastapi import APIRouter, HTTPException
+from backend.models import (
+    get_connection,
+    insertar_recordatorio,
+    get_recordatorios_por_paciente,
+    get_panel_dia_por_paciente
+)
+
 from backend.models import (
     get_connection,
     insertar_recordatorio,
@@ -63,7 +70,7 @@ def crear_recordatorio(data: dict):
 
         paciente_id = obtener_paciente_id_de_medicamento(medicamento_id, conn)
 
-        # Opcional: conserva el patr�n Observer si ya lo vienes usando
+        # Opcional: conserva el patrón Observer si ya lo vienes usando
         if publisher:
             publisher.notify({
                 "type": "reminder_created",
@@ -113,3 +120,30 @@ def listar_recordatorios(paciente_id: int):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener recordatorios: {e}")
+
+@router.get("/panel-dia/{paciente_id}")
+def obtener_panel_dia(paciente_id: int):
+    try:
+        filas = get_panel_dia_por_paciente(paciente_id)
+
+        recordatorios = []
+        for fila in filas:
+            recordatorios.append({
+                "id": fila["id"],
+                "medicamento_id": fila["medicamento_id"],
+                "medicamento_nombre": fila["medicamento_nombre"],
+                "dosis": fila["dosis"],
+                "hora_recordatorio": fila["hora_recordatorio"],
+                "fecha_inicio": fila["fecha_inicio"],
+                "activo": fila["activo"],
+                "observaciones": fila["observaciones"],
+                "toma_id": fila["toma_id"],
+                "fecha_hora_toma": fila["fecha_hora_toma"],
+                "estado_toma": fila["estado_toma"],
+                "tomada": bool(fila["tomada"])
+            })
+
+        return {"recordatorios": recordatorios}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener panel del día: {e}")

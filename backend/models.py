@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sqlite3
 
 # Esto asegura que la BD siempre quede en backend/database.db
@@ -156,6 +156,41 @@ def insertar_recordatorio(medicamento_id, hora_recordatorio, fecha_inicio, activ
     nuevo_id = cursor.lastrowid
     conn.close()
     return nuevo_id
+
+def get_panel_dia_por_paciente(paciente_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            r.id,
+            r.medicamento_id,
+            m.nombre AS medicamento_nombre,
+            m.dosis AS dosis,
+            r.hora_recordatorio,
+            r.fecha_inicio,
+            r.activo,
+            r.observaciones,
+            t.id AS toma_id,
+            t.fecha_hora_toma,
+            t.estado AS estado_toma,
+            CASE
+                WHEN t.id IS NOT NULL THEN 1
+                ELSE 0
+            END AS tomada
+        FROM recordatorios r
+        INNER JOIN medicamentos m
+            ON r.medicamento_id = m.id
+        LEFT JOIN tomas_medicamento t
+            ON t.recordatorio_id = r.id
+        WHERE m.paciente_id = ?
+          AND r.activo = 1
+        ORDER BY r.hora_recordatorio ASC
+    """, (paciente_id,))
+
+    filas = cursor.fetchall()
+    conn.close()
+    return filas
 
 if __name__ == "__main__":
     init_db()

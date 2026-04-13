@@ -213,6 +213,15 @@
 </head>
 
 <body>
+ <!-- Contenedor de alertas de retraso -->
+      <div id="contenedor-alertas" style="
+          position: fixed;
+          top: 1rem;
+          right: 1rem;
+          z-index: 9999;
+          max-width: 350px;
+      "></div>
+
 
     <div class="encabezado-pagina">
         <div class="marca">
@@ -232,6 +241,7 @@
 
         <div class="alerta-error" id="alerta-error"></div>
 
+<<<<<<< HEAD
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -275,6 +285,73 @@
         function obtenerFechaHoraActual() {
             const ahora = new Date();
             const pad = (n) => String(n).padStart(2, "0");
+=======
+    <div class="alerta-error" id="alerta-error"></div>
+
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Medicamento</th>
+            <th>Dosis</th>
+            <th>Hora</th>
+            <th>Fecha inicio</th>
+            <th>Estado</th>
+            <th>Observaciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-recordatorios">
+          <tr>
+            <td class="vacio" colspan="6">Cargando...</td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+  </div>
+ <script src="api.js"></script>
+
+<script>
+  const pacienteId = 2;
+  const tbody = document.getElementById('tabla-recordatorios');
+
+  function mostrarError(mensaje) {
+    const alerta = document.getElementById('alerta-error');
+    alerta.textContent = mensaje;
+    alerta.style.display = 'block';
+  }
+
+  api.obtenerRecordatorios(pacienteId)
+    .then(function(resultado) {
+      if (!resultado.ok) {
+        mostrarError('Error al cargar los recordatorios.');
+        tbody.innerHTML = `<tr><td class="vacio" colspan="6">No se pudieron cargar los recordatorios.</td></tr>`;
+        return;
+      }
+      const recordatorios = resultado.body.recordatorios || [];
+
+      if (!recordatorios.length) {
+        tbody.innerHTML = `<tr><td class="vacio" colspan="6">No hay recordatorios registrados aún.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = recordatorios.map(function(r) {
+        return `
+          <tr>
+            <td>${r.medicamento_nombre}</td>
+            <td>—</td>
+            <td>${r.hora_recordatorio}</td>
+            <td>${r.fecha_inicio}</td>
+            <td>
+              <span class="${r.activo ? 'badge-activo' : 'badge-inactivo'}">
+                ${r.activo ? 'Activo' : 'Inactivo'}
+              </span>
+            </td>
+            <td>${r.observaciones || '—'}</td>
+          </tr>
+          
+        `).join("");
+>>>>>>> 746f323ecd9223321641613fefa868daec13de58
 
             return `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(ahora.getDate())} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}:${pad(ahora.getSeconds())}`;
         }
@@ -282,6 +359,7 @@
         async function marcarComoTomada(pacienteId, medicamentoId, recordatorioId, fechaProgramada) {
             limpiarError();
 
+<<<<<<< HEAD
             const body = {
                 paciente_id: pacienteId,
                 medicamento_id: medicamentoId,
@@ -379,6 +457,100 @@
 
         cargarPanelDia();
     </script>
+=======
+    cargarRecordatorios();
+  </script>
+    <script>
+      /*
+      Función que consulta los recordatorios retrasados del paciente
+      y muestra una alerta visual por cada uno.
+      */
+      async function verificarRetrasados(pacienteId) {
+          const token = localStorage.getItem("medtrack_token") || "test";
+>>>>>>> 746f323ecd9223321641613fefa868daec13de58
 
+          try {
+              const respuesta = await fetch(`http://localhost:8000/recordatorios/retrasados/${pacienteId}`, {
+                  headers: { "Authorization": `Bearer ${token}` }
+              });
+
+              const datos = await respuesta.json();
+
+              if (!respuesta.ok || datos.retrasados.length === 0) return;
+
+              const contenedor = document.getElementById("contenedor-alertas");
+
+              /* Por cada recordatorio retrasado creamos una alerta visual */
+              datos.retrasados.forEach(r => {
+                  const alerta = document.createElement("div");
+                  alerta.style.cssText = `
+                      background: rgba(244,114,106,.15);
+                      border: 1px solid #F4726A;
+                      border-radius: 12px;
+                      padding: 1rem 1.25rem;
+                      margin-bottom: .75rem;
+                      color: #F4726A;
+                      font-family: 'DM Sans', sans-serif;
+                      font-size: .88rem;
+                      box-shadow: 0 8px 24px rgba(0,0,0,.3);
+                      animation: entrar .35s ease both;
+                  `;
+
+                  alerta.innerHTML = `
+                      <strong>⚠️ Medicamento no tomado</strong><br>
+                      <span style="color:#E2EAF4">${r.paciente}</span> debía tomar
+                      <strong>${r.medicamento_nombre}</strong> a las ${r.hora_recordatorio}.<br>
+                      <button onclick="marcarComoTomado(${r.id}, this.parentElement)"
+                          style="
+                              margin-top: .5rem;
+                              background: #F4726A;
+                              color: white;
+                              border: none;
+                              border-radius: 8px;
+                              padding: .3rem .8rem;
+                              cursor: pointer;
+                              font-size: .82rem;
+                          ">
+                          Marcar como tomado
+                      </button>
+                  `;
+
+                  contenedor.appendChild(alerta);
+              });
+
+          } catch (err) {
+              console.log("No se pudo verificar retrasos:", err);
+          }
+      }
+
+      /*
+      Marca un recordatorio como tomado y elimina la alerta visual.
+      */
+      async function marcarComoTomado(recordatorioId, elementoAlerta) {
+          const token = localStorage.getItem("medtrack_token") || "test";
+
+          try {
+              const respuesta = await fetch(`http://localhost:8000/recordatorios/${recordatorioId}/tomado`, {
+                  method: "PATCH",
+                  headers: { "Authorization": `Bearer ${token}` }
+              });
+
+              if (respuesta.ok) {
+                  /* Si se marcó correctamente, eliminamos la alerta de la pantalla */
+                  elementoAlerta.remove();
+              }
+          } catch (err) {
+              console.log("Error al marcar como tomado:", err);
+          }
+      }
+
+
+      /*
+      Ejecutamos la verificación al cargar la página.
+      Por ahora usamos paciente_id = 1 de prueba.
+      TODO: reemplazar por el id real del paciente seleccionado.
+      */
+      verificarRetrasados(1);
+      </script>
 </body>
 </html>

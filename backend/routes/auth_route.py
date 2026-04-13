@@ -1,25 +1,23 @@
-from fastapi              import APIRouter, status, HTTPException
-from pydantic             import BaseModel
-from backend.auth         import hash_password, verify_password_hash, generate_jwt
-from backend.models       import get_connection
+from fastapi import APIRouter, status, HTTPException
+from pydantic import BaseModel
 
-# Creamos el router en vez de una app separada.
-# Esto permite que main.py lo registre y use el CORS que ya tiene configurado.
+from backend.auth import hash_password, verify_password_hash, generate_jwt
+from backend.models import get_connection
+
+
 router = APIRouter()
 
 
-# Modelo para el inicio de sesión (solo correo y contraseña)
 class UserCreate(BaseModel):
     username: str
     password: str
 
 
-# Modelo para el registro (todos los campos)
 class UserRegister(BaseModel):
-    nombre:   str
+    nombre: str
     username: str
     password: str
-    rol:      str
+    rol: str
 
 
 @router.post("/signin")
@@ -28,7 +26,7 @@ async def login_user(user_data: UserCreate):
     password = user_data.password
 
     # Buscamos el usuario en la base de datos por correo
-    conn   = get_connection()
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM usuarios WHERE correo = ?", (username,))
     usuario = cursor.fetchone()
@@ -49,28 +47,28 @@ async def login_user(user_data: UserCreate):
     # Devolvemos el token y los datos del usuario al frontend
     return {
         "detail": "Inicio de sesión exitoso",
-        "token":  token,
+        "token": token,
         "usuario": {
-            "id":     usuario["id"],
+            "id": usuario["id"],
             "nombre": usuario["nombre"],
             "correo": usuario["correo"],
-            "rol":    usuario["rol"]
+            "rol": usuario["rol"]
         }
     }
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: UserRegister):
-    nombre   = user_data.nombre
+    nombre = user_data.nombre
     username = user_data.username
     password = user_data.password
-    rol      = user_data.rol
+    rol = user_data.rol
 
     # Validamos que el rol sea válido
     if rol not in ("cuidador", "administrador"):
         raise HTTPException(status_code=400, detail="Rol inválido.")
 
-    conn   = get_connection()
+    conn = get_connection()
     cursor = conn.cursor()
 
     # Verificamos si el correo ya está registrado

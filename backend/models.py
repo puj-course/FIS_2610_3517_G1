@@ -2,21 +2,19 @@
 import sqlite3
 from datetime import datetime
 
-# Esto asegura que la BD siempre quede en backend/database.db
 DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
 
-# Funcion para abrir una conexión con la BD
+
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
-# Funcion para inicializar la BD
+
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Tabla de usuarios
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +25,6 @@ def init_db():
         )
     """)
 
-    # Tabla de pacientes
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pacientes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,49 +43,34 @@ def init_db():
         )
     """)
 
-    # Tabla de medicamentos
-    # Campos obligatorios: nombre, dosis, frecuencia, horario, fecha_inicio, paciente_id
-    # Campo opcional: observaciones
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS medicamentos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL,
-        concentracion TEXT,
-        forma_farmaceutica TEXT,
-        dosis TEXT NOT NULL,
-        dosis_cantidad REAL,
-        dosis_unidad TEXT,
-        frecuencia TEXT NOT NULL,
-        relacion_comida TEXT,
-        horario TEXT NOT NULL,
-        dias TEXT,
-        fecha_inicio TEXT NOT NULL,
-        fecha_fin TEXT,
-        via_administracion TEXT,
-        medico_receto TEXT,
-        instrucciones TEXT,
-        observaciones TEXT,
-        paciente_id INTEGER NOT NULL,
-        FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
-    )
-""")
-
-
-    # Tabla de recordatorios
-
-    # AUTOINCREMENT hace que el sistema de BD genere las id 
-    cursor.execute("""
-	CREATE TABLE IF NOT EXISTS recordatorios (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		medicamento_id INTEGER NOT NULL,
-		hora_recordatorio TEXT NOT NULL,
-		fecha_inicio TEXT NOT NULL,
-		activo INTEGER NOT NULL DEFAULT 1,
-		observaciones TEXT,
-		FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
-	)
+        CREATE TABLE IF NOT EXISTS medicamentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            dosis TEXT NOT NULL,
+            frecuencia TEXT NOT NULL,
+            horario TEXT NOT NULL,
+            fecha_inicio TEXT NOT NULL,
+            observaciones TEXT,
+            paciente_id INTEGER NOT NULL,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+        )
     """)
 
+    # Tabla de recordatorios
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS recordatorios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            medicamento_id INTEGER NOT NULL,
+            hora_recordatorio TEXT NOT NULL,
+            fecha_inicio TEXT NOT NULL,
+            activo INTEGER NOT NULL DEFAULT 1,
+            observaciones TEXT,
+            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id)
+        )
+    """)
+
+<<<<<<< HEAD
     # Table de tomas/administraciones de medicamentos
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS tomas_medicamento (
@@ -143,6 +125,22 @@ def init_db():
         FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
         FOREIGN KEY (recordatorio_id) REFERENCES recordatorios(id)
     )
+=======
+    # Tabla de tomas
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tomas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            medicamento_id INTEGER NOT NULL,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            hora_programada TEXT NOT NULL,
+            hora_tomada TEXT,
+            estado TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente', 'tomado', 'atrasado')),
+            observaciones TEXT,
+            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+        )
+>>>>>>> 746f323ecd9223321641613fefa868daec13de58
     """)
 
     conn.commit()
@@ -150,6 +148,7 @@ def init_db():
     print("Base de datos inicializada correctamente.")
 
 
+<<<<<<< HEAD
 
 def get_recordatorios_por_paciente(paciente_id):
     conn = get_connection()
@@ -170,6 +169,15 @@ def get_recordatorios_por_paciente(paciente_id):
         WHERE m.paciente_id = ?
         ORDER BY r.fecha_inicio ASC, r.hora_recordatorio ASC
     """, (paciente_id,))
+=======
+def get_recordatorios_activos(medicamento_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM recordatorios
+        WHERE medicamento_id = ? AND activo = 1
+    """, (medicamento_id,))
+>>>>>>> 746f323ecd9223321641613fefa868daec13de58
     recordatorios = cursor.fetchall()
     conn.close()
     return recordatorios
@@ -180,6 +188,7 @@ def insertar_recordatorio(medicamento_id, hora_recordatorio, fecha_inicio, activ
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO recordatorios (
+<<<<<<< HEAD
             medicamento_id,
             hora_recordatorio,
             fecha_inicio,
@@ -194,6 +203,12 @@ def insertar_recordatorio(medicamento_id, hora_recordatorio, fecha_inicio, activ
         activo,
         observaciones
     ))
+=======
+            medicamento_id, hora_recordatorio, fecha_inicio, activo, observaciones
+        )
+        VALUES (?, ?, ?, ?, ?)
+    """, (medicamento_id, hora_recordatorio, fecha_inicio, activo, observaciones))
+>>>>>>> 746f323ecd9223321641613fefa868daec13de58
     conn.commit()
     nuevo_id = cursor.lastrowid
     conn.close()
@@ -251,8 +266,35 @@ def get_panel_dia_por_paciente(paciente_id):
     conn.close()
     return filas
 
+
+# 🔥 AQUÍ ESTÁ LO IMPORTANTE DE TU HU-35 🔥
+def obtener_historial_tomas(paciente_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT 
+            t.id,
+            t.paciente_id,
+            t.medicamento_id,
+            m.nombre,
+            t.fecha,
+            t.hora_programada,
+            t.hora_tomada,
+            t.estado,
+            t.observaciones
+        FROM tomas t
+        JOIN medicamentos m ON t.medicamento_id = m.id
+        WHERE t.paciente_id = ?
+          AND date(t.fecha) >= date('now', '-7 days')
+        ORDER BY date(t.fecha) DESC, t.hora_programada DESC
+    """, (paciente_id,))
+
+    resultados = cursor.fetchall()
+    conn.close()
+
+    return resultados
+
+
 if __name__ == "__main__":
     init_db()
-    # aumentara la implementacion
-
-

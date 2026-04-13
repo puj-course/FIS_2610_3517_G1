@@ -32,11 +32,17 @@ def verify_password_hash(password, reference_hash):
 def generate_jwt(user_id, correo, rol):
     payload = {
         'iss': 'MedTrack',
+<<<<<<< HEAD
 #features-vanesa
         'sub': correo,        # identifica al usuario
         'id':  user_id,       # id del usuario
         'rol': rol,           # rol del usuario
         #develop
+=======
+        'sub': correo,        # identifica al usuario
+        'id':  user_id,       # id del usuario
+        'rol': rol,           # rol del usuario
+>>>>>>> 746f323ecd9223321641613fefa868daec13de58
         'iat': int((datetime.now(timezone.utc)).timestamp()),
         'exp': int((datetime.now(timezone.utc) + timedelta(hours=8)).timestamp()),
     }

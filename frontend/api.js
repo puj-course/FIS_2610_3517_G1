@@ -130,3 +130,13 @@ const api = {
       });
     });
   }
+  // Esta función trae todos los medicamentos programados
+// para el día actual agrupados por paciente
+obtenerPanelDia: function() {
+  return fetch(API_URL + '/panel-dia')
+  .then(function(r) {
+    return r.json().then(function(b) {
+      return { ok: r.ok, body: b };
+    });
+  });
+}

@@ -198,3 +198,52 @@ def marcar_como_tomado(recordatorio_id: int):
     conn.close()
 
     return {"mensaje": "Medicamento marcado como tomado", "hora_tomado": hora_tomado}
+
+@router.get("/panel-dia")
+def obtener_panel_dia():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Traemos todos los recordatorios activos cruzando
+    # con medicamentos y pacientes
+    cursor.execute("""
+        SELECT 
+            p.id as paciente_id,
+            p.nombres,
+            p.apellidos,
+            m.nombre as medicamento,
+            m.dosis,
+            r.id as recordatorio_id,
+            r.hora_recordatorio,
+            r.tomado
+        FROM recordatorios r
+        JOIN medicamentos m ON r.medicamento_id = m.id
+        JOIN pacientes p ON m.paciente_id = p.id
+        WHERE r.activo = 1
+        ORDER BY p.id, r.hora_recordatorio
+    """)
+
+    filas = cursor.fetchall()
+    conn.close()
+
+    # Agrupamos por paciente
+    resultado = {}
+    for f in filas:
+        clave = f["paciente_id"]
+        if clave not in resultado:
+            resultado[clave] = {
+                "paciente_id": f["paciente_id"],
+                "nombres": f["nombres"],
+                "apellidos": f["apellidos"],
+                "medicamentos": []
+            }
+        resultado[clave]["medicamentos"].append({
+            "recordatorio_id": f["recordatorio_id"],
+            "medicamento": f["medicamento"],
+            "dosis": f["dosis"],
+            "hora": f["hora_recordatorio"],
+            "tomado": f["tomado"]
+        })
+
+    return {"panel": list(resultado.values())}

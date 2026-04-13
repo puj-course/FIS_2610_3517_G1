@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ﻿from fastapi import APIRouter, HTTPException
 from backend.models import (
     get_connection,
@@ -7,14 +6,14 @@ from backend.models import (
     get_panel_dia_por_paciente
 )
 from backend.validaciones import validar_recordatorio
-=======
+
 import sqlite3
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from backend.validaciones import validar_recordatorio, verificar_medicamento_existe
 from datetime import datetime, timedelta
 
->>>>>>> 746f323ecd9223321641613fefa868daec13de58
+
 
 # Para Observer
 try:
@@ -130,7 +129,7 @@ def listar_recordatorios(paciente_id: int):
         raise HTTPException(status_code=500, detail=f"Error al obtener recordatorios: {e}")
 
 
-<<<<<<< HEAD
+
 @router.get("/panel-dia/{paciente_id}")
 def obtener_panel_dia(paciente_id: int):
     try:
@@ -159,7 +158,7 @@ def obtener_panel_dia(paciente_id: int):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener panel del día: {e}")
-=======
+
     return {"status": 200, "recordatorios": resultado}
 
 @router.get("/retrasados/{paciente_id}")
@@ -292,4 +291,4 @@ def obtener_panel_dia():
         })
 
     return {"panel": list(resultado.values())}
->>>>>>> 746f323ecd9223321641613fefa868daec13de58
+

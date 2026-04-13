@@ -10,12 +10,11 @@ from backend.routes.toma_route import router as toma_router
 
 app = FastAPI()
 
-<<<<<<< HEAD
+
 init_db()
 
 # para que frontend se conecte al backend
-=======
->>>>>>> 746f323ecd9223321641613fefa868daec13de58
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

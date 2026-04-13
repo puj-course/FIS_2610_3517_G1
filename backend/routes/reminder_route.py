@@ -1,3 +1,12 @@
+﻿from fastapi import APIRouter, HTTPException
+from backend.models import (
+    get_connection,
+    insertar_recordatorio,
+    get_recordatorios_por_paciente,
+    get_panel_dia_por_paciente
+)
+from backend.validaciones import validar_recordatorio
+
 import sqlite3
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
@@ -5,39 +14,36 @@ from backend.validaciones import validar_recordatorio, verificar_medicamento_exi
 from datetime import datetime, timedelta
 
 
-router = APIRouter(prefix="/recordatorios", tags=["Recordatorios"])
 
-DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
+# Para Observer
+try:
+    from backend.alertas.bootstrap import publisher
+except Exception:
+    publisher = None
+
+router = APIRouter(
+    prefix="/recordatorios",
+    tags=["Recordatorios"]
+)
 
 
-def insertar_recordatorio(data: dict) -> int:
-    conn = sqlite3.connect(DB_PATH)
+def verificar_medicamento_existe(medicamento_id: int, conn) -> bool:
     cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id FROM medicamentos WHERE id = ?",
+        (medicamento_id,)
+    )
+    return cursor.fetchone() is not None
 
-    try:
-        cursor.execute(
-            """
-            INSERT INTO recordatorios (
-                medicamento_id,
-                hora_recordatorio,
-                fecha_inicio,
-                activo,
-                observaciones
-            )
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                int(data["medicamento_id"]),
-                data["hora_recordatorio"].strip(),
-                data["fecha_inicio"].strip(),
-                int(data.get("activo", 1)),
-                data.get("observaciones", "").strip()
-            )
-        )
-        conn.commit()
-        return cursor.lastrowid
-    finally:
-        conn.close()
+
+def obtener_paciente_id_de_medicamento(medicamento_id: int, conn):
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT paciente_id FROM medicamentos WHERE id = ?",
+        (medicamento_id,)
+    )
+    fila = cursor.fetchone()
+    return fila["paciente_id"] if fila else None
 
 
 @router.post("/")
@@ -45,75 +51,113 @@ def crear_recordatorio(data: dict):
     errores = validar_recordatorio(data)
 
     if errores:
-        raise HTTPException(status_code=400, detail=errores)
+        detalle = "; ".join(errores) if isinstance(errores, list) else str(errores)
+        raise HTTPException(status_code=400, detail=detalle)
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
 
     try:
-        if not verificar_medicamento_existe(int(data["medicamento_id"]), conn):
+        medicamento_id = int(data["medicamento_id"])
+
+        if not verificar_medicamento_existe(medicamento_id, conn):
             raise HTTPException(status_code=404, detail="El medicamento no existe")
 
-        nuevo_id = insertar_recordatorio(data)
+        nuevo_id = insertar_recordatorio(
+            medicamento_id=medicamento_id,
+            hora_recordatorio=data["hora_recordatorio"].strip(),
+            fecha_inicio=data["fecha_inicio"].strip(),
+            activo=int(data.get("activo", 1)),
+            observaciones=data.get("observaciones", "").strip()
+        )
 
+        paciente_id = obtener_paciente_id_de_medicamento(medicamento_id, conn)
+
+        print("publisher cargado:", publisher, flush=True)
+
+        if publisher:
+            print("Voy a publicar evento reminder_created", flush=True)
+            publisher.notify({
+                "type": "reminder_created",
+                "recordatorio_id": nuevo_id,
+                "medicamento_id": medicamento_id,
+                "paciente_id": paciente_id,
+                "hora_recordatorio": data["hora_recordatorio"].strip(),
+                "fecha_inicio": data["fecha_inicio"].strip(),
+                "activo": int(data.get("activo", 1)),
+                "observaciones": data.get("observaciones", "").strip()
+            })
+        else:
+            print("publisher es None", flush=True)
+
+        
         return {
             "mensaje": "Recordatorio creado correctamente",
             "recordatorio_id": nuevo_id
         }
 
+    except ValueError:
+        raise HTTPException(status_code=400, detail="medicamento_id debe ser un entero valido")
     except HTTPException:
         raise
-
-    except sqlite3.Error:
-        raise HTTPException(
-            status_code=500,
-            detail="Error interno al crear el recordatorio"
-        )
-
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno al crear el recordatorio: {e}")
     finally:
         conn.close()
 
 
 @router.get("/{paciente_id}")
-def consultar_recordatorios(paciente_id: int):
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+def listar_recordatorios(paciente_id: int):
+    try:
+        filas = get_recordatorios_por_paciente(paciente_id)
 
-    cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))
-    paciente = cursor.fetchone()
+        recordatorios = []
+        for fila in filas:
+            recordatorios.append({
+                "id": fila["id"],
+                "medicamento_id": fila["medicamento_id"],
+                "medicamento_nombre": fila["medicamento_nombre"],
+                "dosis": fila["dosis"],
+                "hora_recordatorio": fila["hora_recordatorio"],
+                "fecha_inicio": fila["fecha_inicio"],
+                "activo": fila["activo"],
+                "observaciones": fila["observaciones"]
+            })
 
-    if not paciente:
-        conn.close()
-        return {"status": 404, "message": "Paciente no encontrado"}
+        return {"recordatorios": recordatorios}
 
-    query = """
-        SELECT
-            r.id,
-            r.medicamento_id,
-            r.hora_recordatorio,
-            r.fecha_inicio,
-            r.activo,
-            r.observaciones,
-            m.nombre as medicamento_nombre
-        FROM recordatorios r
-        JOIN medicamentos m ON r.medicamento_id = m.id
-        WHERE m.paciente_id = ? AND r.activo = 1
-    """
-    cursor.execute(query, (paciente_id,))
-    recordatorios = cursor.fetchall()
-    conn.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener recordatorios: {e}")
 
-    resultado = []
-    for r in recordatorios:
-        resultado.append({
-            "id": r["id"],
-            "medicamento_id": r["medicamento_id"],
-            "medicamento_nombre": r["medicamento_nombre"],
-            "hora_recordatorio": r["hora_recordatorio"],
-            "fecha_inicio": r["fecha_inicio"],
-            "activo": r["activo"],
-            "observaciones": r["observaciones"]
-        })
+
+
+@router.get("/panel-dia/{paciente_id}")
+def obtener_panel_dia(paciente_id: int):
+    try:
+        filas = get_panel_dia_por_paciente(paciente_id)
+
+        recordatorios = []
+        for fila in filas:
+            recordatorios.append({
+                "recordatorio_id": fila["recordatorio_id"],
+                "paciente_id": fila["paciente_id"],
+                "medicamento_id": fila["medicamento_id"],
+                "medicamento_nombre": fila["medicamento_nombre"],
+                "dosis": fila["dosis"],
+                "hora_recordatorio": fila["hora_recordatorio"],
+                "fecha_inicio": fila["fecha_inicio"],
+                "activo": fila["activo"],
+                "observaciones": fila["observaciones"],
+                "fecha_programada": fila["fecha_programada"],
+                "toma_id": fila["toma_id"],
+                "fecha_hora_toma": fila["fecha_hora_toma"],
+                "estado_toma": fila["estado_toma"],
+                "tomada": bool(fila["tomada"])
+            })
+
+        return {"recordatorios": recordatorios}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener panel del día: {e}")
 
     return {"status": 200, "recordatorios": resultado}
 
@@ -247,3 +291,4 @@ def obtener_panel_dia():
         })
 
     return {"panel": list(resultado.values())}
+

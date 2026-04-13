@@ -7,7 +7,10 @@ import sqlite3
 from typing import Any, Dict, Optional
 
 from backend.models import DB_PATH
-
+try:
+    from backend.alertas.bootstrap import publisher
+except Exception:
+    publisher = None
 
 class TomaService:
     """
@@ -130,6 +133,19 @@ class TomaService:
 
             conn.commit()
             toma_id = cur.lastrowid
+
+            if publisher:
+                publisher.notify({
+                    "type": "medication_taken",
+                    "toma_id": toma_id,
+                    "paciente_id": paciente_id,
+                    "medicamento_id": medicamento_id,
+                    "recordatorio_id": recordatorio_id,
+                    "fecha_programada": fecha_programada,
+                    "fecha_hora_toma": fecha_hora_toma,
+                    "estado": estado,
+                    "observaciones": observaciones
+                })
 
             return {
                 "ok": True,

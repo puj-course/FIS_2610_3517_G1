@@ -5,12 +5,6 @@ from backend.models import (
     get_recordatorios_por_paciente,
     get_panel_dia_por_paciente
 )
-
-from backend.models import (
-    get_connection,
-    insertar_recordatorio,
-    get_recordatorios_por_paciente
-)
 from backend.validaciones import validar_recordatorio
 
 # Para Observer
@@ -70,8 +64,10 @@ def crear_recordatorio(data: dict):
 
         paciente_id = obtener_paciente_id_de_medicamento(medicamento_id, conn)
 
-        # Opcional: conserva el patrón Observer si ya lo vienes usando
+        print("publisher cargado:", publisher, flush=True)
+
         if publisher:
+            print("Voy a publicar evento reminder_created", flush=True)
             publisher.notify({
                 "type": "reminder_created",
                 "recordatorio_id": nuevo_id,
@@ -82,7 +78,10 @@ def crear_recordatorio(data: dict):
                 "activo": int(data.get("activo", 1)),
                 "observaciones": data.get("observaciones", "").strip()
             })
+        else:
+            print("publisher es None", flush=True)
 
+        
         return {
             "mensaje": "Recordatorio creado correctamente",
             "recordatorio_id": nuevo_id
@@ -121,6 +120,7 @@ def listar_recordatorios(paciente_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener recordatorios: {e}")
 
+
 @router.get("/panel-dia/{paciente_id}")
 def obtener_panel_dia(paciente_id: int):
     try:
@@ -129,7 +129,8 @@ def obtener_panel_dia(paciente_id: int):
         recordatorios = []
         for fila in filas:
             recordatorios.append({
-                "id": fila["id"],
+                "recordatorio_id": fila["recordatorio_id"],
+                "paciente_id": fila["paciente_id"],
                 "medicamento_id": fila["medicamento_id"],
                 "medicamento_nombre": fila["medicamento_nombre"],
                 "dosis": fila["dosis"],
@@ -137,6 +138,7 @@ def obtener_panel_dia(paciente_id: int):
                 "fecha_inicio": fila["fecha_inicio"],
                 "activo": fila["activo"],
                 "observaciones": fila["observaciones"],
+                "fecha_programada": fila["fecha_programada"],
                 "toma_id": fila["toma_id"],
                 "fecha_hora_toma": fila["fecha_hora_toma"],
                 "estado_toma": fila["estado_toma"],

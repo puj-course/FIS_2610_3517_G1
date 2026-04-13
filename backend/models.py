@@ -1,5 +1,6 @@
 ﻿import os
 import sqlite3
+from datetime import datetime
 
 # Esto asegura que la BD siempre quede en backend/database.db
 DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
@@ -105,9 +106,50 @@ def init_db():
         UNIQUE (recordatorio_id, fecha_programada)
     )
     """)
+    
+    
+
+	     # Table de tomas/administraciones de medicamentos
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tomas_medicamento (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        paciente_id INTEGER NOT NULL,
+        medicamento_id INTEGER NOT NULL,
+        recordatorio_id INTEGER,
+        fecha_programada TEXT NOT NULL,
+        fecha_hora_toma TEXT,
+        estado TEXT NOT NULL DEFAULT 'tomado',
+        observaciones TEXT,
+        FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
+        FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
+        FOREIGN KEY (recordatorio_id) REFERENCES recordatorios(id),
+        UNIQUE (recordatorio_id, fecha_programada)
+    )
+    """)
+
+    # Tabla de alertas
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS alertas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tipo TEXT NOT NULL,
+        mensaje TEXT NOT NULL,
+        severidad TEXT NOT NULL,
+        paciente_id INTEGER NOT NULL,
+        medicamento_id INTEGER,
+        recordatorio_id INTEGER,
+        fecha_creacion TEXT NOT NULL,
+        atendida INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
+        FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
+        FOREIGN KEY (recordatorio_id) REFERENCES recordatorios(id)
+    )
+    """)
+
     conn.commit()
     conn.close()
     print("Base de datos inicializada correctamente.")
+
+
 
 def get_recordatorios_por_paciente(paciente_id):
     conn = get_connection()
@@ -157,22 +199,32 @@ def insertar_recordatorio(medicamento_id, hora_recordatorio, fecha_inicio, activ
     conn.close()
     return nuevo_id
 
+
+
+
+
 def get_panel_dia_por_paciente(paciente_id):
     conn = get_connection()
     cursor = conn.cursor()
 
+    hoy = datetime.now()
+    fecha_hoy = hoy.strftime("%m/%d/%Y")
+    fecha_sql_hoy = hoy.strftime("%Y-%m-%d")
+
     cursor.execute("""
         SELECT
-            r.id,
-            r.medicamento_id,
+            r.id AS recordatorio_id,
+            m.paciente_id AS paciente_id,
+            r.medicamento_id AS medicamento_id,
             m.nombre AS medicamento_nombre,
             m.dosis AS dosis,
-            r.hora_recordatorio,
-            r.fecha_inicio,
-            r.activo,
-            r.observaciones,
+            r.hora_recordatorio AS hora_recordatorio,
+            r.fecha_inicio AS fecha_inicio,
+            r.activo AS activo,
+            r.observaciones AS observaciones,
+            (? || ' ' || r.hora_recordatorio || ':00') AS fecha_programada,
             t.id AS toma_id,
-            t.fecha_hora_toma,
+            t.fecha_hora_toma AS fecha_hora_toma,
             t.estado AS estado_toma,
             CASE
                 WHEN t.id IS NOT NULL THEN 1
@@ -183,10 +235,17 @@ def get_panel_dia_por_paciente(paciente_id):
             ON r.medicamento_id = m.id
         LEFT JOIN tomas_medicamento t
             ON t.recordatorio_id = r.id
+           AND t.fecha_programada = (? || ' ' || r.hora_recordatorio || ':00')
         WHERE m.paciente_id = ?
           AND r.activo = 1
+          AND r.fecha_inicio <= ?
         ORDER BY r.hora_recordatorio ASC
-    """, (paciente_id,))
+    """, (
+        fecha_sql_hoy,
+        fecha_sql_hoy,
+        paciente_id,
+        fecha_hoy
+    ))
 
     filas = cursor.fetchall()
     conn.close()

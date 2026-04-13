@@ -1,291 +1,384 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MedTrack — Recordatorios</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MedTrack — Panel del día</title>
 
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-  <style>
-    :root {
-      --color-menta:        #2DD4BF;
-      --color-menta-oscuro: #0F9D8A;
-      --color-fondo:        #0F1B2D;
-      --color-campo:        #1E2D3D;
-      --color-tarjeta:      #162030;
-      --color-borde:        #243447;
-      --color-texto:        #E2EAF4;
-      --color-texto-suave:  #7A95B0;
-      --color-error:        #F4726A;
-      --color-exito:        #4ADE80;
-    }
+    <style>
+        :root {
+            --color-menta: #2DD4BF;
+            --color-menta-oscuro: #0F9D8A;
+            --color-fondo: #0F1B2D;
+            --color-campo: #1E2D3D;
+            --color-tarjeta: #162030;
+            --color-borde: #243447;
+            --color-texto: #E2EAF4;
+            --color-texto-suave: #7A95B0;
+            --color-error: #F4726A;
+            --color-exito: #4ADE80;
+        }
 
-    *, *::before, *::after { box-sizing: border-box; }
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background-color: var(--color-fondo);
-      font-family: 'DM Sans', sans-serif;
-      color: var(--color-texto);
-      padding: 2rem 1rem;
-      background-image:
-        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
-        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
-    }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background-color: var(--color-fondo);
+            font-family: 'DM Sans', sans-serif;
+            color: var(--color-texto);
+            padding: 2rem 1rem;
+            background-image: radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%), radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+        }
 
-    .encabezado-pagina {
-      max-width: 1100px;
-      margin: 0 auto 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+        .encabezado-pagina {
+            max-width: 1100px;
+            margin: 0 auto 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
 
-    .marca {
-      display: flex;
-      align-items: center;
-      gap: .6rem;
-    }
+        .marca {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
 
-    .marca-icono {
-      width: 36px;
-      height: 36px;
-      background: var(--color-menta);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+        .marca-icono {
+            width: 36px;
+            height: 36px;
+            background: var(--color-menta);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    .marca-icono svg {
-      width: 20px;
-      height: 20px;
-      color: var(--color-fondo);
-    }
+            .marca-icono svg {
+                width: 20px;
+                height: 20px;
+                color: var(--color-fondo);
+            }
 
-    .marca-nombre {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.4rem;
-      color: var(--color-texto);
-    }
+        .marca-nombre {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.4rem;
+            color: var(--color-texto);
+        }
 
-    .boton-nuevo {
-      background: var(--color-menta);
-      color: var(--color-fondo);
-      border: none;
-      border-radius: 12px;
-      padding: .6rem 1.4rem;
-      font-size: .9rem;
-      font-weight: 600;
-      font-family: 'DM Sans', sans-serif;
-      cursor: pointer;
-      transition: background .2s, box-shadow .2s;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: .4rem;
-    }
+        .boton-nuevo {
+            background: var(--color-menta);
+            color: var(--color-fondo);
+            border: none;
+            border-radius: 12px;
+            padding: .6rem 1.4rem;
+            font-size: .9rem;
+            font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: background .2s, box-shadow .2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+        }
 
-    .boton-nuevo:hover {
-      background: var(--color-menta-oscuro);
-      box-shadow: 0 8px 24px rgba(45,212,191,.3);
-      color: var(--color-fondo);
-    }
+            .boton-nuevo:hover {
+                background: var(--color-menta-oscuro);
+                box-shadow: 0 8px 24px rgba(45,212,191,.3);
+                color: var(--color-fondo);
+            }
 
-    .tarjeta {
-      background: var(--color-tarjeta);
-      border: 1px solid var(--color-borde);
-      border-radius: 20px;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 2rem;
-      box-shadow: 0 32px 80px rgba(0,0,0,.5);
-      animation: aparecer .5s ease both;
-    }
+        .tarjeta {
+            background: var(--color-tarjeta);
+            border: 1px solid var(--color-borde);
+            border-radius: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem;
+            box-shadow: 0 32px 80px rgba(0,0,0,.5);
+            animation: aparecer .5s ease both;
+        }
 
-    @keyframes aparecer {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+        @keyframes aparecer {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
 
-    .titulo-seccion {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-    .table {
-      color: var(--color-texto);
-      border-color: var(--color-borde);
-    }
+        .titulo-seccion {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
 
-    .table thead th {
-      background: var(--color-campo);
-      color: var(--color-menta);
-      border-color: var(--color-borde);
-      font-size: .82rem;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      font-weight: 500;
-      padding: .85rem 1rem;
-    }
+        .table {
+            color: var(--color-texto);
+            border-color: var(--color-borde);
+        }
 
-    .table tbody tr {
-      border-color: var(--color-borde);
-      transition: background .15s;
-    }
+            .table thead th {
+                background: var(--color-campo);
+                color: var(--color-menta);
+                border-color: var(--color-borde);
+                font-size: .82rem;
+                text-transform: uppercase;
+                letter-spacing: .05em;
+                font-weight: 500;
+                padding: .85rem 1rem;
+            }
 
-    .table tbody tr:hover {
-      background: rgba(45,212,191,.05);
-    }
+            .table tbody tr {
+                border-color: var(--color-borde);
+                transition: background .15s;
+            }
 
-    .table tbody td {
-      border-color: var(--color-borde);
-      padding: .85rem 1rem;
-      font-size: .9rem;
-      vertical-align: middle;
-    }
+                .table tbody tr:hover {
+                    background: rgba(45,212,191,.05);
+                }
 
-    .vacio {
-      text-align: center;
-      color: var(--color-texto-suave);
-      padding: 3rem !important;
-    }
+            .table tbody td {
+                border-color: var(--color-borde);
+                padding: .85rem 1rem;
+                font-size: .9rem;
+                vertical-align: middle;
+            }
 
-    .alerta-error {
-      background: rgba(244,114,106,.1);
-      border: 1px solid var(--color-error);
-      color: var(--color-error);
-      border-radius: 12px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-      display: none;
-    }
+        .vacio {
+            text-align: center;
+            color: var(--color-texto-suave);
+            padding: 3rem !important;
+        }
 
-    .badge-activo {
-      background: rgba(74,222,128,.15);
-      color: var(--color-exito);
-      border: 1px solid var(--color-exito);
-      border-radius: 20px;
-      padding: .2rem .7rem;
-      font-size: .78rem;
-      font-weight: 500;
-    }
+        .alerta-error {
+            background: rgba(244,114,106,.1);
+            border: 1px solid var(--color-error);
+            color: var(--color-error);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
 
-    .badge-inactivo {
-      background: rgba(122,149,176,.15);
-      color: var(--color-texto-suave);
-      border: 1px solid var(--color-texto-suave);
-      border-radius: 20px;
-      padding: .2rem .7rem;
-      font-size: .78rem;
-      font-weight: 500;
-    }
-  </style>
+        .badge-tomada {
+            background: rgba(74,222,128,.15);
+            color: var(--color-exito);
+            border: 1px solid var(--color-exito);
+            border-radius: 20px;
+            padding: .2rem .7rem;
+            font-size: .78rem;
+            font-weight: 500;
+        }
+
+        .badge-pendiente {
+            background: rgba(244,114,106,.12);
+            color: #fca5a5;
+            border: 1px solid #fca5a5;
+            border-radius: 20px;
+            padding: .2rem .7rem;
+            font-size: .78rem;
+            font-weight: 500;
+        }
+
+        .boton-tomada {
+            background: var(--color-menta);
+            color: var(--color-fondo);
+            border: none;
+            border-radius: 10px;
+            padding: .45rem .9rem;
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .2s, box-shadow .2s;
+        }
+
+            .boton-tomada:hover {
+                background: var(--color-menta-oscuro);
+                box-shadow: 0 8px 20px rgba(45,212,191,.25);
+            }
+    </style>
 </head>
 
 <body>
 
-  <div class="encabezado-pagina">
-    <div class="marca">
-      <div class="marca-icono">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
-        </svg>
-      </div>
-      <span class="marca-nombre">MedTrack</span>
+    <div class="encabezado-pagina">
+        <div class="marca">
+            <div class="marca-icono">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z" />
+                </svg>
+            </div>
+            <span class="marca-nombre">MedTrack</span>
+        </div>
+
+        <a href="recordatorios.html" class="boton-nuevo">+ Nuevo recordatorio</a>
     </div>
 
-    <a href="recordatorios.html" class="boton-nuevo">+ Nuevo recordatorio</a>
-  </div>
+    <div class="tarjeta">
+        <h2 class="titulo-seccion">Panel del día</h2>
 
-  <div class="tarjeta">
-    <h2 class="titulo-seccion">Recordatorios activos</h2>
+        <div class="alerta-error" id="alerta-error"></div>
 
-    <div class="alerta-error" id="alerta-error"></div>
-
-    <div class="table-responsive">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Medicamento</th>
-            <th>Dosis</th>
-            <th>Hora</th>
-            <th>Fecha inicio</th>
-            <th>Estado</th>
-            <th>Observaciones</th>
-          </tr>
-        </thead>
-        <tbody id="tabla-recordatorios">
-          <tr>
-            <td class="vacio" colspan="6">Cargando...</td>
-          </tr>
-        </tbody>
-      </table>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Medicamento</th>
+                        <th>Dosis</th>
+                        <th>Hora</th>
+                        <th>Fecha programada</th>
+                        <th>Estado</th>
+                        <th>Observaciones</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-recordatorios">
+                    <tr>
+                        <td class="vacio" colspan="7">Cargando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-  </div>
 
-  <script>
-    const token = localStorage.getItem("medtrack_token") || "test";
-    const pacienteId = 2;
+    <script>
+        const token = localStorage.getItem("medtrack_token") || "test";
 
-    async function cargarRecordatorios() {
-      try {
-        const respuesta = await fetch(`http://127.0.0.1:8000/recordatorios/${pacienteId}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
+        const params = new URLSearchParams(window.location.search);
+        const pacienteId = params.get("paciente_id");
 
-        const datos = await respuesta.json();
-        const tbody = document.getElementById("tabla-recordatorios");
-
-        if (!respuesta.ok) {
-          mostrarError("Error al cargar los recordatorios.");
-          tbody.innerHTML = `<tr><td class="vacio" colspan="6">No se pudieron cargar los recordatorios.</td></tr>`;
-          return;
+        function mostrarError(mensaje) {
+            const alerta = document.getElementById("alerta-error");
+            alerta.textContent = mensaje;
+            alerta.style.display = "block";
         }
 
-        if (!datos.recordatorios || datos.recordatorios.length === 0) {
-          tbody.innerHTML = `<tr><td class="vacio" colspan="6">No hay recordatorios registrados aún.</td></tr>`;
-          return;
+        function limpiarError() {
+            const alerta = document.getElementById("alerta-error");
+            alerta.textContent = "";
+            alerta.style.display = "none";
         }
 
-        tbody.innerHTML = datos.recordatorios.map(r => `
-          <tr>
-            <td>${r.medicamento_nombre}</td>
-            <td>—</td>
-            <td>${r.hora_recordatorio}</td>
-            <td>${r.fecha_inicio}</td>
-            <td>
-              <span class="${r.activo ? 'badge-activo' : 'badge-inactivo'}">
-                ${r.activo ? 'Activo' : 'Inactivo'}
-              </span>
-            </td>
-            <td>${r.observaciones || "—"}</td>
-          </tr>
-        `).join("");
+        function obtenerFechaHoraActual() {
+            const ahora = new Date();
+            const pad = (n) => String(n).padStart(2, "0");
 
-      } catch (error) {
-        mostrarError("No se pudo conectar con el servidor.");
-        document.getElementById("tabla-recordatorios").innerHTML =
-          `<tr><td class="vacio" colspan="6">Error de conexión con el backend.</td></tr>`;
-        console.error(error);
-      }
-    }
+            return `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(ahora.getDate())} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}:${pad(ahora.getSeconds())}`;
+        }
 
-    function mostrarError(mensaje) {
-      const alerta = document.getElementById("alerta-error");
-      alerta.textContent = mensaje;
-      alerta.style.display = "block";
-    }
+        async function marcarComoTomada(pacienteId, medicamentoId, recordatorioId, fechaProgramada) {
+            limpiarError();
 
-    cargarRecordatorios();
-  </script>
+            const body = {
+                paciente_id: pacienteId,
+                medicamento_id: medicamentoId,
+                recordatorio_id: recordatorioId,
+                fecha_programada: fechaProgramada,
+                fecha_hora_toma: obtenerFechaHoraActual(),
+                estado: "tomada",
+                observaciones: "Marcada desde el panel del día"
+            };
+
+            try {
+                const respuesta = await fetch("http://127.0.0.1:8000/tomas/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await respuesta.json();
+
+                if (!respuesta.ok) {
+                    mostrarError(data.detail || "No se pudo registrar la toma.");
+                    return;
+                }
+
+                await cargarPanelDia();
+
+            } catch (error) {
+                mostrarError("No se pudo conectar con el servidor para registrar la toma.");
+                console.error(error);
+            }
+        }
+
+        async function cargarPanelDia() {
+            limpiarError();
+
+            const tbody = document.getElementById("tabla-recordatorios");
+
+            if (!pacienteId) {
+                tbody.innerHTML = `<tr><td class="vacio" colspan="7">No se recibió el paciente_id en la URL.</td></tr>`;
+                mostrarError("Falta el paciente_id en la URL. Usa por ejemplo: listaRecordatorios.html?paciente_id=1");
+                return;
+            }
+
+            try {
+                const respuesta = await fetch(`http://127.0.0.1:8000/recordatorios/panel-dia/${pacienteId}`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                const datos = await respuesta.json();
+
+                if (!respuesta.ok) {
+                    mostrarError("Error al cargar el panel del día.");
+                    tbody.innerHTML = `<tr><td class="vacio" colspan="7">No se pudo cargar el panel del día.</td></tr>`;
+                    return;
+                }
+
+                if (!datos.recordatorios || datos.recordatorios.length === 0) {
+                    tbody.innerHTML = `<tr><td class="vacio" colspan="7">No hay recordatorios para mostrar hoy.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = datos.recordatorios.map(r => `
+              <tr>
+                <td>${r.medicamento_nombre}</td>
+                <td>${r.dosis || "—"}</td>
+                <td>${r.hora_recordatorio}</td>
+                <td>${r.fecha_programada}</td>
+                <td>
+                  ${r.tomada
+                        ? `<span class="badge-tomada">Tomada</span>`
+                        : `<span class="badge-pendiente">Pendiente</span>`
+                    }
+                </td>
+                <td>${r.observaciones || "—"}</td>
+                <td>
+                  ${r.tomada
+                        ? `—`
+                        : `<button class="boton-tomada" onclick="marcarComoTomada(${r.paciente_id}, ${r.medicamento_id}, ${r.recordatorio_id}, '${r.fecha_programada}')">Marcar como tomada</button>`
+                    }
+                </td>
+              </tr>
+            `).join("");
+
+            } catch (error) {
+                mostrarError("No se pudo conectar con el servidor.");
+                tbody.innerHTML = `<tr><td class="vacio" colspan="7">Error de conexión con el backend.</td></tr>`;
+                console.error(error);
+            }
+        }
+
+        cargarPanelDia();
+    </script>
 
 </body>
 </html>

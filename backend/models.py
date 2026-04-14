@@ -1,5 +1,6 @@
-import os
+﻿import os
 import sqlite3
+from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
 
@@ -56,7 +57,6 @@ def init_db():
         )
     """)
 
-    # Tabla de recordatorios
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS recordatorios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,19 +69,37 @@ def init_db():
         )
     """)
 
-    # Tabla de tomas
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tomas (
+        CREATE TABLE IF NOT EXISTS tomas_medicamento (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            medicamento_id INTEGER NOT NULL,
             paciente_id INTEGER NOT NULL,
-            fecha TEXT NOT NULL,
-            hora_programada TEXT NOT NULL,
-            hora_tomada TEXT,
-            estado TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente', 'tomado', 'atrasado')),
+            medicamento_id INTEGER NOT NULL,
+            recordatorio_id INTEGER,
+            fecha_programada TEXT NOT NULL,
+            fecha_hora_toma TEXT,
+            estado TEXT NOT NULL DEFAULT 'tomado',
             observaciones TEXT,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
             FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
-            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+            FOREIGN KEY (recordatorio_id) REFERENCES recordatorios(id),
+            UNIQUE (recordatorio_id, fecha_programada)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS alertas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL,
+            mensaje TEXT NOT NULL,
+            severidad TEXT NOT NULL,
+            paciente_id INTEGER NOT NULL,
+            medicamento_id INTEGER,
+            recordatorio_id INTEGER,
+            fecha_creacion TEXT NOT NULL,
+            atendida INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
+            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
+            FOREIGN KEY (recordatorio_id) REFERENCES recordatorios(id)
         )
     """)
 
@@ -90,13 +108,42 @@ def init_db():
     print("Base de datos inicializada correctamente.")
 
 
+def get_recordatorios_por_paciente(paciente_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            r.id,
+            r.medicamento_id,
+            m.nombre AS medicamento_nombre,
+            m.dosis AS dosis,
+            r.hora_recordatorio,
+            r.fecha_inicio,
+            r.activo,
+            r.observaciones
+        FROM recordatorios r
+        INNER JOIN medicamentos m
+            ON r.medicamento_id = m.id
+        WHERE m.paciente_id = ?
+        ORDER BY r.fecha_inicio ASC, r.hora_recordatorio ASC
+    """, (paciente_id,))
+
+    recordatorios = cursor.fetchall()
+    conn.close()
+    return recordatorios
+
+
 def get_recordatorios_activos(medicamento_id):
     conn = get_connection()
     cursor = conn.cursor()
+
     cursor.execute("""
-        SELECT * FROM recordatorios
+        SELECT *
+        FROM recordatorios
         WHERE medicamento_id = ? AND activo = 1
     """, (medicamento_id,))
+
     recordatorios = cursor.fetchall()
     conn.close()
     return recordatorios
@@ -105,42 +152,103 @@ def get_recordatorios_activos(medicamento_id):
 def insertar_recordatorio(medicamento_id, hora_recordatorio, fecha_inicio, activo=1, observaciones=""):
     conn = get_connection()
     cursor = conn.cursor()
+
     cursor.execute("""
         INSERT INTO recordatorios (
-            medicamento_id, hora_recordatorio, fecha_inicio, activo, observaciones
+            medicamento_id,
+            hora_recordatorio,
+            fecha_inicio,
+            activo,
+            observaciones
         )
         VALUES (?, ?, ?, ?, ?)
-    """, (medicamento_id, hora_recordatorio, fecha_inicio, activo, observaciones))
+    """, (
+        medicamento_id,
+        hora_recordatorio,
+        fecha_inicio,
+        activo,
+        observaciones
+    ))
+
     conn.commit()
+    nuevo_id = cursor.lastrowid
     conn.close()
+    return nuevo_id
 
 
-# 🔥 AQUÍ ESTÁ LO IMPORTANTE DE TU HU-35 🔥
+def get_panel_dia_por_paciente(paciente_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    hoy = datetime.now()
+    fecha_hoy = hoy.strftime("%m/%d/%Y")
+    fecha_sql_hoy = hoy.strftime("%Y-%m-%d")
+
+    cursor.execute("""
+        SELECT
+            r.id AS recordatorio_id,
+            m.paciente_id AS paciente_id,
+            r.medicamento_id AS medicamento_id,
+            m.nombre AS medicamento_nombre,
+            m.dosis AS dosis,
+            r.hora_recordatorio AS hora_recordatorio,
+            r.fecha_inicio AS fecha_inicio,
+            r.activo AS activo,
+            r.observaciones AS observaciones,
+            (? || ' ' || r.hora_recordatorio || ':00') AS fecha_programada,
+            t.id AS toma_id,
+            t.fecha_hora_toma AS fecha_hora_toma,
+            t.estado AS estado_toma,
+            CASE
+                WHEN t.id IS NOT NULL THEN 1
+                ELSE 0
+            END AS tomada
+        FROM recordatorios r
+        INNER JOIN medicamentos m
+            ON r.medicamento_id = m.id
+        LEFT JOIN tomas_medicamento t
+            ON t.recordatorio_id = r.id
+           AND t.fecha_programada = (? || ' ' || r.hora_recordatorio || ':00')
+        WHERE m.paciente_id = ?
+          AND r.activo = 1
+          AND r.fecha_inicio <= ?
+        ORDER BY r.hora_recordatorio ASC
+    """, (
+        fecha_sql_hoy,
+        fecha_sql_hoy,
+        paciente_id,
+        fecha_hoy
+    ))
+
+    filas = cursor.fetchall()
+    conn.close()
+    return filas
+
+
 def obtener_historial_tomas(paciente_id):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT 
+        SELECT
             t.id,
             t.paciente_id,
             t.medicamento_id,
-            m.nombre,
-            t.fecha,
-            t.hora_programada,
-            t.hora_tomada,
+            m.nombre AS medicamento_nombre,
+            t.recordatorio_id,
+            t.fecha_programada,
+            t.fecha_hora_toma,
             t.estado,
             t.observaciones
-        FROM tomas t
-        JOIN medicamentos m ON t.medicamento_id = m.id
+        FROM tomas_medicamento t
+        INNER JOIN medicamentos m
+            ON t.medicamento_id = m.id
         WHERE t.paciente_id = ?
-          AND date(t.fecha) >= date('now', '-7 days')
-        ORDER BY date(t.fecha) DESC, t.hora_programada DESC
+        ORDER BY t.fecha_programada DESC, t.fecha_hora_toma DESC
     """, (paciente_id,))
 
     resultados = cursor.fetchall()
     conn.close()
-
     return resultados
 
 

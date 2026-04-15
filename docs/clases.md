@@ -1,6 +1,6 @@
 # Diagrama de Clases
 
-![Diagrama de Clases](./imagenes/diagrama-clases.png)
+![Diagrama de Clases](.arquitectura/imagenes/DiagramaClases.png)
 
 ## Descripción
 Este diagrama representa las clases principales del sistema y sus relaciones. Incluye entidades como `Usuario`, `Pacientes`, `Medicamento` y `recordatorios`, además de clases de soporte como `Models`, rutas de atención (`PatientRoute`, `MedicationRoute`, `ReminderRoute`), servicios de `Validaciones` y componentes relacionados con patrones de diseño usados en el proyecto.

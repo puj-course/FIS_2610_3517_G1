@@ -13,3 +13,12 @@ class HistorialTomas(Historial):
         self._tomas = tomas
     def obtener_datos(self)->dict:
         return {"historial": self._tomas}
+
+class HistorialDecorator(Historial):
+    #esto es el decorador base, que recibe un historial de tomas y lo decora con funcionalidades adicionales
+    #es como si envolviera el objeto de Historial y delega obtener_datos al componente interno. 
+    #y asi las subclases concretas pueden agregar funcionalidades adicionales a obtener_datos sin modificar la estructura base del historial de tomas
+    def __init__(self, historial:Historial):
+        self._historial = historial
+    def obtener_datos(self)->dict:
+        return self._historial.obtener_datos()

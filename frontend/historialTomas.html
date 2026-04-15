@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historial de Tomas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      margin: 0;
+      padding: 30px;
+    }
+
+    .contenedor {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .filtro {
+      margin-bottom: 20px;
+    }
+
+    input, button {
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      margin-right: 10px;
+    }
+
+    button {
+      background: #14b8a6;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0f766e;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      color: black;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background: #1e293b;
+      color: #2dd4bf;
+    }
+
+    .pendiente {
+      color: orange;
+      font-weight: bold;
+    }
+
+    .tomado {
+      color: green;
+      font-weight: bold;
+    }
+
+    .atrasado {
+      color: red;
+      font-weight: bold;
+    }
+
+    .mensaje {
+      margin-top: 20px;
+      color: #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Historial de tomas de los últimos 7 días</h1>
+
+    <div class="filtro">
+      <input type="number" id="pacienteId" placeholder="ID del paciente">
+      <button onclick="cargarHistorial()">Consultar historial</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Medicamento</th>
+          <th>Fecha</th>
+          <th>Hora programada</th>
+          <th>Hora tomada</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="tablaHistorial">
+        <tr>
+          <td colspan="5">No hay datos cargados.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="mensaje" id="mensaje"></p>
+  </div>
+
+  <script>
+    async function cargarHistorial() {
+      const pacienteId = document.getElementById("pacienteId").value;
+      const tabla = document.getElementById("tablaHistorial");
+      const mensaje = document.getElementById("mensaje");
+
+      if (!pacienteId) {
+        mensaje.textContent = "Debes ingresar un ID de paciente.";
+        return;
+      }
+
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/tomas/historial/${pacienteId}`);
+        const data = await res.json();
+
+        tabla.innerHTML = "";
+        mensaje.textContent = "";
+
+        if (!data.historial || data.historial.length === 0) {
+          tabla.innerHTML = `<tr><td colspan="5">No hay historial para este paciente en los últimos 7 días.</td></tr>`;
+          return;
+        }
+
+        data.historial.forEach(t => {
+          tabla.innerHTML += `
+            <tr>
+              <td>${t.medicamento}</td>
+              <td>${t.fecha}</td>
+              <td>${t.hora_programada}</td>
+              <td>${t.hora_tomado || "-"}</td>
+              <td class="${t.estado}">${t.estado}</td>
+            </tr>
+          `;
+        });
+
+      } catch (error) {
+        mensaje.textContent = "Error al consultar el historial.";
+      }
+    }
+  </script>
+</body>
+</html>

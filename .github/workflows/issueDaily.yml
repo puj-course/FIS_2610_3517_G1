@@ -1,11 +1,13 @@
-name: Daily 
+name: Daily
 
 on:
   schedule:
-    - cron: '2 18 * * *'
+    - cron: '41 18 * * *'
+  workflow_dispatch:   # 👈 AGREGA ESTO
 
 permissions:
   issues: write
+  contents: read
 
 jobs:
   daily_standup:
@@ -15,7 +17,7 @@ jobs:
         run: echo "TODAY=$(date '+%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: New standup issue
-        uses: imjohnbo/issue-bot@v3
+        uses: imjohnbo/issue-bot@3.3.4
         with:
           assignees: "Naqz05, TorresVides, Valentina866, rodriguezdiazandres8, sofia-sierra2, vanexalrm"
           labels: "seguimiento"

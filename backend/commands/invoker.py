@@ -1,8 +1,4 @@
-#####################################################################################
-#	invoker.py, este fichero reprsentara el CommandInvoker del patron Command
-#	y sera quien disapara la orden
-#
-#############################################################################################
+#es quien dispara la orden para el patron Command
 class CommandInvoker:
     def __init__(self):
         self.command = None

@@ -1,6 +1,6 @@
 # Diagrama de Despliegue
 
-![Diagrama de Despliegue](./arquitectura/diagrama-despliegue.png)
+![Diagrama de Despliegue](./arquitectura/despliegue.drawio (1).png)
 
 ## Descripción
 Este diagrama muestra la distribución física de los componentes principales del sistema. Se identifican el cliente o frontend, el backend desarrollado para procesar la lógica del negocio y la base de datos utilizada para almacenar la información del sistema, así como la comunicación entre estos elementos.

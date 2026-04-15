@@ -3,7 +3,7 @@ class Historial(ABC):
     #interfaz base que define lo de cualquier historial de tomas
     #uso patron decorator porque se pueden agregar funcionalidades a los historiales de tomas sin modificar su estructura base
     @abstractmethod
-    def get_obtener_datos(self)->dict:
+    def obtener_datos(self)->dict:
         #esto me devuelve un diccionario con los datos del historial de tomas, como fecha, hora, medicamento, dosis, etc
         pass
 class HistorialTomas(Historial):
@@ -22,3 +22,19 @@ class HistorialDecorator(Historial):
         self._historial = historial
     def obtener_datos(self)->dict:
         return self._historial.obtener_datos()
+    
+class CumplimientoDecorator(HistorialDecorator):
+    #esto es un decorador concreto que agrega la funcionalidad de calcular el cumplimiento de las tomas en porcentaje para las tomas que se han cumplido respecto a las programadas
+    def obtener_datos(self)->dict:
+        datos=self._historial.obtener_datos()
+        tomas=datos.get("historial",[])
+
+        total=len(tomas)
+        tomadas=sum(1 for toma in tomas if toma.get("estado")=="tomado")
+        porcentaje=round((tomadas/total)*100,1)if total>0 else 0
+        datos["cumplimiento"] = {
+            "total_tomas": total,
+            "tomas_realizadas": tomadas,
+            "porcentaje": porcentaje
+        }
+        return datos

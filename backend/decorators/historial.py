@@ -6,3 +6,10 @@ class Historial(ABC):
     def get_obtener_datos(self)->dict:
         #esto me devuelve un diccionario con los datos del historial de tomas, como fecha, hora, medicamento, dosis, etc
         pass
+class HistorialTomas(Historial):
+    #esto es ya como la implementacion concreta del historial de tomas, que puede ser decorada con otras funcionalidades
+    #recibe las tomas crudas del endpoint y las las expone
+    def __init__(self, tomas:list):
+        self._tomas = tomas
+    def obtener_datos(self)->dict:
+        return {"historial": self._tomas}

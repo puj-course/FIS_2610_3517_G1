@@ -1,6 +1,7 @@
 # Diagrama de Base de Datos
+<img width="761" height="273" alt="Diagrama_BDMedtrack" src="https://github.com/user-attachments/assets/7d73735f-078e-43f8-b420-28022957e0d8" />
 
-![Diagrama BD](./imagenes/diagrama-base-datos)
+
 
 ## Descripción
 Este diagrama representa la estructura de datos principal del sistema.

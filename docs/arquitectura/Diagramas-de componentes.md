@@ -1,177 +1,45 @@
-# Escenario — Recordatorios
+# Diagramas de Componentes
 
 ## Descripción general
-Este escenario reúne los diagramas de componentes asociados a la funcionalidad de recordatorios. En conjunto, muestran cómo se organiza el sistema para crear, editar, activar o desactivar recordatorios, integrando la interfaz del usuario, la lógica del sistema, las validaciones, la API REST y la persistencia.
+Este documento reúne los tres diagramas de componentes trabajados para el sistema. En conjunto, muestran cómo se distribuyen las responsabilidades entre la interfaz del usuario, los formularios, las validaciones, la API REST, la lógica de negocio y la persistencia de datos. Cada diagrama representa una vista distinta de funcionalidades clave del proyecto: registro de pacientes, registro de medicamentos y gestión de recordatorios.
 
 ---
 
-## Diagrama de componentes 1
-![Componentes Recordatorios 1](./imagenes/componentes-recordatorios-1.png)
+## 1. Diagrama de componentes — Registro de pacientes
+
+![Componentes Registro Pacientes](./imagenes/componentes-registro-pacientes.png)
 
 ### Explicación
-Este diagrama presenta una vista general del **Sistema de recordatorio** como componente central, conectado con los módulos principales del sistema:
-
-- **Gestión Recordatorios**, donde se agrupan:
-  - `EditarRecordatorio`
-  - `ActivarDesactivar`
-  - `CrearRecordatorio`
-- **Medicamentos**, con:
-  - `ModeloMedicamento`
-  - `RelacionFK`
-- **Persistencia**, compuesta por:
-  - `TablaRecordatorios`
-  - `TablaMedicamentos`
-- **Cliente**, con:
-  - `InterfazUsuario`
-  - `FormularioRecordatorio`
-- **API REST**, que incluye:
-  - `ValidacionDatos`
-  - `EndpointsRecordatorios`
+Este diagrama representa los componentes involucrados en la funcionalidad de registro de pacientes. Se observa la participación del cliente, la interfaz de usuario, los formularios de captura, la capa de validaciones, la API REST y la persistencia de datos. Su objetivo es mostrar cómo fluye la información desde la entrada de datos del usuario hasta su almacenamiento en el sistema.
 
 ### Justificación
-Este diagrama muestra cómo la funcionalidad de recordatorios depende de varios módulos del sistema y cómo todos se articulan alrededor del componente central. Esto permite entender la relación entre cliente, lógica de negocio, persistencia y API.
+El diagrama es coherente con la arquitectura del proyecto porque refleja la separación entre presentación, lógica de validación, comunicación con el backend y almacenamiento. Esto permite entender cómo el sistema organiza la funcionalidad de registro de pacientes de manera modular.
 
 ---
 
-## Diagrama de componentes 2
-![Componentes Recordatorios 2](./imagenes/componentes-recordatorios-2.png)
+## 2. Diagrama de componentes — Registro de medicamentos
+
+![Componentes Registro Medicamentos](./imagenes/componentes-registro-medicamentos.png)
 
 ### Explicación
-Este segundo diagrama profundiza en el flujo de creación de recordatorios. Se observa cómo el **Formulario Recordatorio** se compone de:
-
-- `SelectorDias`
-- `SelectorHora`
-- `InputMedicamento`
-- `InputDosis`
-- `InputObservaciones`
-
-Además, se conectan los componentes de:
-
-- **Validaciones**
-  - `CamposObligatorios`
-  - `ValidacionFormatoHora`
-- **Gestión Recordatorios**
-  - `CrearRecordatorio`
-- **Persistencia**
-  - `TablaRecordatorios`
-- **API REST**
-  - `RecepcionDatos`
-  - `EndpointsRecordatorios`
-- **Cliente**
-  - `InterfazUsuario`
-  - `FormularioRecordatorio`
+Este diagrama muestra los componentes que intervienen en el registro de medicamentos. Se identifican módulos asociados al formulario, las validaciones, la API REST, la lógica de gestión de medicamentos, la persistencia y los mensajes de retroalimentación al usuario. También permite observar cómo la funcionalidad se conecta con la capa de cliente y con el almacenamiento de la información.
 
 ### Justificación
-Este diagrama permite ver con mayor detalle la interacción interna de la funcionalidad, especialmente el rol del formulario, las validaciones y la comunicación con la API y la base de datos.
+El diagrama representa adecuadamente la estructura del sistema para esta funcionalidad, ya que evidencia la división de responsabilidades entre los distintos componentes. Además, muestra cómo el registro de medicamentos requiere tanto validación de datos como comunicación con la persistencia y respuesta visual al usuario.
+
+---
+
+## 3. Diagrama de componentes — Recordatorios
+
+![Componentes Recordatorios](./imagenes/componentes-recordatorios.png)
+
+### Explicación
+Este diagrama representa los componentes principales relacionados con la gestión de recordatorios. Se observa un sistema central de recordatorios conectado con módulos de gestión, cliente, medicamentos, persistencia y API REST. A su vez, se muestran subcomponentes específicos como edición, activación, creación de recordatorios, tablas de persistencia y elementos de la interfaz.
+
+### Justificación
+El diagrama es acorde con la lógica del sistema porque muestra cómo la funcionalidad de recordatorios depende de varios módulos que trabajan de forma integrada. Esto ayuda a comprender mejor la organización interna de la solución y la relación entre el sistema de recordatorios y otros componentes del proyecto.
+
+---
 
 ## Conclusión
-Los dos diagramas se complementan entre sí: el primero presenta la arquitectura general del sistema de recordatorios y el segundo muestra con mayor detalle el flujo específico de creación y validación.
-
-
-# Escenario — Registro de medicamentos
-
-## Descripción general
-Este escenario reúne los diagramas de componentes relacionados con la funcionalidad de registro de medicamentos. En conjunto, muestran cómo el sistema organiza la captura de datos, la validación, la lógica de negocio, la persistencia y la retroalimentación al usuario.
-
----
-
-## Diagrama de componentes 1
-![Componentes Registro Medicamentos 1](./imagenes/componentes-registro-medicamentos-1.png)
-
-### Explicación
-Este diagrama muestra la interacción entre los componentes que participan en el registro de medicamentos:
-
-- **Cliente**
-  - `InterfazUsuario`
-  - `FormularioRecordatorio`
-- **Formulario Recordatorio**
-  - `SelectorDias`
-  - `SelectorHora`
-  - `InputMedicamento`
-  - `InputDosis`
-  - `InputObservaciones`
-- **Validaciones**
-  - `CamposObligatorios`
-  - `ValidacionFormatoHora`
-  - `ControlErrores`
-- **API REST**
-  - `RecepcionDatos`
-  - `EndpointsRecordatorios`
-- **Gestión medicamentos**
-  - `RegistrarMedicamento`
-- **Persistencia**
-  - `TablaMedicamentos`
-- **Mensaje**
-  - `Mensajeerror`
-  - `MensajeExito`
-
-### Justificación
-Este diagrama evidencia cómo el registro de medicamentos se apoya en distintos módulos especializados, permitiendo separar la captura de datos, la validación, el almacenamiento y la notificación al usuario.
-
----
-
-## Diagrama de componentes 2
-![Componentes Registro Medicamentos 2](./imagenes/componentes-registro-medicamentos-2.png)
-
-### Explicación
-Este segundo diagrama muestra una vista más enfocada en la relación entre:
-
-- **API REST**
-  - `RecepcionDatos`
-  - `EndpointsRecordatorios`
-- **Gestión medicamentos**
-  - `RegistrarMedicamento`
-- **Persistencia**
-  - `TablaMedicamentos`
-- **Cliente**
-  - `InterfazUsuario`
-  - `FormularioRecordatorio`
-- **Formulario Recordatorio**
-  - `SelectorDias`
-  - `SelectorHora`
-  - `InputMedicamento`
-  - `InputDosis`
-  - `InputObservaciones`
-- **Validaciones**
-  - `CamposObligatorios`
-  - `ValidacionFormatoHora`
-- **Mensaje**
-  - `Mensajeerror`
-  - `MensajeExito`
-
-### Justificación
-Este diagrama permite complementar la visión del primero, resaltando cómo el flujo de datos del formulario llega hasta la capa de persistencia y cómo el sistema devuelve retroalimentación al usuario después del proceso.
-
-## Conclusión
-Los dos diagramas ofrecen una visión complementaria del registro de medicamentos, mostrando tanto la estructura general de componentes como el detalle del flujo entre formulario, validaciones, API, persistencia y mensajes.
-
-
-# Escenario — Registro de pacientes
-
-## Descripción general
-Este escenario reúne los diagramas asociados a la funcionalidad de registro de pacientes. En conjunto, permiten comprender la relación entre la interfaz, las validaciones, la lógica de negocio y la persistencia.
-
----
-
-## Diagrama 1
-![Diagrama 1](./imagenes/registro-pacientes-1.png)
-
-### Explicación
-Aquí describes el primer diagrama.
-
-### Justificación
-Aquí explicas por qué ese diagrama representa bien la funcionalidad.
-
----
-
-## Diagrama 2
-![Diagrama 2](./imagenes/registro-pacientes-2.png)
-
-### Explicación
-Aquí describes el segundo diagrama.
-
-### Justificación
-Aquí explicas por qué complementa al primero.
-
-## Conclusión
-Ambos diagramas permiten entender de forma más completa la funcionalidad de registro de pacientes.
+Los tres diagramas permiten visualizar la arquitectura por componentes de funcionalidades importantes del sistema. En conjunto, muestran una estructura organizada en capas, donde la interfaz del usuario, la validación, la lógica de negocio, la API REST y la persistencia colaboran para soportar los procesos principales del proyecto.

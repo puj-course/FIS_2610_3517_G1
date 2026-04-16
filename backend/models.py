@@ -70,20 +70,21 @@ def init_db():
     """)
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tomas_medicamento (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            paciente_id INTEGER NOT NULL,
-            medicamento_id INTEGER NOT NULL,
-            recordatorio_id INTEGER,
-            fecha_programada TEXT NOT NULL,
-            fecha_hora_toma TEXT,
-            estado TEXT NOT NULL DEFAULT 'tomado',
-            observaciones TEXT,
-            FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
-            FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
-            FOREIGN KEY (recordatorio_id) REFERENCES recordatorios(id),
-            UNIQUE (recordatorio_id, fecha_programada)
-        )
+    CREATE TABLE IF NOT EXISTS tomas_medicamento (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        paciente_id INTEGER NOT NULL,
+        medicamento_id INTEGER NOT NULL,
+        recordatorio_id INTEGER,
+        fecha_programada TEXT NOT NULL,
+        fecha_hora_toma TEXT,
+        estado TEXT NOT NULL DEFAULT 'pendiente',
+        diferencia_minutos INTEGER,
+        observaciones TEXT,
+        FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
+        FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
+        FOREIGN KEY (recordatorio_id) REFERENCES recordatorios(id),
+        UNIQUE (recordatorio_id, fecha_programada)
+    )
     """)
 
     cursor.execute("""

@@ -1,4 +1,4 @@
-name: Reporte de commits
+name: Reporte de commits recientes
 run-name: Reporte de actividad para ${{ github.actor }}
 
 on:

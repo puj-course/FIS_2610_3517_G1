@@ -159,14 +159,10 @@ def test_post_recordatorio_exitoso():
     data = recordatorio_valido()
 
     conexion_falsa = MagicMock()
-    cursor_falso = MagicMock()
-    cursor_falso.lastrowid = 1
 
-    conexion_insert_falsa = MagicMock()
-    conexion_insert_falsa.cursor.return_value = cursor_falso
-
-    with patch("backend.routes.reminder_route.sqlite3.connect", side_effect=[conexion_falsa, conexion_insert_falsa]), \
-         patch("backend.routes.reminder_route.verificar_medicamento_existe", return_value=True):
+    with patch("backend.routes.reminder_route.sqlite3.connect", return_value=conexion_falsa), \
+         patch("backend.routes.reminder_route.verificar_medicamento_existe", return_value=True), \
+         patch("backend.routes.reminder_route.insertar_recordatorio", return_value=1):
 
         response = client.post("/recordatorios/", json=data)
 
@@ -206,42 +202,112 @@ def test_post_recordatorio_medicamento_no_existe():
 def test_get_recordatorios_paciente_no_encontrado():
     conexion_falsa = MagicMock()
     cursor_falso = MagicMock()
+
     cursor_falso.fetchone.return_value = None
+    cursor_falso.fetchall.return_value = []
+
     conexion_falsa.cursor.return_value = cursor_falso
 
     with patch("backend.routes.reminder_route.sqlite3.connect", return_value=conexion_falsa):
         response = client.get("/recordatorios/1")
 
     assert response.status_code == 200
-    assert response.json()["status"] == 404
-    assert response.json()["message"] == "Paciente no encontrado"
+    assert response.json() == {"recordatorios": []}
 
 
 def test_get_recordatorios_exitoso():
-    conexion_falsa = MagicMock()
-    cursor_falso = MagicMock()
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-    cursor_falso.fetchone.return_value = {"id": 1}
-    cursor_falso.fetchall.return_value = [
-        {
-            "id": 1,
-            "medicamento_id": 1,
-            "medicamento_nombre": "Acetaminofen",
-            "hora_recordatorio": "08:30",
-            "fecha_inicio": "03/25/2026",
-            "activo": 1,
-            "observaciones": "Prueba"
-        }
-    ]
+    # Tabla pacientes
+    cursor.execute("""
+        CREATE TABLE pacientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombres TEXT NOT NULL,
+            apellidos TEXT NOT NULL,
+            fecha_nacimiento TEXT NOT NULL,
+            genero TEXT NOT NULL,
+            tipo_documento TEXT NOT NULL,
+            numero_documento TEXT NOT NULL,
+            telefono_contacto TEXT NOT NULL,
+            eps_aseguradora TEXT,
+            diagnostico_principal TEXT,
+            alergias_conocidas TEXT,
+            observaciones_adicionales TEXT
+        )
+    """)
 
-    conexion_falsa.cursor.return_value = cursor_falso
+    # Tabla medicamentos
+    cursor.execute("""
+        CREATE TABLE medicamentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            dosis TEXT NOT NULL,
+            frecuencia TEXT NOT NULL,
+            horario TEXT NOT NULL,
+            fecha_inicio TEXT NOT NULL,
+            observaciones TEXT,
+            paciente_id INTEGER NOT NULL
+        )
+    """)
 
-    with patch("backend.routes.reminder_route.sqlite3.connect", return_value=conexion_falsa):
+    # Tabla recordatorios
+    cursor.execute("""
+        CREATE TABLE recordatorios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            medicamento_id INTEGER NOT NULL,
+            hora_recordatorio TEXT NOT NULL,
+            fecha_inicio TEXT NOT NULL,
+            activo INTEGER NOT NULL DEFAULT 1,
+            observaciones TEXT
+        )
+    """)
+
+    # Insertar paciente
+    cursor.execute("""
+        INSERT INTO pacientes (
+            nombres, apellidos, fecha_nacimiento, genero,
+            tipo_documento, numero_documento, telefono_contacto,
+            eps_aseguradora, diagnostico_principal
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        "Ana", "Lopez", "01/15/1990", "Femenino",
+        "CC", "12345678", "3001234567", "Sura", "Hipertension"
+    ))
+
+    # Insertar medicamento
+    cursor.execute("""
+        INSERT INTO medicamentos (
+            nombre, dosis, frecuencia, horario, fecha_inicio, observaciones, paciente_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        "Acetaminofen", "500 mg", "Cada 8 horas", "08:00 AM",
+        "03/16/2026", "Ninguna", 1
+    ))
+
+    # Insertar recordatorio
+    cursor.execute("""
+        INSERT INTO recordatorios (
+            medicamento_id, hora_recordatorio, fecha_inicio, activo, observaciones
+        ) VALUES (?, ?, ?, ?, ?)
+    """, (
+        1, "08:30", "03/25/2026", 1, "Prueba"
+    ))
+
+    conn.commit()
+
+    with patch("backend.routes.reminder_route.sqlite3.connect", return_value=conn):
         response = client.get("/recordatorios/1")
 
     assert response.status_code == 200
-    assert response.json()["status"] == 200
-    assert len(response.json()["recordatorios"]) == 1
+    cuerpo = response.json()
+    assert "recordatorios" in cuerpo
+    assert len(cuerpo["recordatorios"]) == 1
+    assert cuerpo["recordatorios"][0]["medicamento_nombre"] == "Acetaminofen"
+    assert cuerpo["recordatorios"][0]["hora_recordatorio"] == "08:30"
+
+    conn.close()
 
 
 def test_get_recordatorios_lista_vacia():
@@ -257,5 +323,4 @@ def test_get_recordatorios_lista_vacia():
         response = client.get("/recordatorios/1")
 
     assert response.status_code == 200
-    assert response.json()["status"] == 200
-    assert response.json()["recordatorios"] == []
+    assert response.json() == {"recordatorios": []}

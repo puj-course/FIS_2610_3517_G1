@@ -1,0 +1,40 @@
+name: Ejecutar pruebas
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+      - feature/pipelines
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      - name: Ejecutar pruebas con pytest
+        run: |
+          PYTHONPATH=. python -m pytest -v \
+            tests/test_calcular_estado.py \
+            tests/test_medicamento.py \
+            tests/test_paciente.py \
+            tests/test_recordatorioo.py \
+            tests/test_validar_medicamento.py

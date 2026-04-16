@@ -1,6 +1,6 @@
 # Patrón Factory Method
 
-![Diagrama Factory Method](./imagenes/factory-method.png)
+![Diagrama Factory Method](./imagenes/Factory.png)
 
 ## Descripción
 Este diagrama representa la implementación del patrón de diseño creacional **Factory Method** en el proceso de creación de pacientes dentro del sistema. Su propósito es delegar la creación de objetos a clases especializadas, evitando que el cliente dependa directamente de la instanciación concreta.

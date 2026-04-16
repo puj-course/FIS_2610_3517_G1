@@ -264,5 +264,4 @@ def validar_historial_toma(data: dict) -> list:
             datetime.strptime(str(fecha_toma), "%Y-%m-%d %H:%M:%S")
         except ValueError:
             errores.append("fecha_hora_toma debe tener formato YYYY-MM-DD HH:MM:SS")
-
     return errores

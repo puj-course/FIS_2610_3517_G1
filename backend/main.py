@@ -15,7 +15,6 @@ app = FastAPI()
 init_db()
 
 # para que frontend se conecte al backend
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

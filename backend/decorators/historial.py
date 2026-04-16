@@ -38,3 +38,22 @@ class CumplimientoDecorator(HistorialDecorator):
             "porcentaje": porcentaje
         }
         return datos
+
+class AlertasDecorator(HistorialDecorator):
+   #este es un decorador conreto que agrega la funcionalidad de generar alertas para las tomas atrasadas
+    def obtener_datos(self) -> dict:
+        datos = self._historial.obtener_datos()
+        tomas = datos.get("historial", [])
+
+        alertas = [
+            {
+                "medicamento": t.get("medicamento"),
+                "fecha": t.get("fecha"),
+                "hora_programada": t.get("hora_programada"),
+                "mensaje": f"Toma de {t.get('medicamento')} no registrada el {t.get('fecha')}"
+            }
+            for t in tomas if t.get("estado") == "atrasado"
+        ]
+
+        datos["alertas"] = alertas
+        return datos

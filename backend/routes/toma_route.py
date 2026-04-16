@@ -1,12 +1,21 @@
 ﻿from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
+from datetime import date
 
 from backend.services.toma_service import TomaService
 from backend.commands.regisToma_command import RegisToma_command
 from backend.commands.invoker import CommandInvoker
+from backend.models import obtener_historial_tomas
+from backend.toma_repository import TomaRepository
+from backend.decorators.historial import (
+    HistorialTomas,
+    CumplimientoDecorator,
+    AlertasDecorator
+)
 
-router = APIRouter(prefix="/tomas", tags=["tomas"])
+router = APIRouter(prefix="/tomas", tags=["Tomas"])
+repositorio = TomaRepository()
 
 
 class RegistrarTomaRequest(BaseModel):
@@ -58,35 +67,8 @@ def registrar_toma(data: RegistrarTomaRequest):
             status_code=500,
             detail=f"Error inesperado al registrar la toma: {str(e)}"
         )
-from fastapi import APIRouter
-from datetime import date
-from backend.models import obtener_historial_tomas
-from backend.toma_repository import TomaRepository
-
-router = APIRouter(prefix="/tomas", tags=["Tomas"])
-
-repositorio = TomaRepository()
 
 
-# HU-33 - Registrar toma
-@router.post("/", status_code=201)
-def registrar_toma(datos: dict):
-    """
-    Registra una nueva toma de medicamento.
-    """
-    toma_id = repositorio.registrar_toma(
-        medicamento_id=datos.get("medicamento_id"),
-        paciente_id=datos.get("paciente_id"),
-        fecha=datos.get("fecha", str(date.today())),
-        hora_programada=datos.get("hora_programada"),
-        hora_tomada=datos.get("hora_tomada"),
-        estado=datos.get("estado", "pendiente"),
-        observaciones=datos.get("observaciones")
-    )
-    return {"message": "Toma registrada exitosamente", "toma_id": toma_id}
-
-
-# HU-33 - Obtener tomas del día
 @router.get("/{paciente_id}")
 def obtener_tomas(paciente_id: int, fecha: str = None):
     """
@@ -98,7 +80,6 @@ def obtener_tomas(paciente_id: int, fecha: str = None):
     return {"tomas": [dict(t) for t in tomas]}
 
 
-#  HU-35 - Historial de tomas
 @router.get("/historial/{paciente_id}")
 def obtener_historial(paciente_id: int):
     tomas = obtener_historial_tomas(paciente_id)
@@ -117,5 +98,8 @@ def obtener_historial(paciente_id: int):
             "estado": t["estado"]
         })
 
-    return {"historial": resultado}
+    historial = HistorialTomas(resultado)
+    historial = CumplimientoDecorator(historial)
+    historial = AlertasDecorator(historial)
 
+    return historial.obtener_datos()

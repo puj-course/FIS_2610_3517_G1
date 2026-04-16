@@ -1,52 +1,54 @@
-# Patrón Strategy
+# Patrón State
 
-![Diagrama Strategy](./imagenes/strategy.png)
+![Diagrama State](./imagenes/state.png)
 
 ## Descripción
-Este diagrama representa la implementación del patrón de diseño comportamental **Strategy** en el sistema de alertas y validaciones. Su propósito es encapsular diferentes algoritmos bajo una misma interfaz común, permitiendo seleccionar dinámicamente cuál estrategia aplicar según el contexto.
+Este diagrama representa la implementación del patrón de diseño comportamental **State** aplicado al manejo del estado de una toma de medicamento. Su propósito es permitir que un objeto cambie su comportamiento según su estado interno, evitando el uso excesivo de condicionales dispersos en el sistema.
 
 ## Justificación
-El patrón Strategy se justifica porque el sistema necesita evaluar distintos tipos de reglas sin concentrar toda la lógica en una sola clase. En lugar de usar múltiples condicionales para cada caso, se define una interfaz común y varias estrategias concretas que implementan el mismo método de evaluación. Esto mejora la flexibilidad, facilita la extensión del sistema y reduce el acoplamiento entre las reglas y la clase que las ejecuta.
+El patrón State se utiliza porque el sistema necesita representar distintos comportamientos para una toma de medicamento dependiendo de su situación actual. En este caso, una toma puede encontrarse en estado pendiente, tomada o atrasada. En lugar de manejar todo con múltiples condiciones, cada estado se encapsula en una clase concreta, lo que mejora la claridad, el mantenimiento y la posibilidad de extender el sistema con nuevos estados.
 
 ## Estructura del patrón en el sistema
 
-### Interfaz Strategy
-La interfaz `AlertaStrategy` define el contrato común para todas las estrategias mediante la operación:
-
-- `evaluar(data: dict, conn): dict`
-
-Esta abstracción permite que todas las estrategias puedan ser utilizadas de forma uniforme.
-
-### Estrategias concretas
-Las estrategias concretas implementan la interfaz y resuelven distintos escenarios del sistema:
-
-- `MedicamentoDuplicadoStrategy`
-- `DosisDuplicadaStrategy`
-- `RecordatorioSeguimientoStrategy`
-
-Cada una encapsula una regla específica de validación o evaluación.
-
 ### Contexto
-La clase `AlertaContext` actúa como contexto del patrón. Mantiene una referencia a una estrategia activa y expone las operaciones:
+La función `calcular_estado()` actúa como contexto del patrón. Recibe la información del medicamento, la hora actual y las tomas registradas del día para decidir qué estado concreto debe instanciarse.
 
-- `setStrategy(strategy: AlertaStrategy): void`
-- `ejecutar(data: dict, conn): dict`
+### Estado abstracto
+La clase abstracta `EstadoToma` define la operación común:
 
-El contexto delega la lógica a la estrategia seleccionada, sin conocer los detalles de implementación de cada una.
+- `obtener_estado(): str`
+
+Esta operación obliga a todos los estados concretos a proporcionar una representación uniforme del estado actual.
+
+### Estados concretos
+A partir de `EstadoToma` se implementan los siguientes estados:
+
+- `EstadoPendiente`
+- `EstadoTomado`
+- `EstadoAtrasado`
+
+Cada uno encapsula su propia lógica y retorna el estado correspondiente.
+
+## Reglas de transición observadas
+Según el diseño mostrado en el diagrama, las reglas principales son:
+
+- si el medicamento aparece registrado como tomado en las tomas del día, se instancia `EstadoTomado`;
+- si la hora programada ya pasó y no existe registro oportuno, se instancia `EstadoAtrasado`;
+- en cualquier otro caso, se instancia `EstadoPendiente`.
 
 ## Relaciones principales
 El diagrama evidencia que:
 
-- `AlertaContext` usa la interfaz `AlertaStrategy`;
-- las clases `MedicamentoDuplicadoStrategy`, `DosisDuplicadaStrategy` y `RecordatorioSeguimientoStrategy` implementan dicha interfaz;
-- el comportamiento final depende de la estrategia que se configure en tiempo de ejecución.
+- `calcular_estado()` utiliza e instancia objetos derivados de `EstadoToma`;
+- `EstadoPendiente`, `EstadoTomado` y `EstadoAtrasado` heredan de la clase abstracta `EstadoToma`;
+- cada estado implementa la operación `obtener_estado()`.
 
 ## Beneficios en el proyecto
-- permite cambiar reglas sin modificar la clase cliente;
-- reduce el uso de condicionales extensos;
-- mejora la extensibilidad del sistema;
-- facilita la incorporación de nuevas estrategias futuras;
-- favorece un diseño más modular y mantenible.
+- reduce el uso de condicionales repetidos;
+- encapsula el comportamiento asociado a cada estado;
+- mejora la claridad del diseño;
+- facilita agregar nuevos estados en el futuro;
+- favorece el mantenimiento y la extensión del sistema.
 
 ## Conclusión
-El patrón Strategy resulta adecuado para este módulo porque permite separar y encapsular distintas reglas de evaluación bajo una estructura común, haciendo que el sistema sea más flexible, claro y fácil de evolucionar.
+El patrón State resulta adecuado para este módulo porque permite representar de manera clara y desacoplada los diferentes comportamientos asociados al estado de una toma de medicamento, manteniendo el sistema más ordenado y escalable.

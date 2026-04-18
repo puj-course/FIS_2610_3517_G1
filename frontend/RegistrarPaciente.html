@@ -651,8 +651,7 @@
     const partes = datosPaciente.fecha_nacimiento.split('-');
     datosPaciente.fecha_nacimiento = `${partes[1]}/${partes[2]}/${partes[0]}`;
   }
- 
-api.registrarPaciente(datosPaciente)
+  api.registrarPaciente(datosPaciente)
   .then(function(resultado) {
     if (!resultado.ok) {
       const mensajes = Array.isArray(resultado.body.detail)
@@ -676,11 +675,9 @@ api.registrarPaciente(datosPaciente)
     botonGuardar.textContent = 'Guardar paciente';
   });
 
-  });  // ← esta cierra el formulario.addEventListener
+  });
 
-  </script>
-
-  
+</script>
 
 </body>
 </html>

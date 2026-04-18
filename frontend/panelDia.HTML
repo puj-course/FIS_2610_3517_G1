@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Panel del día</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --color-menta:       #2DD4BF;
+      --color-menta-oscuro:#0F9D8A;
+      --color-fondo:       #0F1B2D;
+      --color-campo:       #1E2D3D;
+      --color-tarjeta:     #162030;
+      --color-borde:       #243447;
+      --color-texto:       #E2EAF4;
+      --color-texto-suave: #7A95B0;
+      --color-error:       #F4726A;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+    .contenedor { max-width: 800px; margin: 0 auto; }
+    .marca { display: flex; align-items: center; gap: .6rem; margin-bottom: 2rem; }
+    .marca-icono {
+      width: 38px; height: 38px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .marca-icono svg { width: 22px; height: 22px; color: var(--color-fondo); }
+    .marca-nombre { font-family: 'DM Serif Display', serif; font-size: 1.45rem; }
+    .titulo { font-family: 'DM Serif Display', serif; font-size: 1.75rem; margin: 0 0 .25rem; }
+    .subtitulo { font-size: .88rem; color: var(--color-texto-suave); margin: 0 0 2rem; }
+    .paciente-card {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .paciente-nombre {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.1rem;
+      margin: 0 0 1rem;
+      color: var(--color-menta);
+    }
+    .med-fila {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .6rem 0;
+      border-bottom: 1px solid var(--color-borde);
+      font-size: .9rem;
+    }
+    .med-fila:last-child { border-bottom: none; }
+    .med-nombre { font-weight: 500; }
+    .med-detalle { color: var(--color-texto-suave); font-size: .82rem; }
+    .med-hora {
+      background: rgba(45,212,191,.12);
+      color: var(--color-menta);
+      border: 1px solid rgba(45,212,191,.3);
+      border-radius: 20px;
+      padding: .2rem .75rem;
+      font-size: .8rem;
+    }
+    .alerta-error {
+      background: rgba(244,114,106,.1);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+    .vacio {
+      text-align: center;
+      color: var(--color-texto-suave);
+      padding: 3rem;
+      font-size: .92rem;
+    }
+  </style>
+</head>
+<body>
+<div class="contenedor">
+
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <h1 class="titulo">Panel del día</h1>
+  <p class="subtitulo" id="fechaHoy"></p>
+
+  <div class="alerta-error" id="alertaError"></div>
+  <div id="contenidoPanel"></div>
+
+</div>
+
+<script src="api.js"></script>
+<script>
+  // Mostramos la fecha de hoy en el subtítulo
+  const hoy = new Date();
+  document.getElementById('fechaHoy').textContent =
+    hoy.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  function mostrarError(mensaje) {
+    const alerta = document.getElementById('alertaError');
+    alerta.textContent = mensaje;
+    alerta.style.display = 'block';
+  }
+
+  function renderizarPanel(panel) {
+    const contenido = document.getElementById('contenidoPanel');
+
+    // Si no hay datos mostramos mensaje vacío
+    if (!panel || panel.length === 0) {
+      contenido.innerHTML = '<div class="vacio">No hay medicamentos programados para hoy.</div>';
+      return;
+    }
+
+    // Generamos una tarjeta por cada paciente
+    contenido.innerHTML = panel.map(function(paciente) {
+      const medicamentos = paciente.medicamentos.map(function(med) {
+        return `
+          <div class="med-fila">
+            <div>
+              <div class="med-nombre">${med.medicamento}</div>
+              <div class="med-detalle">${med.dosis}</div>
+            </div>
+            <span class="med-hora">${med.hora}</span>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="paciente-card">
+          <p class="paciente-nombre">${paciente.nombres} ${paciente.apellidos}</p>
+          ${medicamentos}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Cargamos el panel al abrir la página
+  api.obtenerPanelDia()
+  .then(function(resultado) {
+    if (!resultado.ok) {
+      mostrarError('Error al cargar el panel del día.');
+      return;
+    }
+    renderizarPanel(resultado.body.panel);
+  })
+  .catch(function() {
+    mostrarError('No se pudo conectar con el servidor.');
+  });
+</script>
+</body>
+</html>

@@ -388,8 +388,10 @@
   </form>
 </div>
 
+
  <script src="api.js"></script>
  
+
 <script>
   /*
     Referencias a los elementos del formulario.
@@ -526,9 +528,10 @@
     botonGuardar.disabled = true;
     botonGuardar.textContent = 'Guardando...';
 
-    api.registrarMedicamento(datosMedicamento)
-    .then(function(resultado) {
-      if (!resultado.ok) {
+   api.registrarMedicamento(datosMedicamento)
+.then(function(resultado) {
+  if (!resultado.ok) {
+   
         // El backend devolvió errores de validación, los mostramos al usuario
         var mensajes = Array.isArray(resultado.body.detail)
           ? resultado.body.detail.join(' | ')

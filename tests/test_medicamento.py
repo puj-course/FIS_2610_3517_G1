@@ -18,13 +18,16 @@ client = TestClient(app)
 
 def medicamento_valido():
     return {
-        "nombre": "Acetaminofen",
-        "dosis": "500 mg",
+        "nombre_medicamento": "Acetaminofen",
+        "concentracion": "500 mg",
+        "forma_farmaceutica": "Tableta",
+        "dosis_cantidad": 1,
+        "dosis_unidad": "tableta",
         "frecuencia": "Cada 8 horas",
-        "horario": "08:00 AM",
         "fecha_inicio": "03/16/2026",
-        "observaciones": "Tomar después de comer",
-        "paciente_id": 1
+        "paciente_id": 1,
+        "horarios": ["08:00", "16:00", "00:00"],
+        "observaciones": "Tomar después de comer"
     }
 
 
@@ -40,14 +43,14 @@ def test_validar_medicamento_exitoso():
 
 def test_nombre_medicamento_vacio():
     data = medicamento_valido()
-    data["nombre"] = ""
+    data["nombre_medicamento"] = ""
     errores = validar_medicamento(data)
     assert "El nombre del medicamento es obligatorio" in errores
 
 
 def test_dosis_vacia():
     data = medicamento_valido()
-    data["dosis"] = ""
+    data["dosis_cantidad"] = ""
     errores = validar_medicamento(data)
     assert "La dosis es obligatoria" in errores
 
@@ -61,9 +64,9 @@ def test_frecuencia_vacia():
 
 def test_horario_vacio():
     data = medicamento_valido()
-    data["horario"] = ""
+    data["horarios"] = []
     errores = validar_medicamento(data)
-    assert "El horario de toma es obligatorio" in errores
+    assert "Debe ingresar al menos un horario" in errores
 
 
 def test_fecha_inicio_vacia():
@@ -190,8 +193,8 @@ def test_verificar_medicamento_duplicado_devuelve_true():
             fecha_inicio, observaciones, paciente_id
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
-        "Acetaminofen", "500 mg", "Cada 8 horas", "08:00 AM",
-        "03/16/2026", "Tomar después de comer", 1
+        "Acetaminofen", "1 tableta", "Cada 8 horas", "08:00, 16:00, 00:00",
+        "03/16/2026", "Concentración: 500 mg | Forma farmacéutica: Tableta", 1
     ))
 
     conn.commit()
@@ -250,7 +253,7 @@ def test_post_medicamento_exitoso():
 
 def test_post_medicamento_datos_invalidos():
     data = medicamento_valido()
-    data["nombre"] = ""
+    data["nombre_medicamento"] = ""
 
     response = client.post("/medicamentos/", json=data)
 

@@ -1,13 +1,8 @@
-﻿from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional
+from fastapi import APIRouter
 from datetime import date
-
-from backend.services.toma_service import TomaService
-from backend.commands.regisToma_command import RegisToma_command
-from backend.commands.invoker import CommandInvoker
-from backend.models import obtener_historial_tomas
 from backend.toma_repository import TomaRepository
+from backend.models import get_connection
+
 from backend.decorators.historial import (
     HistorialTomas,
     CumplimientoDecorator,
@@ -18,88 +13,86 @@ router = APIRouter(prefix="/tomas", tags=["Tomas"])
 repositorio = TomaRepository()
 
 
-class RegistrarTomaRequest(BaseModel):
-    paciente_id: int
-    medicamento_id: int
-    recordatorio_id: int
-    fecha_programada: str
-    fecha_hora_toma: str
-    estado: str = "tomada"
-    observaciones: Optional[str] = None
+@router.post("/", status_code=201)
+def registrar_toma(datos: dict):
+    """
+    Registra una nueva toma de medicamento.
+    """
+    toma_id = repositorio.registrar_toma(
+        medicamento_id=datos.get("medicamento_id"),
+        paciente_id=datos.get("paciente_id"),
+        fecha=datos.get("fecha", str(date.today())),
+        hora_programada=datos.get("hora_programada"),
+        hora_tomada=datos.get("hora_tomada"),
+        estado=datos.get("estado", "pendiente"),
+        observaciones=datos.get("observaciones")
+    )
+
+    return {
+        "message": "Toma registrada exitosamente",
+        "toma_id": toma_id
+    }
 
 
-@router.post("/")
-def registrar_toma(data: RegistrarTomaRequest):
-    try:
-        receiver = TomaService()
-
-        command = RegisToma_command(
-            receiver=receiver,
-            paciente_id=data.paciente_id,
-            medicamento_id=data.medicamento_id,
-            recordatorio_id=data.recordatorio_id,
-            fecha_programada=data.fecha_programada,
-            fecha_hora_toma=data.fecha_hora_toma,
-            estado=data.estado,
-            observaciones=data.observaciones
-        )
-
-        invoker = CommandInvoker()
-        invoker.set_command(command)
-
-        resultado = invoker.run()
-        return resultado
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    except FileExistsError as e:
-        raise HTTPException(status_code=409, detail=str(e))
-
-    except RuntimeError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error inesperado al registrar la toma: {str(e)}"
-        )
-
-
-@router.get("/{paciente_id}")
+@router.get("/dia/{paciente_id}")
 def obtener_tomas(paciente_id: int, fecha: str = None):
     """
     Retorna las tomas del día de un paciente.
     """
     if not fecha:
         fecha = str(date.today())
+
     tomas = repositorio.obtener_tomas_del_dia(paciente_id, fecha)
-    return {"tomas": [dict(t) for t in tomas]}
+
+    return {
+        "tomas": [dict(t) for t in tomas]
+    }
 
 
 @router.get("/historial/{paciente_id}")
 def obtener_historial(paciente_id: int):
-    tomas = obtener_historial_tomas(paciente_id)
+    """
+    Retorna el historial completo de tomas de un paciente
+    usando patrón Decorator (cumplimiento + alertas)
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
 
-    resultado = []
+    cursor.execute("""
+        SELECT 
+            t.id,
+            t.paciente_id,
+            t.medicamento_id,
+            m.nombre AS medicamento_nombre,
+            t.fecha,
+            t.hora_programada,
+            t.hora_tomada,
+            t.estado,
+            t.observaciones
+        FROM tomas t
+        INNER JOIN medicamentos m ON t.medicamento_id = m.id
+        WHERE t.paciente_id = ?
+        ORDER BY t.fecha DESC
+    """, (paciente_id,))
 
-    for t in tomas:
-        resultado.append({
-            "id": t["id"],
-            "paciente_id": t["paciente_id"],
-            "medicamento_id": t["medicamento_id"],
-            "medicamento": t["nombre"],
-            "fecha": t["fecha"],
-            "hora_programada": t["hora_programada"],
-            "hora_tomado": t["hora_tomada"],
-            "estado": t["estado"]
-        })
+    filas = cursor.fetchall()
+    conn.close()
 
-    historial = HistorialTomas(resultado)
-    historial = CumplimientoDecorator(historial)
-    historial = AlertasDecorator(historial)
+    historial = [dict(f) for f in filas]
 
-    return historial.obtener_datos()
+    if not historial:
+        return {
+            "historial": [],
+            "cumplimiento": {
+                "total_tomas": 0,
+                "tomas_realizadas": 0,
+                "porcentaje": 0
+            },
+            "alertas": []
+        }
+
+    historial_base = HistorialTomas(historial)
+    historial_decorado = CumplimientoDecorator(historial_base)
+    historial_decorado = AlertasDecorator(historial_decorado)
+
+    return historial_decorado.obtener_datos()

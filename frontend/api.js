@@ -1,142 +1,191 @@
 /*
-Patrón fachada
-decidimos implementar el patrón de diseño Fachada, ya que la idea es centralizar todas las llamadas al backend en un mismo lugar
-Así las interfaces HTML ya no hacen llamadas directas al backend, sino que usan el objeto "api" como intermediario.
-Entonces ya no tenemos que duplicar el código del fetch, reducimos el acoplamiento entre en front y el backend 
-sino que simplente llamamos las funciones.
+Patrón Fachada
+Centraliza todas las llamadas al backend en un mismo lugar.
+Las páginas HTML no hacen fetch() directo; usan el objeto api.
 */
-// Esta variable guarda la dirección del servidor backend.
-// Si algún día cambia el puerto o la dirección, solo se cambia aqui y automáticamente funciona en todo el proyecto.
-const API_URL = 'http://localhost:8000';
 
+const API_URL = 'http://127.0.0.1:8000';
 
-// En lugar de escribir el fetch completo en cada HTML, aquí lo definimos, que viene siendo la fachada del sistem
-// una sola vez y lo reutilizamos desde cualquier página.
-const api = {
+function procesarRespuesta(response) {
+  return response.text().then(function(texto) {
+    let body = {};
+    try {
+      body = texto ? JSON.parse(texto) : {};
+    } catch (e) {
+      body = { detail: texto };
+    }
 
-  //PACIENTES 
+    return {
+      ok: response.ok,
+      status: response.status,
+      body: body
+    };
+  });
+}
 
-  // Esta función recibe los datos del formulario y los envía al backend
-  // para registrar un paciente nuevo en la base de datos.
-  // datos es el objeto con nombre, apellidos, documento y demas datos del paciente
+function fetchJson(url, options) {
+  return fetch(url, options).then(procesarRespuesta);
+}
 
-  // Método de la fachada para registrar un paciente
-  registrarPaciente: function(datos) {
-    return fetch(API_URL + '/pacientes', {
-      method: 'POST',                                    // POST ya que estamos creando algo nuevo
-      headers: { 'Content-Type': 'application/json' },  // le decimos al backend que mandamos JSON
-      body: JSON.stringify(datos)                        // convertimos el objeto a texto JSON
-    })
-    .then(function(r) {
-      // r.json() lee la respuesta del servidor
-      // lo combinamos con r.ok para saber si fue exitoso con true o tuvo error con false
-      return r.json().then(function(b) {
-        return { ok: r.ok, body: b };
+function fetchConFallback(urls, options) {
+  let indice = 0;
+
+  function intentar() {
+    return fetch(urls[indice], options)
+      .then(procesarRespuesta)
+      .then(function(resultado) {
+        if (!resultado.ok && resultado.status === 404 && indice < urls.length - 1) {
+          indice += 1;
+          return intentar();
+        }
+        return resultado;
+      })
+      .catch(function(error) {
+        if (indice < urls.length - 1) {
+          indice += 1;
+          return intentar();
+        }
+        throw error;
       });
+  }
+
+  return intentar();
+}
+
+const api = {
+  // PACIENTES
+  registrarPaciente: function(datos) {
+    return fetchJson(API_URL + '/pacientes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datos)
     });
   },
 
-  // Esta función le pide al backend la lista de todos los pacientes registrados
-  // Método de la fachada para obtener todos los pacientes.
   obtenerPacientes: function() {
-    return fetch(API_URL + '/pacientes')
-    .then(function(r) {
-      return r.json().then(function(b) {
-        return { ok: r.ok, body: b };
-      });
-    });
+    return fetchJson(API_URL + '/pacientes');
   },
 
   // MEDICAMENTOS
-  // Esta función envía los datos de un medicamento nuevo al backend.
-  // datos incluye nombre, dosis, frecuencia, horario y el id del paciente.
-
-   // Método de la fachada para registrar un medicamento
   registrarMedicamento: function(datos) {
-    return fetch(API_URL + '/medicamentos/', {
+    return fetchJson(API_URL + '/medicamentos/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
-    })
-    .then(function(r) {
-      return r.json().then(function(b) {
-        return { ok: r.ok, body: b };
-      });
     });
   },
 
-  // Esta función trae todos los medicamentos de un paciente específico
   obtenerMedicamentos: function(pacienteId) {
-    return fetch(API_URL + '/medicamentos/' + pacienteId)
-    .then(function(r) {
-      return r.json().then(function(b) {
-        return { ok: r.ok, body: b };
-      });
-    });
+    return fetchJson(API_URL + '/medicamentos/paciente/' + pacienteId);
   },
 
-  //RECORDATORIOS
-
-  // Esta función crea un recordatorio nuevo en el backend
-  // datos contiene el id del medicamento, la hora y la fecha de inicio
-  // Método de la fachada para crear un recordatorio.
+  // RECORDATORIOS
   crearRecordatorio: function(datos) {
-    return fetch(API_URL + '/recordatorios/', {
+    return fetchJson(API_URL + '/recordatorios/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
-    })
-    .then(function(r) {
-      return r.json().then(function(b) {
-        return { ok: r.ok, body: b };
-      });
     });
   },
-  //Método de la fachada para obtener recordatorios de un paciente
-  // Esta función trae todos los recordatorios activos de un paciente
+
   obtenerRecordatorios: function(pacienteId) {
-    return fetch(API_URL + '/recordatorios/' + pacienteId)
-    .then(function(r) {
-      return r.json().then(function(b) {
-        return { ok: r.ok, body: b };
-      });
+    return fetchJson(API_URL + '/recordatorios/' + pacienteId);
+  },
+
+  obtenerPanelDia: function(pacienteId, fecha) {
+    if (pacienteId) {
+      const query = fecha ? ('?fecha=' + fecha) : '';
+      return fetchConFallback([
+        API_URL + '/recordatorios/panel-dia/' + pacienteId,
+        API_URL + '/tomas/dia/' + pacienteId + query,
+        API_URL + '/tomas/' + pacienteId + query
+      ]);
+    }
+
+    return fetchJson(API_URL + '/recordatorios/panel-dia');
+  },
+
+  obtenerPanelDiaPaciente: function(pacienteId) {
+    return fetchConFallback([
+      API_URL + '/recordatorios/panel-dia/' + pacienteId,
+      API_URL + '/tomas/dia/' + pacienteId,
+      API_URL + '/tomas/' + pacienteId
+    ]);
+  },
+
+  obtenerRecordatoriosRetrasados: function(pacienteId) {
+    return fetchJson(API_URL + '/recordatorios/retrasados/' + pacienteId);
+  },
+
+  marcarRecordatorioTomado: function(recordatorioId) {
+    return fetchJson(API_URL + '/recordatorios/' + recordatorioId + '/tomado', {
+      method: 'PATCH'
     });
   },
 
-// TOMAS
-
-  // Esta función registra una nueva toma de medicamento
+  // TOMAS
   registrarToma: function(datos) {
-    return fetch(API_URL + '/tomas/', {
+    return fetchJson(API_URL + '/tomas/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
-    })
-    .then(function(r) {
-      return r.json().then(function(b) {
-        return { ok: r.ok, body: b };
-      });
     });
   },
 
-  // Esta función trae todas las tomas del día de un paciente específico
   obtenerTomas: function(pacienteId, fecha) {
-    return fetch(API_URL + '/tomas/' + pacienteId + (fecha ? '?fecha=' + fecha : ''))
-    .then(function(r) {
-      return r.json().then(function(b) {
-        return { ok: r.ok, body: b };
+    if (!pacienteId) {
+      return Promise.resolve({
+        ok: false,
+        status: 400,
+        body: { detail: 'pacienteId es obligatorio' }
       });
+    }
+
+    const query = fecha ? ('?fecha=' + fecha) : '';
+
+    return fetchConFallback([
+      API_URL + '/tomas/dia/' + pacienteId + query,
+      API_URL + '/tomas/' + pacienteId + query
+    ]);
+  },
+
+  obtenerTomasDelDia: function(pacienteId, fecha) {
+    return this.obtenerTomas(pacienteId, fecha);
+  },
+
+  // HISTORIAL
+  obtenerHistorial: function(pacienteId) {
+    if (!pacienteId) {
+      return Promise.resolve({
+        ok: false,
+        status: 400,
+        body: { detail: 'pacienteId es obligatorio' }
+      });
+    }
+
+    return fetchConFallback([
+      API_URL + '/tomas/historial/' + pacienteId,
+      API_URL + '/historial/' + pacienteId
+    ]);
+  },
+
+  // AUTH
+  iniciarSesion: function(username, password) {
+    return fetchJson(API_URL + '/signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: username,
+        password: password
+      })
     });
   },
-  // Esta función trae todos los medicamentos programados
-// para el día actual agrupados por paciente
-  obtenerPanelDia: function() {
-    return fetch(API_URL + '/panel-dia')
-    .then(function(r) {
-      return r.json().then(function(b) {
-        return { ok: r.ok, body: b };
-      });
+
+  registrarUsuario: function(datos) {
+    return fetchJson(API_URL + '/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datos)
     });
   }
 };
-

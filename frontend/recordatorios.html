@@ -1,229 +1,380 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Registrar Recordatorio - MedTrack</title>
-
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Registrar Recordatorio</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
+    :root {
+      --menta:        #2DD4BF;
+      --menta-oscuro: #0F9D8A;
+      --fondo:        #0F1B2D;
+      --campo:        #1E2D3D;
+      --tarjeta:      #162030;
+      --borde:        #243447;
+      --texto:        #E2EAF4;
+      --suave:        #7A95B0;
+      --error:        #F4726A;
+      --exito:        #4ADE80;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: white;
-      margin: 0;
-      padding: 0;
+      margin: 0; min-height: 100vh;
+      background: var(--fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--texto);
+      display: flex; align-items: center; justify-content: center;
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
     }
-
-    .contenedor {
-      max-width: 600px;
-      margin: 50px auto;
-      padding: 20px;
-    }
-
     .tarjeta {
-      background: #1e293b;
-      padding: 25px;
-      border-radius: 15px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      background: var(--tarjeta);
+      border: 1px solid var(--borde);
+      border-radius: 20px;
+      width: 100%; max-width: 560px;
+      padding: 2.5rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: subir .45s ease both;
     }
-
-    h2 {
-      margin-bottom: 20px;
+    @keyframes subir {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
-
-    input, select, textarea {
+    .marca { display: flex; align-items: center; gap: .6rem; margin-bottom: 1.75rem; }
+    .marca-icono {
+      width: 36px; height: 36px; background: var(--menta);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    }
+    .marca-icono svg { width: 20px; height: 20px; color: var(--fondo); }
+    .marca-nombre { font-family: 'DM Serif Display', serif; font-size: 1.35rem; }
+    h1 { font-family: 'DM Serif Display', serif; font-size: 1.65rem; margin: 0 0 .25rem; }
+    .subtitulo { font-size: .88rem; color: var(--suave); margin: 0 0 1.75rem; }
+    .campo-grupo { margin-bottom: 1.1rem; }
+    label {
+      display: block; font-size: .82rem; font-weight: 500;
+      color: var(--suave); margin-bottom: .4rem;
+    }
+    label .req { color: var(--menta); }
+    .form-control, .form-select {
       width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      margin-bottom: 15px;
-      border-radius: 8px;
-      border: none;
-      outline: none;
-    }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      border: none;
+      background: var(--campo);
+      border: 1.5px solid var(--borde);
+      color: var(--texto);
       border-radius: 10px;
-      background: #22c55e;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
+      padding: .65rem .9rem;
+      font-size: .92rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color .2s, box-shadow .2s;
     }
-
-    button:hover {
-      background: #16a34a;
+    .form-control:focus, .form-select:focus {
+      outline: none; border-color: var(--menta);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.18);
     }
-
-    .error-text {
-      color: #f87171;
-      font-size: 12px;
-      display: none;
-    }
-
-    .visible {
-      display: block;
-    }
-
+    .form-control::placeholder { color: #4A6278; }
+    .form-select option { background: var(--campo); }
+    .form-control.invalido, .form-select.invalido { border-color: var(--error); }
+    .form-control.valido,   .form-select.valido   { border-color: var(--exito); }
+    .msg-error { font-size: .78rem; color: var(--error); margin-top: .3rem; display: none; }
+    .msg-error.visible { display: block; }
     .alerta {
-      background: #7f1d1d;
-      padding: 10px;
-      border-radius: 8px;
-      margin-top: 10px;
-      display: none;
+      background: rgba(244,114,106,.1); border: 1px solid var(--error);
+      color: var(--error); border-radius: 10px; padding: .75rem 1rem;
+      font-size: .85rem; margin-bottom: 1rem; display: none;
     }
-
-    .notificacion {
-      background: #16a34a;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
+    .info-med {
+      background: rgba(45,212,191,.08); border: 1px solid rgba(45,212,191,.2);
+      border-radius: 10px; padding: .75rem 1rem; font-size: .84rem;
+      color: var(--menta); margin-bottom: 1rem; display: none;
     }
-
-    .error {
-      border: 2px solid red;
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid var(--borde); border-top-color: var(--menta);
+      border-radius: 50%; animation: spin .7s linear infinite;
+      vertical-align: middle; margin-right: .3rem;
     }
-
-    .correcto {
-      border: 2px solid green;
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-guardar {
+      width: 100%; background: var(--menta); color: var(--fondo);
+      border: none; border-radius: 12px; padding: .75rem;
+      font-size: .95rem; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; margin-top: 1.5rem;
+      transition: background .2s, box-shadow .2s;
+    }
+    .btn-guardar:hover { background: var(--menta-oscuro); box-shadow: 0 8px 24px rgba(45,212,191,.3); }
+    .btn-guardar:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-volver {
+      width: 100%; background: transparent; color: var(--suave);
+      border: 1.5px solid var(--borde); border-radius: 12px; padding: .65rem;
+      font-size: .88rem; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; margin-top: .75rem;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-volver:hover { border-color: var(--suave); color: var(--texto); }
+    .notif-ctn { position: fixed; top: 1.25rem; right: 1.25rem; z-index: 9999; }
+    .notif {
+      background: var(--tarjeta); border: 1px solid var(--exito);
+      border-radius: 12px; padding: .85rem 1.1rem;
+      font-size: .86rem; margin-bottom: .5rem;
+      animation: deslizar .3s ease both;
+      min-width: 250px;
+    }
+    .notif.err { border-color: var(--error); }
+    @keyframes deslizar {
+      from { opacity: 0; transform: translateX(30px); }
+      to   { opacity: 1; transform: translateX(0); }
     }
   </style>
 </head>
-
 <body>
 
-<div class="contenedor">
-  <div class="tarjeta">
+<div class="notif-ctn" id="notifCtn"></div>
 
-    <h2>Registrar Recordatorio</h2>
+<div class="tarjeta">
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
 
-    <form id="formulario" novalidate>
+  <h1>Registrar Recordatorio</h1>
+  <p class="subtitulo">Selecciona el paciente y su medicamento para programar el recordatorio.</p>
 
-      <label>ID del medicamento *</label>
-      <input type="number" id="medicamentoId">
-      <div id="error-medicamentoId" class="error-text">Campo obligatorio</div>
+  <div class="alerta" id="alertaError"></div>
 
-      <label>Hora del recordatorio *</label>
-      <input type="time" id="horaRecordatorio">
-      <div id="error-horaRecordatorio" class="error-text">Campo obligatorio</div>
+  <form id="formulario" novalidate>
 
-      <label>Fecha de inicio *</label>
-      <input type="date" id="fechaInicio">
-      <div id="error-fechaInicio" class="error-text">Campo obligatorio</div>
+    <!-- 1. Seleccionar paciente -->
+    <div class="campo-grupo">
+      <label for="selectPaciente">Paciente <span class="req">*</span></label>
+      <select class="form-select" id="selectPaciente">
+        <option value="">Cargando pacientes…</option>
+      </select>
+      <div class="msg-error" id="errPaciente">Selecciona un paciente.</div>
+    </div>
 
-      <label>Estado</label>
-      <select id="activo">
+    <!-- 2. Seleccionar medicamento (se carga al elegir paciente) -->
+    <div class="campo-grupo">
+      <label for="selectMedicamento">Medicamento <span class="req">*</span></label>
+      <select class="form-select" id="selectMedicamento" disabled>
+        <option value="">Primero selecciona un paciente</option>
+      </select>
+      <div class="msg-error" id="errMedicamento">Selecciona un medicamento.</div>
+    </div>
+
+    <!-- Info del medicamento seleccionado -->
+    <div class="info-med" id="infoMed"></div>
+
+    <!-- 3. Hora del recordatorio -->
+    <div class="campo-grupo">
+      <label for="horaRecordatorio">Hora del recordatorio <span class="req">*</span></label>
+      <input type="time" class="form-control" id="horaRecordatorio"/>
+      <div class="msg-error" id="errHora">Selecciona una hora.</div>
+    </div>
+
+    <!-- 4. Fecha de inicio -->
+    <div class="campo-grupo">
+      <label for="fechaInicio">Fecha de inicio <span class="req">*</span></label>
+      <input type="date" class="form-control" id="fechaInicio"/>
+      <div class="msg-error" id="errFecha">Selecciona una fecha válida.</div>
+    </div>
+
+    <!-- 5. Estado -->
+    <div class="campo-grupo">
+      <label for="selectActivo">Estado</label>
+      <select class="form-select" id="selectActivo">
         <option value="1">Activo</option>
         <option value="0">Inactivo</option>
       </select>
+    </div>
 
-      <label>Observaciones</label>
-      <textarea id="observaciones"></textarea>
+    <!-- 6. Observaciones -->
+    <div class="campo-grupo">
+      <label for="observaciones">Observaciones</label>
+      <textarea class="form-control" id="observaciones" rows="2"
+                placeholder="Notas adicionales…" maxlength="300"></textarea>
+    </div>
 
-      <button type="submit">Guardar Recordatorio</button>
-
-      <div id="alertaError" class="alerta"></div>
-
-    </form>
-
-    <div id="contenedorNotificaciones"></div>
-
-  </div>
+    <button type="submit" class="btn-guardar" id="btnGuardar">Guardar recordatorio</button>
+    <button type="button" class="btn-volver" onclick="history.back()">← Volver</button>
+  </form>
 </div>
 
+<script src="api.js"></script>
 <script>
-  const formulario = document.getElementById('formulario');
-  const medicamentoId = document.getElementById('medicamentoId');
-  const horaRecordatorio = document.getElementById('horaRecordatorio');
-  const fechaInicio = document.getElementById('fechaInicio');
-  const activo = document.getElementById('activo');
-  const observaciones = document.getElementById('observaciones');
-  const alertaError = document.getElementById('alertaError');
+  // Fecha mínima = hoy
+  document.getElementById('fechaInicio').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fechaInicio').min   = new Date().toISOString().split('T')[0];
 
-  function validarCampo(campo, idError) {
-    campo.classList.remove('error', 'correcto');
-    const valor = campo.value.trim();
+  // ── Cargar pacientes al inicio ──────────────────────────
+  async function cargarPacientes() {
+    const sel = document.getElementById('selectPaciente');
+    try {
+      const res = await api.obtenerPacientes();
+      if (!res.ok) throw new Error();
 
-    if (!valor) {
-      campo.classList.add('error');
-      document.getElementById(idError).classList.add('visible');
-      return false;
+      const pacientes = Array.isArray(res.body) ? res.body : (res.body.pacientes || []);
+
+      if (!pacientes.length) {
+        sel.innerHTML = '<option value="">No hay pacientes registrados</option>';
+        return;
+      }
+
+      sel.innerHTML = '<option value="">Selecciona un paciente…</option>';
+      pacientes.forEach(function(p) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.nombres + ' ' + p.apellidos + ' — ' + p.tipo_documento + ' ' + p.numero_documento;
+        sel.appendChild(opt);
+      });
+    } catch(e) {
+      sel.innerHTML = '<option value="">Error al cargar pacientes</option>';
+      mostrarAlerta('No se pudo conectar con el servidor para cargar los pacientes.');
     }
-
-    campo.classList.add('correcto');
-    document.getElementById(idError).classList.remove('visible');
-    return true;
   }
 
-  function formatearFechaBackend(fechaISO) {
-    const partes = fechaISO.split('-');
-    return partes[1] + '/' + partes[2] + '/' + partes[0];
-  }
+  // ── Al cambiar paciente: cargar sus medicamentos ────────
+  document.getElementById('selectPaciente').addEventListener('change', async function() {
+    const pacienteId = this.value;
+    const selMed   = document.getElementById('selectMedicamento');
+    const infoMed  = document.getElementById('infoMed');
+    infoMed.style.display = 'none';
 
-  function mostrarNotificacion(mensaje, esError = false) {
-    const contenedor = document.getElementById('contenedorNotificaciones');
-    const notificacion = document.createElement('div');
-    notificacion.className = 'notificacion' + (esError ? ' error' : '');
-    notificacion.textContent = mensaje;
-    contenedor.appendChild(notificacion);
-
-    setTimeout(() => {
-      notificacion.remove();
-    }, 3000);
-  }
-
-  formulario.addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    alertaError.style.display = "none";
-
-    let valido = true;
-
-    if (!validarCampo(medicamentoId, 'error-medicamentoId')) valido = false;
-    if (!validarCampo(horaRecordatorio, 'error-horaRecordatorio')) valido = false;
-    if (!validarCampo(fechaInicio, 'error-fechaInicio')) valido = false;
-
-    if (!valido) {
-      mostrarNotificacion("Revisa los campos", true);
+    if (!pacienteId) {
+      selMed.innerHTML = '<option value="">Primero selecciona un paciente</option>';
+      selMed.disabled = true;
       return;
     }
 
+    selMed.innerHTML = '<option value=""><span class="spinner"></span> Cargando medicamentos…</option>';
+    selMed.disabled = true;
+
+    try {
+      const res = await api.obtenerMedicamentos(pacienteId);
+
+      // El endpoint devuelve array directo o { medicamentos: [...] }
+      const meds = Array.isArray(res.body) ? res.body : (res.body.medicamentos || []);
+
+      if (!res.ok || !meds.length) {
+        selMed.innerHTML = '<option value="">Este paciente no tiene medicamentos registrados</option>';
+        return;
+      }
+
+      selMed.innerHTML = '<option value="">Selecciona un medicamento…</option>';
+      meds.forEach(function(m) {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.nombre + ' — ' + m.dosis + ' (' + m.frecuencia + ')';
+        opt.dataset.dosis     = m.dosis;
+        opt.dataset.frecuencia = m.frecuencia;
+        opt.dataset.horario    = m.horario || '';
+        selMed.appendChild(opt);
+      });
+      selMed.disabled = false;
+
+    } catch(e) {
+      selMed.innerHTML = '<option value="">Error al cargar medicamentos</option>';
+    }
+  });
+
+  // ── Al cambiar medicamento: mostrar info y prellenar hora ──
+  document.getElementById('selectMedicamento').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    const infoMed = document.getElementById('infoMed');
+
+    if (!this.value) { infoMed.style.display = 'none'; return; }
+
+    infoMed.style.display = 'block';
+    infoMed.innerHTML = '💊 <strong>' + opt.textContent.split('—')[0].trim() + '</strong> &nbsp;|&nbsp; '
+      + 'Dosis: ' + opt.dataset.dosis + ' &nbsp;|&nbsp; '
+      + 'Frecuencia: ' + opt.dataset.frecuencia
+      + (opt.dataset.horario ? ' &nbsp;|&nbsp; Horario actual: ' + opt.dataset.horario : '');
+
+    // Prellenar hora si el medicamento ya tiene horario definido
+    if (opt.dataset.horario) {
+      const primeraHora = opt.dataset.horario.split(',')[0].trim();
+      if (primeraHora) document.getElementById('horaRecordatorio').value = primeraHora;
+    }
+  });
+
+  // ── Validación ──────────────────────────────────────────
+  function validar(id, errId) {
+    const el  = document.getElementById(id);
+    const err = document.getElementById(errId);
+    const ok  = el.value.trim() !== '';
+    el.classList.toggle('invalido', !ok);
+    el.classList.toggle('valido',    ok);
+    err.classList.toggle('visible', !ok);
+    return ok;
+  }
+
+  // ── Envío ───────────────────────────────────────────────
+  document.getElementById('formulario').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    ocultarAlerta();
+
+    const v1 = validar('selectPaciente',   'errPaciente');
+    const v2 = validar('selectMedicamento','errMedicamento');
+    const v3 = validar('horaRecordatorio', 'errHora');
+    const v4 = validar('fechaInicio',      'errFecha');
+    if (!v1 || !v2 || !v3 || !v4) return;
+
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    // Convertir fecha de yyyy-mm-dd a mm/dd/yyyy (formato del backend)
+    const fechaISO = document.getElementById('fechaInicio').value;
+    const partes   = fechaISO.split('-');
+    const fechaBackend = partes[1] + '/' + partes[2] + '/' + partes[0];
+
     const datos = {
-      medicamento_id: parseInt(medicamentoId.value),
-      hora_recordatorio: horaRecordatorio.value,
-      fecha_inicio: formatearFechaBackend(fechaInicio.value),
-      activo: parseInt(activo.value),
-      observaciones: observaciones.value
+      medicamento_id:   parseInt(document.getElementById('selectMedicamento').value),
+      hora_recordatorio: document.getElementById('horaRecordatorio').value,
+      fecha_inicio:     fechaBackend,
+      activo:           parseInt(document.getElementById('selectActivo').value),
+      observaciones:    document.getElementById('observaciones').value.trim()
     };
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/recordatorios/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(datos)
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        mostrarNotificacion("Recordatorio creado correctamente");
-
-        setTimeout(() => {
-          window.location.href = "listaRecordatorios.html";
-        }, 1200);
-      } else {
-        alertaError.textContent = data.detail;
-        alertaError.style.display = "block";
+      const res = await api.crearRecordatorio(datos);
+      if (!res.ok) {
+        mostrarAlerta(res.body.detail || 'Error al crear el recordatorio.');
+        return;
       }
-
-    } catch (err) {
-      alertaError.textContent = "Error de conexión con el servidor";
-      alertaError.style.display = "block";
+      mostrarNotif('Recordatorio creado correctamente ✓');
+      setTimeout(function() { window.location.href = 'dashboard.html'; }, 1500);
+    } catch(err) {
+      mostrarAlerta('Error de conexión con el servidor.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar recordatorio';
     }
   });
-</script>
 
+  function mostrarAlerta(msg) {
+    const el = document.getElementById('alertaError');
+    el.textContent = msg; el.style.display = 'block';
+  }
+  function ocultarAlerta() {
+    document.getElementById('alertaError').style.display = 'none';
+  }
+  function mostrarNotif(msg, err) {
+    const ctn  = document.getElementById('notifCtn');
+    const div  = document.createElement('div');
+    div.className = 'notif' + (err ? ' err' : '');
+    div.textContent = msg;
+    ctn.appendChild(div);
+    setTimeout(function() { div.remove(); }, 3500);
+  }
+
+  cargarPacientes();
+</script>
 </body>
 </html>

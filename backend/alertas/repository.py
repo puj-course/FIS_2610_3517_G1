@@ -1,40 +1,26 @@
-from backend.models import get_connection
+from pathlib import Path
+import sqlite3
 
+DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
 
-class AlertRepository:
-    def save_alert(
-        self,
-        tipo: str,
-        mensaje: str,
-        severidad: str,
-        paciente_id: int,
-        medicamento_id: int | None = None,
-        recordatorio_id: int | None = None
-    ) -> None:
-        conn = get_connection()
-        cursor = conn.cursor()
+def guardar_alerta(tipo, mensaje, severidad, paciente_id, medicamento_id=None, recordatorio_id=None):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
 
-        try:
-            cursor.execute("""
-                INSERT INTO alertas (
-                    tipo,
-                    mensaje,
-                    severidad,
-                    paciente_id,
-                    medicamento_id,
-                    recordatorio_id,
-                    fecha_creacion,
-                    atendida
-                )
-                VALUES (?, ?, ?, ?, ?, ?, datetime('now'), 0)
-            """, (
-                tipo,
-                mensaje,
-                severidad,
-                paciente_id,
-                medicamento_id,
-                recordatorio_id
-            ))
-            conn.commit()
-        finally:
-            conn.close()
+    cursor.execute(
+        """
+        INSERT INTO alertas (
+            tipo,
+            mensaje,
+            severidad,
+            paciente_id,
+            medicamento_id,
+            recordatorio_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (tipo, mensaje, severidad, paciente_id, medicamento_id, recordatorio_id)
+    )
+
+    conn.commit()
+    conn.close()

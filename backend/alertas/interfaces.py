@@ -9,4 +9,4 @@ from abc import ABC, abstractmethod
 class IAlertObserver(ABC):
     @abstractmethod
     def update(self, event: dict):
-        pass #hay que completar
+        pass 

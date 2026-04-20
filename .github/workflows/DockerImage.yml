@@ -1,4 +1,4 @@
-name: CD - Build Docker Image
+﻿name: CD - Build Docker Image
 on:
   push:
     branches:
@@ -16,7 +16,7 @@ jobs:
     steps:
       # Descarga el código
       - name: Checkout del código
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Construye la imagen Docker
       # Esto verifica que el Dockerfile funciona y que todas
@@ -24,13 +24,19 @@ jobs:
       - name: Build de imagen Docker
         run: docker build -t proyecto-medicamentos:latest .
 
-      # Verifica que el contenedor arranca sin errores
-      - name: Verificar que el contenedor inicia correctamente
+
+      - name: Levantar contenedor de prueba
         run: |
           docker run --rm -d \
             --name test-container \
             -p 8000:8000 \
             proyecto-medicamentos:latest
-          sleep 5
-          curl --fail http://localhost:8000/docs || exit 1
-          docker stop test-container
+
+      - name: Verificar que la aplicación responde
+        run: |
+          sleep 10
+          curl --fail http://localhost:8000/docs
+       # Para garantizar que el contenedor se detiene
+      - name: Detener contenedor
+        if: always()
+        run: docker stop test-container || true

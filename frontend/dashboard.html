@@ -1,129 +1,448 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>MedTrack — Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --menta:#2DD4BF;--menta-oscuro:#0F9D8A;--menta-suave:rgba(45,212,191,.1);
+      --fondo:#0A1628;--fondo2:#0F1B2D;--campo:#1E2D3D;--tarjeta:#142030;
+      --borde:#1E3147;--texto:#E2EAF4;--suave:#6B8BA4;
+      --error:#F4726A;--exito:#4ADE80;--alerta:#FBBF24;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;background:var(--fondo);font-family:'DM Sans',sans-serif;color:var(--texto);display:flex}
+    .sidebar{width:240px;min-height:100vh;background:var(--tarjeta);border-right:1px solid var(--borde);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:transform .3s ease}
+    .sidebar-logo{padding:1.5rem 1.25rem 1rem;border-bottom:1px solid var(--borde);display:flex;align-items:center;gap:.6rem}
+    .logo-icono{width:34px;height:34px;background:var(--menta);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .logo-icono svg{width:18px;height:18px;color:var(--fondo)}
+    .logo-nombre{font-family:'DM Serif Display',serif;font-size:1.3rem}
+    .sidebar-nav{flex:1;padding:1rem 0;overflow-y:auto}
+    .nav-grupo{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--suave);padding:.75rem 1.25rem .4rem;font-weight:500}
+    .nav-link{display:flex;align-items:center;gap:.65rem;padding:.6rem 1.25rem;color:var(--suave);text-decoration:none;font-size:.88rem;cursor:pointer;border:none;background:none;width:100%;text-align:left;position:relative;transition:all .2s}
+    .nav-link svg{width:17px;height:17px;flex-shrink:0}
+    .nav-link:hover{color:var(--texto);background:rgba(45,212,191,.06)}
+    .nav-link.activo{color:var(--menta);background:rgba(45,212,191,.1);font-weight:600}
+    .nav-link.activo::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--menta);border-radius:0 2px 2px 0}
+    .sidebar-footer{padding:1rem 1.25rem;border-top:1px solid var(--borde)}
+    .usuario-info{display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem}
+    .usuario-avatar{width:32px;height:32px;background:var(--menta-suave);border:1px solid rgba(45,212,191,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--menta);font-weight:700;flex-shrink:0}
+    .usuario-nombre{font-size:.82rem;font-weight:500;line-height:1.2}
+    .usuario-rol{font-size:.72rem;color:var(--suave)}
+    .btn-salir{width:100%;background:transparent;border:1px solid var(--borde);color:var(--suave);border-radius:8px;padding:.45rem;font-size:.82rem;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.4rem}
+    .btn-salir svg{width:14px;height:14px}
+    .btn-salir:hover{border-color:var(--error);color:var(--error)}
+    .main{margin-left:240px;flex:1;min-height:100vh;background:var(--fondo2);background-image:radial-gradient(ellipse 55% 45% at 90% 5%,rgba(45,212,191,.08) 0%,transparent 65%),radial-gradient(ellipse 35% 35% at 5% 90%,rgba(45,212,191,.05) 0%,transparent 55%)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 2rem;border-bottom:1px solid var(--borde);background:rgba(10,22,40,.6);backdrop-filter:blur(8px);position:sticky;top:0;z-index:50}
+    .topbar-titulo{font-family:'DM Serif Display',serif;font-size:1.4rem}
+    .topbar-sub{font-size:.82rem;color:var(--suave);margin-top:.1rem}
+    .btn-primario{background:var(--menta);color:var(--fondo);border:none;border-radius:10px;padding:.55rem 1.2rem;font-size:.88rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .2s,box-shadow .2s;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem}
+    .btn-primario:hover{background:var(--menta-oscuro);box-shadow:0 6px 20px rgba(45,212,191,.3)}
+    .pagina{display:none;padding:2rem;animation:subir .4s ease both}
+    .pagina.activa{display:block}
+    @keyframes subir{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}
+    .stat-card{background:var(--tarjeta);border:1px solid var(--borde);border-radius:16px;padding:1.25rem 1.5rem;transition:border-color .2s}
+    .stat-card:hover{border-color:rgba(45,212,191,.3)}
+    .stat-icono{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:.75rem}
+    .stat-icono svg{width:18px;height:18px}
+    .stat-num{font-family:'DM Serif Display',serif;font-size:1.9rem;line-height:1;margin-bottom:.2rem}
+    .stat-label{font-size:.8rem;color:var(--suave)}
+    .seccion{background:var(--tarjeta);border:1px solid var(--borde);border-radius:18px;padding:1.5rem;margin-bottom:1.5rem}
+    .seccion-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem}
+    .seccion-titulo{font-family:'DM Serif Display',serif;font-size:1.2rem}
+    .tabla{width:100%;border-collapse:collapse}
+    .tabla thead th{background:var(--campo);color:var(--menta);border-bottom:1px solid var(--borde);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;font-weight:500;padding:.75rem 1rem;text-align:left;white-space:nowrap}
+    .tabla tbody tr{border-bottom:1px solid var(--borde);transition:background .15s}
+    .tabla tbody tr:last-child{border-bottom:none}
+    .tabla tbody tr:hover{background:rgba(45,212,191,.04)}
+    .tabla tbody td{padding:.8rem 1rem;font-size:.87rem;vertical-align:middle}
+    .vacio{text-align:center;color:var(--suave);padding:2.5rem !important}
+    .buscador{background:var(--campo);border:1.5px solid var(--borde);color:var(--texto);border-radius:9px;padding:.5rem .85rem;font-size:.88rem;font-family:'DM Sans',sans-serif;width:240px;transition:border-color .2s}
+    .buscador:focus{outline:none;border-color:var(--menta);box-shadow:0 0 0 3px rgba(45,212,191,.15)}
+    .buscador::placeholder{color:var(--suave)}
+    .badge{display:inline-flex;align-items:center;border-radius:20px;padding:.2rem .65rem;font-size:.75rem;font-weight:500}
+    .bv{background:rgba(74,222,128,.12);color:var(--exito);border:1px solid rgba(74,222,128,.3)}
+    .br{background:rgba(244,114,106,.12);color:var(--error);border:1px solid rgba(244,114,106,.3)}
+    .ba{background:rgba(251,191,36,.12);color:var(--alerta);border:1px solid rgba(251,191,36,.3)}
+    .bm{background:rgba(45,212,191,.12);color:var(--menta);border:1px solid rgba(45,212,191,.3)}
+    .alerta-err{background:rgba(244,114,106,.1);border:1px solid var(--error);color:var(--error);border-radius:12px;padding:.9rem 1.1rem;margin-bottom:1.25rem;font-size:.88rem;display:none}
+    .filtro-fila{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem}
+    .form-select{background:var(--campo);border:1.5px solid var(--borde);color:var(--texto);border-radius:9px;padding:.5rem .85rem;font-size:.88rem;font-family:'DM Sans',sans-serif;transition:border-color .2s;min-width:220px}
+    .form-select:focus{outline:none;border-color:var(--menta)}
+    .form-select option{background:var(--campo)}
+    .panel-pac{background:var(--campo);border:1px solid var(--borde);border-radius:14px;overflow:hidden;margin-bottom:1rem}
+    .panel-hdr{padding:.85rem 1.25rem;display:flex;align-items:center;gap:.75rem;border-bottom:1px solid var(--borde);background:rgba(45,212,191,.05)}
+    .panel-av{width:34px;height:34px;background:rgba(45,212,191,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:.95rem;color:var(--menta)}
+    .panel-med{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1.25rem;border-bottom:1px solid rgba(30,49,71,.5);font-size:.86rem}
+    .panel-med:last-child{border-bottom:none}
+    .panel-hora{background:rgba(45,212,191,.1);color:var(--menta);border:1px solid rgba(45,212,191,.25);border-radius:16px;padding:.18rem .65rem;font-size:.78rem}
+    .spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--borde);border-top-color:var(--menta);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:.35rem}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .notif-ctn{position:fixed;top:1.25rem;right:1.25rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+    .notif{background:var(--tarjeta);border:1px solid var(--exito);border-radius:12px;padding:.85rem 1.1rem;font-size:.86rem;min-width:250px;animation:deslizar .3s ease both}
+    .notif.err{border-color:var(--error)}
+    @keyframes deslizar{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+    .hamburguer{display:none;background:none;border:none;color:var(--texto);cursor:pointer;padding:.4rem}
+    .hamburguer svg{width:22px;height:22px}
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:90}
+    @media(max-width:900px){
+      .sidebar{transform:translateX(-100%)}.sidebar.abierto{transform:translateX(0)}
+      .main{margin-left:0}.hamburguer{display:flex}.overlay.visible{display:block}
+      .pagina{padding:1.25rem}.stats-grid{grid-template-columns:repeat(2,1fr)}
+    }
+    @media(max-width:540px){.topbar{padding:1rem}.buscador{width:100%}}
+  </style>
 </head>
 <body>
+<div class="notif-ctn" id="notifCtn"></div>
+<div class="overlay" id="overlay" onclick="cerrarSidebar()"></div>
 
-<nav class="navbar navbar-dark bg-primary px-4">
-    <span class="navbar-brand fw-bold">💊 MedTrack</span>
-    <div class="d-flex align-items-center gap-3">
-        <span class="text-white" id="nombre-usuario"></span>
-        <button class="btn btn-outline-light btn-sm" onclick="cerrarSesion()">Cerrar sesión</button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/></svg></div>
+    <span class="logo-nombre">MedTrack</span>
+  </div>
+  <nav class="sidebar-nav">
+    <p class="nav-grupo">Principal</p>
+    <button class="nav-link activo" onclick="irA('inicio')" id="nav-inicio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Inicio
+    </button>
+    <button class="nav-link" onclick="irA('panel')" id="nav-panel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Panel del día
+    </button>
+    <p class="nav-grupo">Pacientes</p>
+    <button class="nav-link" onclick="irA('pacientes')" id="nav-pacientes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Lista de pacientes
+    </button>
+    <a class="nav-link" href="RegistrarPaciente.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo paciente
+    </a>
+    <p class="nav-grupo">Medicamentos</p>
+    <a class="nav-link" href="medicamentos.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>Ver medicamentos
+    </a>
+    <a class="nav-link" href="RegistrarMedicamento.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Registrar medicamento
+    </a>
+    <p class="nav-grupo">Seguimiento</p>
+    <a class="nav-link" href="recordatorios.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Crear recordatorio
+    </a>
+    <a class="nav-link" href="tomas.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Marcar tomas
+    </a>
+    <button class="nav-link" onclick="irA('historial')" id="nav-historial">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Historial de tomas
+    </button>
+    <p class="nav-grupo">Cuenta</p>
+    <a class="nav-link" href="registro.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Registrar usuario
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="usuario-info">
+      <div class="usuario-avatar" id="avatarInicial">?</div>
+      <div>
+        <div class="usuario-nombre" id="usuarioNombre">—</div>
+        <div class="usuario-rol"    id="usuarioRol">—</div>
+      </div>
     </div>
-</nav>
+    <button class="btn-salir" onclick="cerrarSesion()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Cerrar sesión
+    </button>
+  </div>
+</aside>
 
-<div class="container mt-5">
-    <h2>Bienvenido/a al dashboard</h2>
-    <p class="text-muted">Aquí irá el contenido principal de MedTrack.</p>
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:.75rem">
+      <button class="hamburguer" onclick="abrirSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div>
+        <div class="topbar-titulo" id="topbarTitulo">Dashboard</div>
+        <div class="topbar-sub"   id="topbarFecha"></div>
+      </div>
+    </div>
+    <a href="RegistrarPaciente.html" class="btn-primario">+ Nuevo paciente</a>
+  </div>
 
-<div id="estado-carga" class="text-center mt-4">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 text-muted">Cargando pacientes...</p>
+  <!-- INICIO -->
+  <div class="pagina activa" id="pag-inicio">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icono" style="background:rgba(45,212,191,.12)"><svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="stat-num" id="statPac">—</div><div class="stat-label">Pacientes registrados</div></div>
+      <div class="stat-card"><div class="stat-icono" style="background:rgba(74,222,128,.12)"><svg viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/></svg></div><div class="stat-num" id="statTom">—</div><div class="stat-label">Tomas tomadas hoy</div></div>
+      <div class="stat-card"><div class="stat-icono" style="background:rgba(251,191,36,.12)"><svg viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg></div><div class="stat-num" id="statPend">—</div><div class="stat-label">Tomas pendientes hoy</div></div>
+      <div class="stat-card"><div class="stat-icono" style="background:rgba(244,114,106,.12)"><svg viewBox="0 0 24 24" fill="none" stroke="#F4726A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><div class="stat-num" id="statMed">—</div><div class="stat-label">Medicamentos activos</div></div>
+    </div>
+    <div class="seccion">
+      <div class="seccion-header">
+        <h2 class="seccion-titulo">Pacientes recientes</h2>
+        <button class="btn-primario" onclick="irA('pacientes')" style="font-size:.82rem;padding:.45rem 1rem">Ver todos →</button>
+      </div>
+      <div class="alerta-err" id="errInicio"></div>
+      <div style="overflow-x:auto">
+        <table class="tabla">
+          <thead><tr><th>Paciente</th><th>Documento</th><th>Diagnóstico</th><th>EPS</th><th>Acción</th></tr></thead>
+          <tbody id="tbodyInicio"><tr><td class="vacio" colspan="5"><span class="spinner"></span> Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL DEL DÍA -->
+  <!-- GET /recordatorios/panel-dia → {panel:[{paciente_id,nombres,apellidos,medicamentos:[{medicamento,dosis,hora,tomado,recordatorio_id}]}]} -->
+  <div class="pagina" id="pag-panel">
+    <div class="alerta-err" id="errPanel"></div>
+    <div id="contenidoPanel"><div style="text-align:center;color:var(--suave);padding:3rem"><span class="spinner"></span> Cargando…</div></div>
+  </div>
+
+  <!-- PACIENTES -->
+  <div class="pagina" id="pag-pacientes">
+    <div class="seccion">
+      <div class="seccion-header">
+        <h2 class="seccion-titulo">Lista de Pacientes</h2>
+        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+          <input type="text" class="buscador" id="buscadorPac" placeholder="Buscar nombre o documento…"/>
+          <a href="RegistrarPaciente.html" class="btn-primario" style="font-size:.85rem">+ Nuevo</a>
+        </div>
+      </div>
+      <div class="alerta-err" id="errPac"></div>
+      <div style="overflow-x:auto">
+        <table class="tabla">
+          <thead><tr><th>Nombres</th><th>Apellidos</th><th>F. nac.</th><th>Género</th><th>Doc.</th><th>N.º doc.</th><th>Teléfono</th><th>EPS</th><th>Diagnóstico</th><th>Alergias</th><th>Observaciones</th></tr></thead>
+          <tbody id="tbodyPac"><tr><td class="vacio" colspan="11"><span class="spinner"></span> Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <!-- GET /historial/{paciente_id} → {historial:[...], resumen:{total,a_tiempo,tarde,omitidas,porcentaje_cumplimiento}} -->
+  <div class="pagina" id="pag-historial">
+    <div class="seccion">
+      <div class="seccion-header"><h2 class="seccion-titulo">Historial de tomas</h2></div>
+      <div class="filtro-fila">
+        <select class="form-select" id="selHistPac"><option value="">Cargando pacientes…</option></select>
+        <button class="btn-primario" onclick="cargarHistorial()">Consultar</button>
+      </div>
+      <div id="resumenDiv" style="display:none;margin-bottom:1.25rem">
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+          <span class="badge bv" id="resATiempo">—</span>
+          <span class="badge ba" id="resTarde">—</span>
+          <span class="badge br" id="resOmitidas">—</span>
+          <span class="badge bm" id="resPct">—</span>
+        </div>
+      </div>
+      <div class="alerta-err" id="errHist"></div>
+      <div style="overflow-x:auto">
+        <table class="tabla">
+          <thead><tr><th>Medicamento</th><th>Fecha programada</th><th>Hora toma</th><th>Estado</th><th>Diferencia</th><th>Observaciones</th></tr></thead>
+          <tbody id="tbodyHist"><tr><td class="vacio" colspan="6">Selecciona un paciente para ver su historial.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div id="estado-error" class="alert alert-danger mt-4" style="display:none">
-        <p id="mensaje-error" class="mb-2"></p>
-        <button class="btn btn-sm btn-danger" onclick="cargarPacientes()">Reintentar</button>
- </div>
-
-    <div id="lista-pacientes" style="display:none"></div>
-
-    <div id="estado-vacio" class="text-center mt-4" style="display:none">
-        <p class="text-muted">No hay pacientes registrados aún.</p>
-        <a href="RegistrarPaciente.html" class="btn btn-primary">+ Agregar paciente</a>
-    </div>
-</div>
-
+<script src="api.js"></script>
 <script>
-    const token = localStorage.getItem("medtrack_token");
-    const usuario = JSON.parse(localStorage.getItem("medtrack_usuario") || "null");
+/* AUTH */
+var token   = localStorage.getItem('medtrack_token');
+var usuario = JSON.parse(localStorage.getItem('medtrack_usuario') || 'null');
+if (!token || !usuario) { window.location.href = 'login.html'; }
+else {
+  document.getElementById('usuarioNombre').textContent = usuario.nombre || usuario.username || 'Usuario';
+  document.getElementById('usuarioRol').textContent    = usuario.rol || '';
+  document.getElementById('avatarInicial').textContent = (usuario.nombre || usuario.username || '?').charAt(0).toUpperCase();
+}
+document.getElementById('topbarFecha').textContent =
+  new Date().toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
-    if (!token || !usuario) {
-        window.location.href = "login.html";
-    } else {
-        document.getElementById("nombre-usuario").textContent =
-            `${usuario.nombre} (${usuario.rol})`;
-    }
+/* NAVEGACIÓN */
+var titulos = {inicio:'Dashboard',panel:'Panel del día',pacientes:'Pacientes',historial:'Historial de tomas'};
+function irA(pag) {
+  document.querySelectorAll('.pagina').forEach(function(p){p.classList.remove('activa');});
+  document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('activo');});
+  var el=document.getElementById('pag-'+pag); if(el) el.classList.add('activa');
+  var nv=document.getElementById('nav-'+pag); if(nv) nv.classList.add('activo');
+  document.getElementById('topbarTitulo').textContent = titulos[pag]||pag;
+  cerrarSidebar();
+  if(pag==='inicio')    cargarInicio();
+  if(pag==='panel')     cargarPanel();
+  if(pag==='pacientes') cargarPacientes();
+  if(pag==='historial') prepHistorial();
+}
+function abrirSidebar(){document.getElementById('sidebar').classList.add('abierto');document.getElementById('overlay').classList.add('visible');}
+function cerrarSidebar(){document.getElementById('sidebar').classList.remove('abierto');document.getElementById('overlay').classList.remove('visible');}
+function cerrarSesion(){localStorage.removeItem('medtrack_token');localStorage.removeItem('medtrack_usuario');window.location.href='login.html';}
 
-    function cerrarSesion() {
-        localStorage.removeItem("medtrack_token");
-        localStorage.removeItem("medtrack_usuario");
-        window.location.href = "login.html";
-    }
+/* UTILS */
+function mostrarErr(id,msg){var e=document.getElementById(id);if(e){e.textContent=msg;e.style.display='block';}}
+function ocultarErr(id){var e=document.getElementById(id);if(e) e.style.display='none';}
+function nulo(v){return v||'<span style="color:var(--suave)">—</span>';}
 
- //Servicio HTTP: obtener lista de pacientes
-    async function obtenerPacientes() {
-        const response = await fetch("http://localhost:8000/pacientes", {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
+/* INICIO */
+async function cargarInicio() {
+  ocultarErr('errInicio');
+  var tb=document.getElementById('tbodyInicio');
+  tb.innerHTML='<tr><td class="vacio" colspan="5"><span class="spinner"></span> Cargando…</td></tr>';
+  try {
+    var res=await api.obtenerPacientes();
+    if(!res.ok) throw new Error('Error al cargar pacientes.');
+    // El backend devuelve array directo (no envuelto en {pacientes:[...]})
+    var pacs=Array.isArray(res.body)?res.body:(res.body.pacientes||[]);
+    document.getElementById('statPac').textContent=pacs.length;
 
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: no se pudo obtener la lista de pacientes`);
-        }
-
-        return await response.json();
-    }
-   // — Gestión de estado y carga de pacientes
-    async function cargarPacientes() {
-    document.getElementById("estado-carga").style.display = "block";
-    document.getElementById("estado-error").style.display = "none";
-    document.getElementById("lista-pacientes").style.display = "none";
-    document.getElementById("estado-vacio").style.display = "none";
-
+    // Stats del panel del día → GET /recordatorios/panel-dia
     try {
-        const pacientes = await obtenerPacientes();
-        document.getElementById("estado-carga").style.display = "none";
+      var rp=await api.obtenerPanelDia();
+      if(rp.ok){
+        var panel=rp.body.panel||[];
+        var tom=0,pend=0,meds=0;
+        panel.forEach(function(p){(p.medicamentos||[]).forEach(function(m){meds++;if(m.tomado)tom++;else pend++;});});
+        document.getElementById('statTom').textContent=tom;
+        document.getElementById('statPend').textContent=pend;
+        document.getElementById('statMed').textContent=meds;
+      }
+    } catch(e2){}
 
-        if (pacientes.length === 0) {
-            document.getElementById("estado-vacio").style.display = "block";
-        } else {
-            document.getElementById("lista-pacientes").style.display = "block";
-            renderizarListaPacientes(pacientes);
-        }
-    } catch (error) {
-        document.getElementById("estado-carga").style.display = "none";
-        document.getElementById("mensaje-error").textContent = error.message;
-        document.getElementById("estado-error").style.display = "block";
+    if(!pacs.length){tb.innerHTML='<tr><td class="vacio" colspan="5">No hay pacientes registrados.</td></tr>';return;}
+    tb.innerHTML=pacs.slice(0,8).map(function(p){
+      return '<tr>'+
+        '<td><div style="display:flex;align-items:center;gap:.6rem">'+
+          '<div style="width:28px;height:28px;border-radius:50%;background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.25);display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--menta);font-weight:700;flex-shrink:0">'+(p.nombres||'?').charAt(0).toUpperCase()+'</div>'+
+          '<span style="font-weight:500">'+p.nombres+' '+p.apellidos+'</span>'+
+        '</div></td>'+
+        '<td><span class="badge bm">'+(p.tipo_documento||'')+' '+(p.numero_documento||'')+'</span></td>'+
+        '<td>'+nulo(p.diagnostico_principal)+'</td>'+
+        '<td>'+nulo(p.eps_aseguradora)+'</td>'+
+        '<td><a href="patients.html?id='+p.id+'" style="background:rgba(45,212,191,.1);color:var(--menta);border:1px solid rgba(45,212,191,.25);border-radius:7px;padding:.28rem .7rem;font-size:.78rem;text-decoration:none">Ver →</a></td>'+
+        '</tr>';
+    }).join('');
+  } catch(e){mostrarErr('errInicio',e.message);tb.innerHTML='<tr><td class="vacio" colspan="5">Error al cargar los pacientes.</td></tr>';}
+}
+
+/* PANEL DEL DÍA */
+// GET /recordatorios/panel-dia → {panel:[{paciente_id,nombres,apellidos,medicamentos:[{medicamento,dosis,hora,tomado,recordatorio_id}]}]}
+async function cargarPanel() {
+  ocultarErr('errPanel');
+  var ctn=document.getElementById('contenidoPanel');
+  ctn.innerHTML='<div style="text-align:center;color:var(--suave);padding:3rem"><span class="spinner"></span> Cargando panel del día…</div>';
+  try {
+    var res=await api.obtenerPanelDia();
+    if(!res.ok) throw new Error('Error al cargar el panel del día.');
+    var panel=res.body.panel||[];
+    if(!panel.length){ctn.innerHTML='<div style="text-align:center;color:var(--suave);padding:3rem">No hay medicamentos con recordatorio activo para hoy.</div>';return;}
+    ctn.innerHTML=panel.map(function(p){
+      var meds=(p.medicamentos||[]).map(function(m){
+        var estado=m.tomado
+          ?'<span style="color:var(--exito);font-size:.8rem">✓ Tomada</span>'
+          :'<span class="badge ba" style="font-size:.72rem">Pendiente</span>';
+        return '<div class="panel-med">'+
+          '<div><div style="font-weight:500">'+(m.medicamento||'—')+'</div>'+
+          '<div style="font-size:.78rem;color:var(--suave)">'+(m.dosis||'—')+'</div></div>'+
+          '<div style="display:flex;align-items:center;gap:.6rem">'+estado+'<span class="panel-hora">'+(m.hora||'—')+'</span></div>'+
+          '</div>';
+      }).join('');
+      return '<div class="panel-pac">'+
+        '<div class="panel-hdr">'+
+          '<div class="panel-av">'+(p.nombres||'?').charAt(0).toUpperCase()+'</div>'+
+          '<div><div style="font-weight:600;font-size:.92rem">'+p.nombres+' '+p.apellidos+'</div>'+
+          '<div style="font-size:.78rem;color:var(--suave)">'+(p.medicamentos||[]).length+' medicamento(s)</div></div>'+
+        '</div><div>'+meds+'</div></div>';
+    }).join('');
+  } catch(e){mostrarErr('errPanel',e.message||'Error de conexión.');ctn.innerHTML='';}
+}
+
+/* PACIENTES */
+var _pacs=[];
+async function cargarPacientes() {
+  ocultarErr('errPac');
+  var tb=document.getElementById('tbodyPac');
+  tb.innerHTML='<tr><td class="vacio" colspan="11"><span class="spinner"></span> Cargando…</td></tr>';
+  try {
+    var res=await api.obtenerPacientes();
+    if(!res.ok) throw new Error('Error al cargar los pacientes.');
+    _pacs=Array.isArray(res.body)?res.body:(res.body.pacientes||[]);
+    renderPacs(_pacs);
+  } catch(e){mostrarErr('errPac',e.message);tb.innerHTML='<tr><td class="vacio" colspan="11">Error al cargar.</td></tr>';}
+}
+function renderPacs(lista){
+  var tb=document.getElementById('tbodyPac');
+  if(!lista.length){tb.innerHTML='<tr><td class="vacio" colspan="11">No hay pacientes.</td></tr>';return;}
+  tb.innerHTML=lista.map(function(p){
+    return '<tr><td>'+nulo(p.nombres)+'</td><td>'+nulo(p.apellidos)+'</td><td>'+nulo(p.fecha_nacimiento)+'</td>'+
+      '<td>'+nulo(p.genero)+'</td><td>'+nulo(p.tipo_documento)+'</td><td>'+nulo(p.numero_documento)+'</td>'+
+      '<td>'+nulo(p.telefono_contacto)+'</td><td>'+nulo(p.eps_aseguradora)+'</td>'+
+      '<td>'+nulo(p.diagnostico_principal)+'</td><td>'+nulo(p.alergias_conocidas)+'</td>'+
+      '<td>'+nulo(p.observaciones_adicionales)+'</td></tr>';
+  }).join('');
+}
+document.getElementById('buscadorPac').addEventListener('input',function(){
+  var q=this.value.trim().toLowerCase();
+  if(!q){renderPacs(_pacs);return;}
+  renderPacs(_pacs.filter(function(p){
+    return (p.nombres||'').toLowerCase().includes(q)||(p.apellidos||'').toLowerCase().includes(q)||(p.numero_documento||'').toLowerCase().includes(q);
+  }));
+});
+
+/* HISTORIAL */
+// GET /historial/{id} → {historial:[{medicamento_nombre,fecha_programada,fecha_hora_toma,estado,diferencia_minutos,observaciones}], resumen:{...}}
+async function prepHistorial() {
+  var sel=document.getElementById('selHistPac');
+  sel.innerHTML='<option value="">Cargando pacientes…</option>';
+  try {
+    var res=await api.obtenerPacientes();
+    var lista=Array.isArray(res.body)?res.body:(res.body.pacientes||[]);
+    sel.innerHTML='<option value="">Selecciona un paciente…</option>';
+    lista.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.nombres+' '+p.apellidos;sel.appendChild(o);});
+  } catch(e){sel.innerHTML='<option value="">Error al cargar</option>';}
+}
+async function cargarHistorial() {
+  var pid=document.getElementById('selHistPac').value;
+  var tb=document.getElementById('tbodyHist');
+  ocultarErr('errHist');
+  document.getElementById('resumenDiv').style.display='none';
+  if(!pid){mostrarErr('errHist','Selecciona un paciente.');return;}
+  tb.innerHTML='<tr><td class="vacio" colspan="6"><span class="spinner"></span> Consultando…</td></tr>';
+  try {
+    var res=await api.obtenerHistorial(pid);
+    if(!res.ok) throw new Error(res.body.detail||'Error al obtener el historial.');
+    var hist=res.body.historial||[];
+    var res2=res.body.resumen||{};
+    if(res2.total>0){
+      document.getElementById('resumenDiv').style.display='block';
+      document.getElementById('resATiempo').textContent='✓ A tiempo: '+(res2.a_tiempo||0);
+      document.getElementById('resTarde').textContent='⏱ Tarde: '+(res2.tarde||0);
+      document.getElementById('resOmitidas').textContent='✗ Omitidas: '+(res2.omitidas||0);
+      document.getElementById('resPct').textContent=(res2.porcentaje_cumplimiento||0)+'% cumplimiento';
     }
+    if(!hist.length){tb.innerHTML='<tr><td class="vacio" colspan="6">No hay historial registrado.</td></tr>';return;}
+    function badge(est){
+      if(est==='a_tiempo') return '<span class="badge bv">A tiempo</span>';
+      if(est==='tarde')    return '<span class="badge ba">Tarde</span>';
+      if(est==='omitida')  return '<span class="badge br">Omitida</span>';
+      return '<span class="badge bm">'+(est||'—')+'</span>';
+    }
+    tb.innerHTML=hist.map(function(t){
+      return '<tr>'+
+        '<td style="font-weight:500">'+(t.medicamento_nombre||'—')+'</td>'+
+        '<td>'+(t.fecha_programada||'—')+'</td>'+
+        '<td>'+(t.fecha_hora_toma?t.fecha_hora_toma.slice(11,16):'<span style="color:var(--suave)">—</span>')+'</td>'+
+        '<td>'+badge(t.estado)+'</td>'+
+        '<td>'+(t.diferencia_minutos!=null?t.diferencia_minutos+' min':'<span style="color:var(--suave)">—</span>')+'</td>'+
+        '<td>'+nulo(t.observaciones)+'</td>'+
+        '</tr>';
+    }).join('');
+  } catch(e){mostrarErr('errHist',e.message||'Error de conexión.');tb.innerHTML='<tr><td class="vacio" colspan="6">Error al cargar el historial.</td></tr>';}
 }
 
-    //  Renderizar lista de pacientes con datos reales
-    function renderizarListaPacientes(pacientes) {
-    const contenedor = document.getElementById("lista-pacientes");
-    contenedor.innerHTML = "";
-
-    pacientes.forEach(paciente => {
-        const tarjeta = document.createElement("div");
-        tarjeta.classList.add("card", "mb-3");
-        tarjeta.innerHTML = `
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="card-title mb-1">${paciente.nombres} ${paciente.apellidos}</h5>
-                    <p class="card-text text-muted mb-0">
-                        Documento: ${paciente.tipo_documento} ${paciente.numero_documento}
-                        &nbsp;|&nbsp;
-                        Diagnóstico: ${paciente.diagnostico_principal || "Sin diagnóstico registrado"}
-                    </p>
-                </div>
-                <a href="patients.html?id=${paciente.id}" class="btn btn-primary btn-sm">
-                    Ver detalle
-                </a>
-            </div>
-        `;
-        contenedor.appendChild(tarjeta);
-    });
-}
-
-    // Se ejecuta automáticamente al cargar la página
-    document.addEventListener("DOMContentLoaded", cargarPacientes);
+cargarInicio();
 </script>
-
 </body>
 </html>
-

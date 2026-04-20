@@ -9,7 +9,7 @@
 from pathlib import Path
 import sqlite3 # Para conectarse a la BD SQLite
 from fastapi import APIRouter, HTTPException
-from validaciones import validar_medicamento, verificar_paciente_existe, verificar_medicamento_duplicado
+from backend.validaciones import validar_medicamento, verificar_paciente_existe, verificar_medicamento_duplicado
 
 # Crea el grupo de rutas de medicamentos
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])

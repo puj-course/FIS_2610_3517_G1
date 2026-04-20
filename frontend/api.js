@@ -1,4 +1,3 @@
-
 /*
 Patrón Fachada
 Centraliza todas las llamadas al backend en un mismo lugar.
@@ -6,7 +5,7 @@ Las interfaces HTML ya no hacen llamadas directas al backend,
 sino que usan el objeto "api" como intermediario.
 */
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://127.0.0.1:8000';
 
 const api = {
   // PACIENTES
@@ -93,7 +92,30 @@ const api = {
   },
 
   obtenerTomas: function(pacienteId, fecha) {
-    return fetch(API_URL + '/tomas/' + pacienteId + (fecha ? '?fecha=' + fecha : ''))
+    if (!pacienteId) {
+      return Promise.resolve({
+        ok: false,
+        body: { detail: 'pacienteId es obligatorio' }
+      });
+    }
+
+    return fetch(API_URL + '/tomas/dia/' + pacienteId + (fecha ? '?fecha=' + fecha : ''))
+    .then(function(r) {
+      return r.json().then(function(b) {
+        return { ok: r.ok, body: b };
+      });
+    });
+  },
+
+  obtenerHistorial: function(pacienteId) {
+    if (!pacienteId) {
+      return Promise.resolve({
+        ok: false,
+        body: { detail: 'pacienteId es obligatorio' }
+      });
+    }
+
+    return fetch(API_URL + '/tomas/historial/' + pacienteId)
     .then(function(r) {
       return r.json().then(function(b) {
         return { ok: r.ok, body: b };
@@ -102,8 +124,17 @@ const api = {
   },
 
   // PANEL DEL DÍA
-  obtenerPanelDia: function() {
-    return fetch(API_URL + '/panel-dia')
+  // Como el backend actual no tiene /panel-dia,
+  // esta función reutiliza la ruta de tomas del día.
+  obtenerPanelDia: function(pacienteId, fecha) {
+    if (!pacienteId) {
+      return Promise.resolve({
+        ok: false,
+        body: { detail: 'pacienteId es obligatorio para cargar el panel del día' }
+      });
+    }
+
+    return fetch(API_URL + '/tomas/dia/' + pacienteId + (fecha ? '?fecha=' + fecha : ''))
     .then(function(r) {
       return r.json().then(function(b) {
         return { ok: r.ok, body: b };

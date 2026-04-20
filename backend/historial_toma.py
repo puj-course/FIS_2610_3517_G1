@@ -67,63 +67,63 @@ class HistorialToma:
         Garantiza que el estado y la diferencia se calculen automáticamente.
         """
 
-    def __init__(self):
-        self._paciente_id      = None
-        self._medicamento_id   = None
-        self._recordatorio_id  = None
-        self._fecha_programada = None
-        self._fecha_hora_toma  = None
-        self._observaciones    = None
+        def __init__(self):
+            self._paciente_id      = None
+            self._medicamento_id   = None
+            self._recordatorio_id  = None
+            self._fecha_programada = None
+            self._fecha_hora_toma  = None
+            self._observaciones    = None
 
-    def set_paciente(self, paciente_id: int) -> "HistorialTomaBuilder":
-        self._paciente_id = paciente_id
-        return self
+        def set_paciente(self, paciente_id: int) -> "HistorialTomaBuilder":
+            self._paciente_id = paciente_id
+            return self
 
-    def set_medicamento(self, medicamento_id: int) -> "HistorialTomaBuilder":
-        self._medicamento_id = medicamento_id
-        return self
+        def set_medicamento(self, medicamento_id: int) -> "HistorialTomaBuilder":
+            self._medicamento_id = medicamento_id
+            return self
 
-    def set_recordatorio(self, recordatorio_id: int | None) -> "HistorialTomaBuilder":
-        self._recordatorio_id = recordatorio_id
-        return self
+        def set_recordatorio(self, recordatorio_id: int | None) -> "HistorialTomaBuilder":
+            self._recordatorio_id = recordatorio_id
+            return self
 
-    def set_fecha_programada(self, fecha_programada: str) -> "HistorialTomaBuilder":
-        self._fecha_programada = fecha_programada
-        return self
+        def set_fecha_programada(self, fecha_programada: str) -> "HistorialTomaBuilder":
+            self._fecha_programada = fecha_programada
+            return self
 
-    def set_fecha_hora_toma(self, fecha_hora_toma: str | None) -> "HistorialTomaBuilder":
-        self._fecha_hora_toma = fecha_hora_toma
-        return self
+        def set_fecha_hora_toma(self, fecha_hora_toma: str | None) -> "HistorialTomaBuilder":
+            self._fecha_hora_toma = fecha_hora_toma
+            return self
 
-    def set_observaciones(self, observaciones: str | None) -> "HistorialTomaBuilder":
-        self._observaciones = observaciones
-        return self
+        def set_observaciones(self, observaciones: str | None) -> "HistorialTomaBuilder":
+            self._observaciones = observaciones
+            return self
 
-    def build(self) -> HistorialToma:
-        """
-        Construye el objeto HistorialToma calculando automáticamente
-        el estado y la diferencia de tiempo.
-        Lanza ValueError si faltan campos obligatorios.
-        """
-        if not self._paciente_id:
-            raise ValueError("paciente_id es obligatorio")
-        if not self._medicamento_id:
-            raise ValueError("medicamento_id es obligatorio")
-        if not self._fecha_programada:
-            raise ValueError("fecha_programada es obligatoria")
+        def build(self) -> HistorialToma:
+            """
+            Construye el objeto HistorialToma calculando automáticamente
+            el estado y la diferencia de tiempo.
+            Lanza ValueError si faltan campos obligatorios.
+            """
+            if not self._paciente_id:
+                raise ValueError("paciente_id es obligatorio")
+            if not self._medicamento_id:
+                raise ValueError("medicamento_id es obligatorio")
+            if not self._fecha_programada:
+                raise ValueError("fecha_programada es obligatoria")
 
-        estado, diferencia = HistorialToma.calcular_estado(
-            self._fecha_programada,
-            self._fecha_hora_toma
-        )
+            estado, diferencia = HistorialToma.calcular_estado(
+                self._fecha_programada,
+                self._fecha_hora_toma
+            )
 
-        return HistorialToma(
-            paciente_id        = self._paciente_id,
-            medicamento_id     = self._medicamento_id,
-            recordatorio_id    = self._recordatorio_id,
-            fecha_programada   = self._fecha_programada,
-            fecha_hora_toma    = self._fecha_hora_toma,
-            diferencia_minutos = diferencia,
-            estado             = estado,
-            observaciones      = self._observaciones
-        )
+            return HistorialToma(
+                paciente_id        = self._paciente_id,
+                medicamento_id     = self._medicamento_id,
+                recordatorio_id    = self._recordatorio_id,
+                fecha_programada   = self._fecha_programada,
+                fecha_hora_toma    = self._fecha_hora_toma,
+                diferencia_minutos = diferencia,
+                estado             = estado,
+                observaciones      = self._observaciones
+            )

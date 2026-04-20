@@ -1,5 +1,6 @@
 from backend.models import get_connection
 
+
 class TomaRepository:
     """
     Patrón Repository para el acceso a la tabla de tomas.
@@ -7,16 +8,41 @@ class TomaRepository:
     desacoplando la lógica de negocio del acceso directo a la BD.
     """
 
-    def registrar_toma(self, medicamento_id, paciente_id, fecha, hora_programada, hora_tomada=None, estado='pendiente', observaciones=None):
+    def registrar_toma(
+        self,
+        medicamento_id,
+        paciente_id,
+        fecha,
+        hora_programada,
+        hora_tomada=None,
+        estado='pendiente',
+        observaciones=None
+    ):
         """
         Registra una nueva toma en la base de datos.
         """
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO tomas (medicamento_id, paciente_id, fecha, hora_programada, hora_tomada, estado, observaciones)
+            INSERT INTO tomas (
+                medicamento_id,
+                paciente_id,
+                fecha,
+                hora_programada,
+                hora_tomada,
+                estado,
+                observaciones
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (medicamento_id, paciente_id, fecha, hora_programada, hora_tomada, estado, observaciones))
+        """, (
+            medicamento_id,
+            paciente_id,
+            fecha,
+            hora_programada,
+            hora_tomada,
+            estado,
+            observaciones
+        ))
         conn.commit()
         toma_id = cursor.lastrowid
         conn.close()

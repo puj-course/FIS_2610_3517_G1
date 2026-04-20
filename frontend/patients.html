@@ -200,7 +200,7 @@
     <span class="marca-nombre">MedTrack</span>
   </div>
 
-  <a href="RegistarPaciente.html" class="boton-nuevo">+ Nuevo paciente</a>
+  <a href="RegistrarPaciente.html" class="boton-nuevo">+ Nuevo paciente</a>
 </div>
 
 <div class="tarjeta">
@@ -254,12 +254,14 @@ async function cargarPacientes() {
       return;
     }
 
-    if (!datos.pacientes || datos.pacientes.length === 0) {
+    const pacientes = Array.isArray(datos) ? datos : (datos.pacientes || []);
+
+    if (pacientes.length === 0) {
       tbody.innerHTML = `<tr><td class="vacio" colspan="12">No hay pacientes registrados aún.</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = datos.pacientes.map(p => {
+    tbody.innerHTML = pacientes.map(p => {
       const nombreCompleto = `${p.nombres} ${p.apellidos}`;
 
       return `

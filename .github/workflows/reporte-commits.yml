@@ -1,0 +1,54 @@
+name: Reporte de commits recientes
+run-name: Reporte de actividad para ${{ github.actor }}
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  reporte:
+    name: Generar reporte de commits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generar reporte HTML
+        run: |
+          cat << 'HTMLEOF' > reporte.html
+          <!DOCTYPE html>
+          <html>
+          <head><meta charset="UTF-8"><title>Reporte de commits</title></head>
+          <body>
+          <h1>Reporte de actividad del equipo</h1>
+          HTMLEOF
+
+          echo "<p><b>Rama:</b> ${{ github.ref_name }}</p>" >> reporte.html
+          echo "<p><b>Autor del push:</b> ${{ github.actor }}</p>" >> reporte.html
+
+          echo "<h2>Commits por integrante (últimos 60)</h2><ul>" >> reporte.html
+          git log -60 --pretty=format:"%an" | sort | uniq -c | sort -rn | \
+            awk '{print "<li><b>" $2 "</b>: " $1 " commits</li>"}' >> reporte.html
+          echo "</ul>" >> reporte.html
+
+          echo "<h2>Últimos 60 commits</h2><ul>" >> reporte.html
+          git log -60 --pretty=format:"<li><b>%an</b> (%ad): %s</li>" --date=short >> reporte.html
+          echo "</ul>" >> reporte.html
+
+          echo "<h2>Archivos modificados en el último commit</h2><ul>" >> reporte.html
+          git diff --name-only HEAD^ HEAD 2>/dev/null | sed 's|.*|<li>&</li>|' >> reporte.html || echo "<li>No disponible</li>" >> reporte.html
+          echo "</ul>" >> reporte.html
+
+          echo "</body></html>" >> reporte.html
+
+      - name: Subir reporte como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-commits
+          path: reporte.html
+          retention-days: 30

@@ -3,7 +3,6 @@ from datetime import date
 from backend.toma_repository import TomaRepository
 from backend.models import get_connection
 
-# Decorators (HU-37)
 from backend.decorators.historial import (
     HistorialTomas,
     CumplimientoDecorator,
@@ -11,13 +10,9 @@ from backend.decorators.historial import (
 )
 
 router = APIRouter(prefix="/tomas", tags=["Tomas"])
-
 repositorio = TomaRepository()
 
 
-# =========================
-# REGISTRAR TOMA
-# =========================
 @router.post("/", status_code=201)
 def registrar_toma(datos: dict):
     """
@@ -39,9 +34,6 @@ def registrar_toma(datos: dict):
     }
 
 
-# =========================
-# TOMAS DEL DÍA (CORREGIDO)
-# =========================
 @router.get("/dia/{paciente_id}")
 def obtener_tomas(paciente_id: int, fecha: str = None):
     """
@@ -57,16 +49,12 @@ def obtener_tomas(paciente_id: int, fecha: str = None):
     }
 
 
-# =========================
-# HISTORIAL COMPLETO (HU-36 + HU-37)
-# =========================
 @router.get("/historial/{paciente_id}")
 def obtener_historial(paciente_id: int):
     """
     Retorna el historial completo de tomas de un paciente
     usando patrón Decorator (cumplimiento + alertas)
     """
-
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -92,7 +80,6 @@ def obtener_historial(paciente_id: int):
 
     historial = [dict(f) for f in filas]
 
-    # ✅ SI NO HAY DATOS (evita errores)
     if not historial:
         return {
             "historial": [],
@@ -104,11 +91,7 @@ def obtener_historial(paciente_id: int):
             "alertas": []
         }
 
-    # =========================
-    # APLICAR DECORATORS
-    # =========================
     historial_base = HistorialTomas(historial)
-
     historial_decorado = CumplimientoDecorator(historial_base)
     historial_decorado = AlertasDecorator(historial_decorado)
 

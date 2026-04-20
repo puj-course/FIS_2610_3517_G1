@@ -1,9 +1,8 @@
 #############################################################################
-#	medication_route.py
-#	APIRouter: Para crear rutas en FastAPI
-#	HTTPException: Para devolver errores HTTP
-#	Se importa la funcion validar_medicamento de validaciones.py
-#
+# medication_route.py
+# APIRouter: Para crear rutas en FastAPI
+# HTTPException: Para devolver errores HTTP
+# Se importa la función validar_medicamento de validaciones.py
 #############################################################################
 
 from pathlib import Path
@@ -45,7 +44,6 @@ def registrar_medicamento(data: dict):
                 detail="El paciente ya tiene registrado este medicamento"
             )
 
-        # Adaptamos el formato nuevo al esquema actual de la tabla medicamentos
         dosis = f'{data["dosis_cantidad"]} {data["dosis_unidad"]}'
         frecuencia = data["frecuencia"].strip()
         horario = ", ".join(data["horarios"])
@@ -97,6 +95,7 @@ def registrar_medicamento(data: dict):
     finally:
         conn.close()
 
+
 @router.get("/paciente/{paciente_id}")
 def obtener_medicamentos_paciente(paciente_id: int):
     """
@@ -115,5 +114,6 @@ def obtener_medicamentos_paciente(paciente_id: int):
     conn.close()
 
     if not meds:
-        return []   
+        return []
+
     return meds

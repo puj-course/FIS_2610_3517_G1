@@ -268,21 +268,33 @@
     </table>
   </div>
 </div>
-
 <script src="api.js"></script>
 <script>
-  const pacienteId = 1;
+  const params = new URLSearchParams(window.location.search);
+  const pacienteId = params.get('pacienteId');
+  const nombrePaciente = params.get('nombre') || 'Paciente';
   const tbody = document.getElementById('tabla-tomas');
   const hoy = new Date().toISOString().split('T')[0];
 
-  // Muestra la fecha de hoy en el subtítulo
-  document.getElementById('fecha-hoy').textContent = 
-    'Mostrando tomas del día: ' + new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('fecha-hoy').textContent =
+  `Paciente: ${nombrePaciente} — ` +
+  new Date().toLocaleDateString('es-CO', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 
   function mostrarError(mensaje) {
     const alerta = document.getElementById('alerta-error');
     alerta.textContent = mensaje;
     alerta.style.display = 'block';
+  }
+
+  function ocultarError() {
+    const alerta = document.getElementById('alerta-error');
+    alerta.textContent = '';
+    alerta.style.display = 'none';
   }
 
   function mostrarNotificacion(mensaje, tipo = 'exito') {
@@ -294,12 +306,18 @@
   }
 
   function badgeEstado(estado) {
-    if (estado === 'tomado')    return `<span class="badge-tomado">Tomado</span>`;
-    if (estado === 'atrasado')  return `<span class="badge-atrasado">Atrasado</span>`;
+    if (estado === 'tomado' || estado === 'a_tiempo') {
+      return `<span class="badge-tomado">Tomado</span>`;
+    }
+    if (estado === 'atrasado' || estado === 'tarde') {
+      return `<span class="badge-atrasado">Atrasado</span>`;
+    }
     return `<span class="badge-pendiente">Pendiente</span>`;
   }
 
   function cargarTomas() {
+    ocultarError();
+
     api.obtenerTomas(pacienteId, hoy)
       .then(function(resultado) {
         if (!resultado.ok) {
@@ -316,16 +334,17 @@
         }
 
         tbody.innerHTML = tomas.map(function(t) {
-          const esTomado = t.estado === 'tomado';
+          const esTomado = t.estado === 'tomado' || t.estado === 'a_tiempo';
+
           return `
             <tr id="fila-${t.id}">
-              <td>${t.medicamento_id}</td>
-              <td>${t.hora_programada}</td>
+              <td>${t.medicamento_nombre || t.medicamento_id}</td>
+              <td>${t.hora_programada || '—'}</td>
               <td>${t.hora_tomada || '—'}</td>
               <td>${badgeEstado(t.estado)}</td>
               <td>${t.observaciones || '—'}</td>
               <td>
-                <button class="boton-tomar" onclick="marcarComoTomado(${t.id})" ${esTomado ? 'disabled' : ''}>
+                <button class="boton-tomar" onclick="marcarComoTomado(${t.medicamento_id}, '${t.hora_programada || hoy}')" ${esTomado ? 'disabled' : ''}>
                   ${esTomado ? 'Tomado ✓' : 'Marcar tomado'}
                 </button>
               </td>
@@ -333,32 +352,43 @@
           `;
         }).join('');
       })
-      .catch(function() {
+      .catch(function(error) {
+        console.error('Error al cargar tomas:', error);
         mostrarError('No se pudo conectar con el servidor.');
         tbody.innerHTML = `<tr><td class="vacio" colspan="6">Error de conexión con el backend.</td></tr>`;
       });
   }
 
-  function marcarComoTomado(tomaId) {
-    const horaActual = new Date().toTimeString().slice(0, 5);
+  function marcarComoTomado(medicamentoId, horaProgramada) {
+    const ahora = new Date();
+    const horaActual = ahora.toTimeString().slice(0, 5);
 
     api.registrarToma({
-      medicamento_id: 1,
+      medicamento_id: medicamentoId,
       paciente_id: pacienteId,
       fecha: hoy,
-      hora_programada: horaActual,
+      hora_programada: horaProgramada,
       hora_tomada: horaActual,
-      estado: 'tomado'
+      estado: 'tomado',
+      observaciones: 'Toma registrada desde la interfaz'
     })
     .then(function(resultado) {
       if (resultado.ok) {
         mostrarNotificacion('Toma marcada como tomada correctamente.');
         cargarTomas();
+        if (!pacienteId) {
+        mostrarError('No se recibió un paciente seleccionado.');
+        tbody.innerHTML = `<tr><td class="vacio" colspan="6">Debes entrar desde la vista de pacientes.</td></tr>`;
+} else {
+  cargarTomas();
+}
       } else {
-        mostrarNotificacion('Error al actualizar la toma.', 'error');
+        console.error('Error backend:', resultado.body);
+        mostrarNotificacion('Error al registrar la toma.', 'error');
       }
     })
-    .catch(function() {
+    .catch(function(error) {
+      console.error('Error de conexión:', error);
       mostrarNotificacion('Error de conexión con el servidor.', 'error');
     });
   }

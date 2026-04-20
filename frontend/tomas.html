@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Tomas del día</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --menta:        #2DD4BF;
+      --menta-oscuro: #0F9D8A;
+      --fondo:        #0F1B2D;
+      --campo:        #1E2D3D;
+      --tarjeta:      #162030;
+      --borde:        #243447;
+      --texto:        #E2EAF4;
+      --suave:        #7A95B0;
+      --error:        #F4726A;
+      --exito:        #4ADE80;
+      --alerta:       #FBBF24;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      background: var(--fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--texto);
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+    .encabezado {
+      max-width: 1000px; margin: 0 auto 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .marca { display: flex; align-items: center; gap: .6rem; }
+    .marca-icono {
+      width: 36px; height: 36px; background: var(--menta);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    }
+    .marca-icono svg { width: 20px; height: 20px; color: var(--fondo); }
+    .marca-nombre { font-family: 'DM Serif Display', serif; font-size: 1.35rem; }
+    .btn-volver {
+      background: transparent; color: var(--suave);
+      border: 1.5px solid var(--borde); border-radius: 10px;
+      padding: .5rem 1.1rem; font-size: .85rem; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all .2s; text-decoration: none;
+      display: inline-flex; align-items: center; gap: .4rem;
+    }
+    .btn-volver:hover { border-color: var(--menta); color: var(--menta); }
+
+    .tarjeta {
+      background: var(--tarjeta); border: 1px solid var(--borde);
+      border-radius: 20px; max-width: 1000px; margin: 0 auto;
+      padding: 2rem; box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: subir .45s ease both;
+    }
+    @keyframes subir {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .titulo { font-family: 'DM Serif Display', serif; font-size: 1.5rem; margin-bottom: .3rem; }
+    .fecha-hoy { font-size: .88rem; color: var(--suave); margin-bottom: 1.5rem; }
+
+    /* Selector de paciente */
+    .filtro-fila { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .form-select {
+      background: var(--campo); border: 1.5px solid var(--borde);
+      color: var(--texto); border-radius: 10px; padding: .55rem .9rem;
+      font-size: .88rem; font-family: 'DM Sans', sans-serif;
+      transition: border-color .2s; min-width: 260px;
+    }
+    .form-select:focus { outline: none; border-color: var(--menta); }
+    .form-select option { background: var(--campo); }
+    .btn-consultar {
+      background: var(--menta); color: var(--fondo);
+      border: none; border-radius: 10px; padding: .55rem 1.2rem;
+      font-size: .88rem; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: background .2s;
+    }
+    .btn-consultar:hover { background: var(--menta-oscuro); }
+
+    /* Tabla */
+    .tabla-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--campo); color: var(--menta);
+      border-bottom: 1px solid var(--borde);
+      font-size: .76rem; text-transform: uppercase; letter-spacing: .06em;
+      font-weight: 500; padding: .8rem 1rem; text-align: left; white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--borde); transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(45,212,191,.04); }
+    tbody td { padding: .8rem 1rem; font-size: .87rem; vertical-align: middle; }
+    .vacio { text-align: center; color: var(--suave); padding: 2.5rem !important; }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center;
+      border-radius: 20px; padding: .2rem .65rem;
+      font-size: .75rem; font-weight: 500;
+    }
+    .badge-verde   { background: rgba(74,222,128,.12); color: var(--exito); border: 1px solid rgba(74,222,128,.3); }
+    .badge-rojo    { background: rgba(244,114,106,.12); color: var(--error); border: 1px solid rgba(244,114,106,.3); }
+    .badge-amarillo{ background: rgba(251,191,36,.12); color: var(--alerta); border: 1px solid rgba(251,191,36,.3); }
+
+    /* Botón marcar tomado */
+    .btn-tomar {
+      background: var(--menta); color: var(--fondo);
+      border: none; border-radius: 8px; padding: .32rem .8rem;
+      font-size: .8rem; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: background .2s;
+    }
+    .btn-tomar:hover { background: var(--menta-oscuro); }
+    .btn-tomar:disabled { background: var(--campo); color: var(--suave); cursor: not-allowed; }
+
+    /* Error */
+    .alerta-error {
+      background: rgba(244,114,106,.1); border: 1px solid var(--error);
+      color: var(--error); border-radius: 12px; padding: .85rem 1rem;
+      margin-bottom: 1.25rem; font-size: .88rem; display: none;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block; width: 15px; height: 15px;
+      border: 2px solid var(--borde); border-top-color: var(--menta);
+      border-radius: 50%; animation: spin .7s linear infinite;
+      vertical-align: middle; margin-right: .35rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Notificaciones */
+    .notif-ctn { position: fixed; top: 1.25rem; right: 1.25rem; z-index: 9999; }
+    .notif {
+      background: var(--tarjeta); border: 1px solid var(--exito);
+      border-radius: 12px; padding: .85rem 1.1rem;
+      font-size: .85rem; margin-bottom: .5rem; min-width: 240px;
+      animation: deslizar .3s ease both;
+    }
+    .notif.err { border-color: var(--error); }
+    @keyframes deslizar {
+      from { opacity: 0; transform: translateX(30px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="notif-ctn" id="notifCtn"></div>
+
+<div class="encabezado">
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+  <a href="dashboard.html" class="btn-volver">← Volver al dashboard</a>
+</div>
+
+<div class="tarjeta">
+  <h2 class="titulo">Panel del día</h2>
+  <p class="fecha-hoy" id="fechaHoy"></p>
+
+  <!-- Selector de paciente -->
+  <div class="filtro-fila">
+    <select class="form-select" id="selectPaciente">
+      <option value="">Cargando pacientes…</option>
+    </select>
+    <button class="btn-consultar" onclick="cargarPanelPaciente()">Ver tomas</button>
+  </div>
+
+  <div class="alerta-error" id="alertaError"></div>
+
+  <div class="tabla-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Medicamento</th>
+          <th>Dosis</th>
+          <th>Hora programada</th>
+          <th>Estado</th>
+          <th>Observaciones</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="tablaBody">
+        <tr><td class="vacio" colspan="6">Selecciona un paciente para ver sus tomas del día.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+  // Fecha de hoy
+  document.getElementById('fechaHoy').textContent =
+    new Date().toLocaleDateString('es-CO', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  // ── Cargar pacientes en el selector ──────────────────────
+  async function cargarPacientes() {
+    const sel = document.getElementById('selectPaciente');
+    try {
+      const res = await api.obtenerPacientes();
+      if (!res.ok) throw new Error();
+      const lista = Array.isArray(res.body) ? res.body : (res.body.pacientes || []);
+      if (!lista.length) {
+        sel.innerHTML = '<option value="">No hay pacientes registrados</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">Selecciona un paciente…</option>';
+      lista.forEach(function(p) {
+        const o = document.createElement('option');
+        o.value = p.id;
+        o.textContent = p.nombres + ' ' + p.apellidos;
+        sel.appendChild(o);
+      });
+    } catch(e) {
+      sel.innerHTML = '<option value="">Error al cargar pacientes</option>';
+    }
+  }
+
+  // ── Cargar panel del día de un paciente ──────────────────
+  // Usa GET /recordatorios/panel-dia/{paciente_id}
+  // Devuelve { recordatorios: [...] } con campo "tomada" boolean
+  async function cargarPanelPaciente() {
+    const pacienteId = document.getElementById('selectPaciente').value;
+    const tbody = document.getElementById('tablaBody');
+    ocultarError();
+
+    if (!pacienteId) {
+      mostrarError('Selecciona un paciente primero.');
+      return;
+    }
+
+    tbody.innerHTML = '<tr><td class="vacio" colspan="6"><span class="spinner"></span> Cargando…</td></tr>';
+
+    try {
+      const res = await api.obtenerPanelDiaPaciente(pacienteId);
+      if (!res.ok) throw new Error(res.body.detail || 'Error al cargar el panel.');
+
+      const recordatorios = res.body.recordatorios || [];
+
+      if (!recordatorios.length) {
+        tbody.innerHTML = '<tr><td class="vacio" colspan="6">No hay medicamentos programados para hoy.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = recordatorios.map(function(r) {
+        const tomada = r.tomada;
+        const badge  = tomada
+          ? '<span class="badge badge-verde">Tomada ✓</span>'
+          : '<span class="badge badge-amarillo">Pendiente</span>';
+        const accion = tomada
+          ? '—'
+          : '<button class="btn-tomar" onclick="marcarTomada(' +
+              r.recordatorio_id + ',' + r.medicamento_id + ',' + r.paciente_id +
+              ',\'' + r.fecha_programada + '\',this)">Marcar tomada</button>';
+        return '<tr id="fila-' + r.recordatorio_id + '">' +
+          '<td style="font-weight:500">' + (r.medicamento_nombre || '—') + '</td>' +
+          '<td>' + (r.dosis || '—') + '</td>' +
+          '<td>' + (r.hora_recordatorio || '—') + '</td>' +
+          '<td>' + badge + '</td>' +
+          '<td>' + (r.observaciones || '<span style="color:var(--suave)">—</span>') + '</td>' +
+          '<td>' + accion + '</td>' +
+          '</tr>';
+      }).join('');
+
+    } catch(e) {
+      mostrarError(e.message || 'Error de conexión con el servidor.');
+      tbody.innerHTML = '<tr><td class="vacio" colspan="6">No se pudo cargar el panel del día.</td></tr>';
+    }
+  }
+
+  // ── Marcar toma como tomada ──────────────────────────────
+  // POST /tomas/ con todos los campos requeridos
+  async function marcarTomada(recordatorioId, medicamentoId, pacienteId, fechaProgramada, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    const ahora = new Date();
+    const pad   = n => String(n).padStart(2, '0');
+    const fechaHoraToma =
+      ahora.getFullYear() + '-' +
+      pad(ahora.getMonth()+1) + '-' +
+      pad(ahora.getDate()) + ' ' +
+      pad(ahora.getHours()) + ':' +
+      pad(ahora.getMinutes()) + ':' +
+      pad(ahora.getSeconds());
+
+    const datos = {
+      paciente_id:      pacienteId,
+      medicamento_id:   medicamentoId,
+      recordatorio_id:  recordatorioId,
+      fecha_programada: fechaProgramada,
+      fecha_hora_toma:  fechaHoraToma,
+      estado:           'tomada',
+      observaciones:    'Marcada desde el panel del día'
+    };
+
+    try {
+      const res = await api.registrarToma(datos);
+      if (!res.ok) {
+        mostrarNotif(res.body.detail || 'Error al registrar la toma.', true);
+        btn.disabled = false;
+        btn.textContent = 'Marcar tomada';
+        return;
+      }
+      mostrarNotif('Toma registrada correctamente ✓');
+      // Actualizar la fila visualmente sin recargar todo
+      const fila = document.getElementById('fila-' + recordatorioId);
+      if (fila) {
+        fila.cells[3].innerHTML = '<span class="badge badge-verde">Tomada ✓</span>';
+        fila.cells[5].textContent = '—';
+      }
+    } catch(e) {
+      mostrarNotif('Error de conexión con el servidor.', true);
+      btn.disabled = false;
+      btn.textContent = 'Marcar tomada';
+    }
+  }
+
+  function mostrarError(msg) {
+    const el = document.getElementById('alertaError');
+    el.textContent = msg; el.style.display = 'block';
+  }
+  function ocultarError() {
+    document.getElementById('alertaError').style.display = 'none';
+  }
+  function mostrarNotif(msg, err) {
+    const ctn = document.getElementById('notifCtn');
+    const div = document.createElement('div');
+    div.className = 'notif' + (err ? ' err' : '');
+    div.textContent = msg;
+    ctn.appendChild(div);
+    setTimeout(function() { div.remove(); }, 3500);
+  }
+
+  cargarPacientes();
+</script>
+</body>
+</html>

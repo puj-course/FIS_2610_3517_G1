@@ -96,3 +96,24 @@ def registrar_medicamento(data: dict):
 
     finally:
         conn.close()
+
+@router.get("/paciente/{paciente_id}")
+def obtener_medicamentos_paciente(paciente_id: int):
+    """
+    Devuelve todos los medicamentos de un paciente específico.
+    URL: GET /medicamentos/paciente/{paciente_id}
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT * FROM medicamentos WHERE paciente_id = ? ORDER BY nombre",
+        (paciente_id,)
+    )
+    meds = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    if not meds:
+        return []   
+    return meds

@@ -1,10 +1,12 @@
 ﻿from fastapi import APIRouter, HTTPException
+import sqlite3
+
 from backend.models import (
-    get_connection,
     insertar_recordatorio,
     get_recordatorios_por_paciente,
     get_panel_dia_por_paciente
 )
+
 from backend.validaciones import (
     validar_recordatorio,
     verificar_medicamento_existe
@@ -22,6 +24,7 @@ router = APIRouter(
 )
 
 
+# 🔹 Helper
 def obtener_paciente_id_de_medicamento(medicamento_id: int, conn):
     cursor = conn.cursor()
     cursor.execute(
@@ -32,16 +35,18 @@ def obtener_paciente_id_de_medicamento(medicamento_id: int, conn):
     return fila["paciente_id"] if fila else None
 
 
+# =========================
+# POST: crear recordatorio
+# =========================
 @router.post("/")
 def crear_recordatorio(data: dict):
 
     errores = validar_recordatorio(data)
 
     if errores:
-        detalle = "; ".join(errores) if isinstance(errores, list) else str(errores)
         raise HTTPException(
             status_code=400,
-            detail=detalle
+            detail="; ".join(errores)
         )
 
     try:
@@ -52,7 +57,8 @@ def crear_recordatorio(data: dict):
             detail="medicamento_id debe ser un entero válido"
         )
 
-    conn = get_connection()
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
 
     try:
         if not verificar_medicamento_existe(medicamento_id, conn):
@@ -91,35 +97,22 @@ def crear_recordatorio(data: dict):
             "recordatorio_id": nuevo_id
         }
 
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error interno: {e}"
-        )
-
     finally:
         conn.close()
 
 
+# =========================
+# GET: panel del día
+# =========================
 @router.get("/panel-dia")
 def obtener_panel_dia():
-    """
-    Devuelve medicamentos programados para hoy
-    de todos los pacientes.
-    """
 
-    conn = get_connection()
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
 
     try:
         cursor = conn.cursor()
-
-        cursor.execute(
-            "SELECT id, nombres, apellidos FROM pacientes"
-        )
-
+        cursor.execute("SELECT id, nombres, apellidos FROM pacientes")
         pacientes = cursor.fetchall()
 
     finally:
@@ -130,11 +123,9 @@ def obtener_panel_dia():
     for p in pacientes:
 
         filas = get_panel_dia_por_paciente(p["id"])
-
         medicamentos = []
 
         for f in filas:
-
             f = dict(f)
 
             medicamentos.append({
@@ -154,13 +145,17 @@ def obtener_panel_dia():
                 "medicamentos": medicamentos
             })
 
-    return {
-        "panel": panel
-    }
+    return {"panel": panel}
 
 
+# =========================
+# GET: listar recordatorios
+# =========================
 @router.get("/{paciente_id}")
 def listar_recordatorios(paciente_id: int):
+
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
 
     try:
         filas = get_recordatorios_por_paciente(paciente_id)
@@ -168,7 +163,6 @@ def listar_recordatorios(paciente_id: int):
         recordatorios = []
 
         for fila in filas:
-
             recordatorios.append({
                 "id": fila["id"],
                 "medicamento_id": fila["medicamento_id"],
@@ -180,12 +174,7 @@ def listar_recordatorios(paciente_id: int):
                 "observaciones": fila["observaciones"]
             })
 
-        return {
-            "recordatorios": recordatorios
-        }
+        return {"recordatorios": recordatorios}
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error al obtener recordatorios: {e}"
-        )
+    finally:
+        conn.close()

@@ -51,7 +51,7 @@ def registrar_toma_historial(data: RegistrarTomaRequest):
 
         # Verificar duplicado
         cursor.execute("""
-            SELECT id FROM historial_tomas
+            SELECT id FROM tomas_medicamento
             WHERE recordatorio_id = ? AND fecha_programada = ?
         """, (toma.recordatorio_id, toma.fecha_programada))
         if cursor.fetchone():
@@ -61,7 +61,7 @@ def registrar_toma_historial(data: RegistrarTomaRequest):
             )
 
         cursor.execute("""
-            INSERT INTO historial_tomas (
+            INSERT INTO tomas_medicamento (
                 paciente_id, medicamento_id, recordatorio_id,
                 fecha_programada, fecha_hora_toma,
                 diferencia_minutos, estado, observaciones
@@ -117,7 +117,7 @@ def obtener_historial(paciente_id: int):
                 h.diferencia_minutos,
                 h.estado,
                 h.observaciones
-            FROM historial_tomas h
+            FROM tomas_medicamento h
             INNER JOIN medicamentos m ON h.medicamento_id = m.id
             WHERE h.paciente_id = ?
             ORDER BY h.fecha_programada DESC

@@ -1,166 +1,312 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedTrack - Detalle del Paciente</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --color-menta: #2DD4BF;
-            --color-fondo: #0F1B2D;
-            --color-tarjeta: #162030;
-            --color-borde: #243447;
-            --color-texto: #E2EAF4;
-        }
-        body {
-            background-color: var(--color-fondo);
-            font-family: 'DM Sans', sans-serif;
-            color: var(--color-texto);
-            padding: 2rem;
-        }
-        .tarjeta {
-            background: var(--color-tarjeta);
-            border: 1px solid var(--color-borde);
-            border-radius: 20px;
-            padding: 2rem;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .btn-volver {
-            background: var(--color-menta);
-            color: var(--color-fondo);
-            border: none;
-            border-radius: 10px;
-            padding: 0.5rem 1rem;
-            text-decoration: none;
-            display: inline-block;
-            margin-bottom: 1rem;
-        }
-        .btn-volver:hover {
-            background: #0F9D8A;
-            color: white;
-        }
-        .medicamento-card {
-            background: rgba(45,212,191,.1);
-            border: 1px solid var(--color-borde);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-    </style>
-</head>
-<body>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Mis Pacientes</title>
 
-<div class="tarjeta">
-    <a href="dashboard.html" class="btn-volver">← Volver al Dashboard</a>
-    
-    <div id="contenido">
-        <div class="text-center">
-            <div class="spinner-border text-success" role="status"></div>
-            <p>Cargando información del paciente...</p>
-        </div>
-    </div>
-</div>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
-<script src="api.js"></script>
-<script>
-    // Obtener el ID del paciente de la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const pacienteId = urlParams.get('id');
-
-    async function cargarDetallePaciente() {
-        const contenedor = document.getElementById('contenido');
-        
-        if (!pacienteId) {
-            contenedor.innerHTML = `
-                <div class="alert alert-danger">
-                    No se especificó un paciente válido.
-                    <br><a href="dashboard.html" class="btn btn-primary mt-2">Volver al dashboard</a>
-                </div>
-            `;
-            return;
-        }
-
-        try {
-            // Obtener todos los pacientes
-            const resultado = await api.obtenerPacientes();
-            
-            if (!resultado.ok) {
-                throw new Error('Error al cargar pacientes');
-            }
-
-            const pacientes = resultado.body;
-            const paciente = pacientes.find(p => p.id == pacienteId);
-
-            if (!paciente) {
-                contenedor.innerHTML = `
-                    <div class="alert alert-warning">
-                        No se encontró el paciente con ID ${pacienteId}
-                        <br><a href="dashboard.html" class="btn btn-primary mt-2">Volver al dashboard</a>
-                    </div>
-                `;
-                return;
-            }
-
-            // Cargar medicamentos del paciente
-            const medicamentosResult = await api.obtenerMedicamentos(pacienteId);
-            const medicamentos = medicamentosResult.ok ? medicamentosResult.body : [];
-
-            // Mostrar información
-            contenedor.innerHTML = `
-                <h2>${paciente.nombres} ${paciente.apellidos}</h2>
-                <hr>
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>📄 Documento:</strong> ${paciente.tipo_documento} ${paciente.numero_documento}</p>
-                        <p><strong>🎂 Fecha nacimiento:</strong> ${paciente.fecha_nacimiento}</p>
-                        <p><strong>⚥ Género:</strong> ${paciente.genero}</p>
-                        <p><strong>📞 Teléfono:</strong> ${paciente.telefono_contacto || '—'}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>🏥 EPS:</strong> ${paciente.eps_aseguradora || '—'}</p>
-                        <p><strong>🩺 Diagnóstico:</strong> ${paciente.diagnostico_principal || '—'}</p>
-                        <p><strong>⚠️ Alergias:</strong> ${paciente.alergias_conocidas || '—'}</p>
-                    </div>
-                </div>
-                
-                <hr>
-                <h3>💊 Medicamentos</h3>
-                ${medicamentos.length === 0 ? 
-                    '<p class="text-muted">No hay medicamentos registrados para este paciente.</p>' : 
-                    medicamentos.map(m => `
-                        <div class="medicamento-card">
-                            <h4>${m.nombre}</h4>
-                            <p><strong>Dosis:</strong> ${m.dosis}</p>
-                            <p><strong>Frecuencia:</strong> ${m.frecuencia}</p>
-                            <p><strong>Horario:</strong> ${m.horario}</p>
-                            <p><strong>Fecha inicio:</strong> ${m.fecha_inicio}</p>
-                            ${m.observaciones ? `<p><strong>Observaciones:</strong> ${m.observaciones}</p>` : ''}
-                        </div>
-                    `).join('')
-                }
-                
-                <div class="mt-4">
-                    <a href="registro_medicamento.html?paciente_id=${pacienteId}" class="btn btn-success">+ Agregar Medicamento</a>
-                    <a href="dashboard.html" class="btn btn-secondary">Volver</a>
-                </div>
-            `;
-
-        } catch (error) {
-            console.error('Error:', error);
-            contenedor.innerHTML = `
-                <div class="alert alert-danger">
-                    Error de conexión con el servidor.
-                    <br><a href="dashboard.html" class="btn btn-primary mt-2">Volver al dashboard</a>
-                </div>
-            `;
-        }
+  <style>
+    :root {
+      --color-menta:        #2DD4BF;
+      --color-menta-oscuro: #0F9D8A;
+      --color-fondo:        #0F1B2D;
+      --color-campo:        #1E2D3D;
+      --color-tarjeta:      #162030;
+      --color-borde:        #243447;
+      --color-texto:        #E2EAF4;
+      --color-texto-suave:  #7A95B0;
+      --color-error:        #F4726A;
+      --color-exito:        #4ADE80;
     }
 
-    // Ejecutar al cargar
-    cargarDetallePaciente();
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    .encabezado-pagina {
+      max-width: 1100px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    .marca-icono {
+      width: 36px;
+      height: 36px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .marca-icono svg {
+      width: 20px;
+      height: 20px;
+      color: var(--color-fondo);
+    }
+
+    .marca-nombre {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+      color: var(--color-texto);
+    }
+
+    .boton-nuevo {
+      background: var(--color-menta);
+      color: var(--color-fondo);
+      border: none;
+      border-radius: 12px;
+      padding: .6rem 1.4rem;
+      font-size: .9rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: background .2s, box-shadow .2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    .boton-nuevo:hover {
+      background: var(--color-menta-oscuro);
+      box-shadow: 0 8px 24px rgba(45,212,191,.3);
+      color: var(--color-fondo);
+    }
+
+    .boton-ver-tomas {
+      background: transparent;
+      color: var(--color-menta);
+      border: 1px solid var(--color-menta);
+      border-radius: 10px;
+      padding: .45rem .9rem;
+      font-size: .82rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all .2s ease;
+      white-space: nowrap;
+    }
+
+    .boton-ver-tomas:hover {
+      background: var(--color-menta);
+      color: var(--color-fondo);
+      box-shadow: 0 8px 24px rgba(45,212,191,.25);
+    }
+
+    .tarjeta {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: aparecer .5s ease both;
+    }
+
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .titulo-seccion {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .table {
+      color: var(--color-texto);
+      border-color: var(--color-borde);
+    }
+
+    .table thead th {
+      background: var(--color-campo);
+      color: var(--color-menta);
+      border-color: var(--color-borde);
+      font-size: .82rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      font-weight: 500;
+      padding: .85rem 1rem;
+    }
+
+    .table tbody tr {
+      border-color: var(--color-borde);
+      transition: background .15s;
+    }
+
+    .table tbody tr:hover {
+      background: rgba(45,212,191,.05);
+    }
+
+    .table tbody td {
+      border-color: var(--color-borde);
+      padding: .85rem 1rem;
+      font-size: .9rem;
+      vertical-align: middle;
+    }
+
+    .vacio {
+      text-align: center;
+      color: var(--color-texto-suave);
+      padding: 3rem !important;
+    }
+
+    .alerta-error {
+      background: rgba(244,114,106,.1);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="encabezado-pagina">
+  <div class="marca">
+    <div class="marca-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4m0 4h.01M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12z"/>
+      </svg>
+    </div>
+    <span class="marca-nombre">MedTrack</span>
+  </div>
+
+  <a href="RegistrarPaciente.html" class="boton-nuevo">+ Nuevo paciente</a>
+</div>
+
+<div class="tarjeta">
+  <h2 class="titulo-seccion">Mis pacientes</h2>
+
+  <div class="alerta-error" id="alerta-error"></div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nombres</th>
+          <th>Apellidos</th>
+          <th>Fecha nacimiento</th>
+          <th>Género</th>
+          <th>Tipo documento</th>
+          <th>Número documento</th>
+          <th>Teléfono</th>
+          <th>EPS/Aseguradora</th>
+          <th>Diagnóstico</th>
+          <th>Alergias</th>
+          <th>Observaciones</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody id="tabla-pacientes">
+        <tr>
+          <td class="vacio" colspan="12">Cargando...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("medtrack_token") || "test";
+
+async function cargarPacientes() {
+  try {
+    const respuesta = await fetch("http://127.0.0.1:8000/pacientes", {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    const datos = await respuesta.json();
+    const tbody = document.getElementById("tabla-pacientes");
+
+    if (!respuesta.ok) {
+      mostrarError("Error al cargar los pacientes.");
+      tbody.innerHTML = `<tr><td class="vacio" colspan="12">No se pudieron cargar los pacientes.</td></tr>`;
+      return;
+    }
+
+    const pacientes = Array.isArray(datos) ? datos : (datos.pacientes || []);
+
+    if (pacientes.length === 0) {
+      tbody.innerHTML = `<tr><td class="vacio" colspan="12">No hay pacientes registrados aún.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = pacientes.map(p => {
+      const nombreCompleto = `${p.nombres} ${p.apellidos}`;
+
+      return `
+        <tr>
+          <td>${p.nombres}</td>
+          <td>${p.apellidos}</td>
+          <td>${p.fecha_nacimiento}</td>
+          <td>${p.genero}</td>
+          <td>${p.tipo_documento}</td>
+          <td>${p.numero_documento}</td>
+          <td>${p.telefono_contacto || "—"}</td>
+          <td>${p.eps_aseguradora || "—"}</td>
+          <td>${p.diagnostico_principal || "—"}</td>
+          <td>${p.alergias_conocidas || "—"}</td>
+          <td>${p.observaciones_adicionales || "—"}</td>
+          <td>
+            <button
+              class="boton-ver-tomas"
+              onclick="irATomas(${p.id}, '${nombreCompleto.replace(/'/g, "\\'")}')">
+              Ver tomas
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+  } catch (err) {
+    mostrarError("No se pudo conectar con el servidor.");
+    document.getElementById("tabla-pacientes").innerHTML =
+      `<tr><td class="vacio" colspan="12">Error de conexión con el backend.</td></tr>`;
+  }
+}
+
+function irATomas(pacienteId, nombrePaciente) {
+  window.location.href =
+    `listaTomas.html?pacienteId=${pacienteId}&nombre=${encodeURIComponent(nombrePaciente)}`;
+}
+
+function mostrarError(mensaje) {
+  const alerta = document.getElementById("alerta-error");
+  alerta.textContent = mensaje;
+  alerta.style.display = "block";
+}
+
+cargarPacientes();
 </script>
 
 </body>

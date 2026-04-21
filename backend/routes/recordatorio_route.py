@@ -2,8 +2,8 @@
 # Endpoint para consultar los recordatorios activos de un paciente
 
 from fastapi import APIRouter
-from models import get_connection
-
+from backend.models import get_connection
+from backend.routes.reminder_route import router
 # Creamos el router que agrupa las rutas de recordatorios
 router = APIRouter()
 

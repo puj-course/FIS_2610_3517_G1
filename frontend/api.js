@@ -1,177 +1,191 @@
 /*
-  api.js — Patrón Fachada
-  Centraliza todas las llamadas al backend en un solo lugar.
-  Ninguna página HTML hace fetch() directamente: siempre llama a api.algo().
-
-  ENDPOINTS REALES DEL BACKEND (FastAPI localhost:8000):
-    POST   /pacientes                          → registrar paciente
-    GET    /pacientes                          → lista de pacientes (retorna array directo)
-    POST   /medicamentos/                      → registrar medicamento
-    GET    /medicamentos/paciente/{id}         → medicamentos de un paciente  ← NUEVO en backend
-    POST   /recordatorios/                     → crear recordatorio
-    GET    /recordatorios/{paciente_id}        → recordatorios de un paciente
-    GET    /recordatorios/panel-dia            → panel del día (TODOS los pacientes)
-    GET    /recordatorios/panel-dia/{id}       → panel del día de un paciente
-    GET    /recordatorios/retrasados/{id}      → recordatorios retrasados
-    PATCH  /recordatorios/{id}/tomado         → marcar recordatorio como tomado
-    POST   /tomas/                             → registrar toma
-    GET    /tomas/{paciente_id}               → tomas del día de un paciente
-    GET    /historial/{paciente_id}           → historial completo de tomas
-    POST   /signin                             → iniciar sesión
-    POST   /signup                             → registrar usuario
+Patrón Fachada
+Centraliza todas las llamadas al backend en un mismo lugar.
+Las páginas HTML no hacen fetch() directo; usan el objeto api.
 */
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://127.0.0.1:8000';
+
+function procesarRespuesta(response) {
+  return response.text().then(function(texto) {
+    let body = {};
+    try {
+      body = texto ? JSON.parse(texto) : {};
+    } catch (e) {
+      body = { detail: texto };
+    }
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      body: body
+    };
+  });
+}
+
+function fetchJson(url, options) {
+  return fetch(url, options).then(procesarRespuesta);
+}
+
+function fetchConFallback(urls, options) {
+  let indice = 0;
+
+  function intentar() {
+    return fetch(urls[indice], options)
+      .then(procesarRespuesta)
+      .then(function(resultado) {
+        if (!resultado.ok && resultado.status === 404 && indice < urls.length - 1) {
+          indice += 1;
+          return intentar();
+        }
+        return resultado;
+      })
+      .catch(function(error) {
+        if (indice < urls.length - 1) {
+          indice += 1;
+          return intentar();
+        }
+        throw error;
+      });
+  }
+
+  return intentar();
+}
 
 const api = {
-
-  // ─── PACIENTES ───────────────────────────────────────────
-
+  // PACIENTES
   registrarPaciente: function(datos) {
-    return fetch(API_URL + '/pacientes', {
+    return fetchJson(API_URL + '/pacientes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
-    }).then(function(r) {
-      return r.json().then(function(b) { return { ok: r.ok, body: b }; });
     });
   },
 
-  // Devuelve: array directo de pacientes (cada uno con campo "id")
   obtenerPacientes: function() {
-    return fetch(API_URL + '/pacientes')
-      .then(function(r) {
-        return r.json().then(function(b) { return { ok: r.ok, body: b }; });
-      });
+    return fetchJson(API_URL + '/pacientes');
   },
 
-  // ─── MEDICAMENTOS ─────────────────────────────────────────
-
+  // MEDICAMENTOS
   registrarMedicamento: function(datos) {
-    return fetch(API_URL + '/medicamentos/', {
+    return fetchJson(API_URL + '/medicamentos/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
-    }).then(function(r) {
-      return r.json().then(function(b) { return { ok: r.ok, body: b }; });
     });
   },
 
-  // GET /medicamentos/paciente/{paciente_id}
-  // IMPORTANTE: este endpoint debe existir en tu backend.
-  // Si aún no lo tienes, agrega esta función a medication_route.py (ver nota al pie).
   obtenerMedicamentos: function(pacienteId) {
-    return fetch(API_URL + '/medicamentos/paciente/' + pacienteId)
-      .then(function(r) {
-        return r.json().then(function(b) { return { ok: r.ok, body: b }; });
-      });
+    return fetchJson(API_URL + '/medicamentos/paciente/' + pacienteId);
   },
 
-  // ─── RECORDATORIOS ────────────────────────────────────────
-
+  // RECORDATORIOS
   crearRecordatorio: function(datos) {
-    return fetch(API_URL + '/recordatorios/', {
+    return fetchJson(API_URL + '/recordatorios/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
-    }).then(function(r) {
-      return r.json().then(function(b) { return { ok: r.ok, body: b }; });
     });
   },
 
   obtenerRecordatorios: function(pacienteId) {
-    return fetch(API_URL + '/recordatorios/' + pacienteId)
-      .then(function(r) {
-        return r.json().then(function(b) { return { ok: r.ok, body: b }; });
-      });
+    return fetchJson(API_URL + '/recordatorios/' + pacienteId);
   },
 
-  // Panel del día de TODOS los pacientes → GET /recordatorios/panel-dia
-  obtenerPanelDia: function() {
-    return fetch(API_URL + '/recordatorios/panel-dia')
-      .then(function(r) {
-        return r.json().then(function(b) { return { ok: r.ok, body: b }; });
-      });
+  obtenerPanelDia: function(pacienteId, fecha) {
+    if (pacienteId) {
+      const query = fecha ? ('?fecha=' + fecha) : '';
+      return fetchConFallback([
+        API_URL + '/recordatorios/panel-dia/' + pacienteId,
+        API_URL + '/tomas/dia/' + pacienteId + query,
+        API_URL + '/tomas/' + pacienteId + query
+      ]);
+    }
+
+    return fetchJson(API_URL + '/recordatorios/panel-dia');
   },
 
-  // Panel del día de UN paciente → GET /recordatorios/panel-dia/{paciente_id}
   obtenerPanelDiaPaciente: function(pacienteId) {
-    return fetch(API_URL + '/recordatorios/panel-dia/' + pacienteId)
-      .then(function(r) {
-        return r.json().then(function(b) { return { ok: r.ok, body: b }; });
-      });
+    return fetchConFallback([
+      API_URL + '/recordatorios/panel-dia/' + pacienteId,
+      API_URL + '/tomas/dia/' + pacienteId,
+      API_URL + '/tomas/' + pacienteId
+    ]);
   },
 
   obtenerRecordatoriosRetrasados: function(pacienteId) {
-    return fetch(API_URL + '/recordatorios/retrasados/' + pacienteId)
-      .then(function(r) {
-        return r.json().then(function(b) { return { ok: r.ok, body: b }; });
-      });
+    return fetchJson(API_URL + '/recordatorios/retrasados/' + pacienteId);
   },
 
   marcarRecordatorioTomado: function(recordatorioId) {
-    return fetch(API_URL + '/recordatorios/' + recordatorioId + '/tomado', {
+    return fetchJson(API_URL + '/recordatorios/' + recordatorioId + '/tomado', {
       method: 'PATCH'
-    }).then(function(r) {
-      return r.json().then(function(b) { return { ok: r.ok, body: b }; });
     });
   },
 
-  // ─── TOMAS ────────────────────────────────────────────────
-
-  // POST /tomas/ — requiere: paciente_id, medicamento_id, recordatorio_id,
-  //                           fecha_programada, fecha_hora_toma, estado, observaciones
+  // TOMAS
   registrarToma: function(datos) {
-    return fetch(API_URL + '/tomas/', {
+    return fetchJson(API_URL + '/tomas/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
-    }).then(function(r) {
-      return r.json().then(function(b) { return { ok: r.ok, body: b }; });
     });
   },
 
-  // GET /tomas/{paciente_id}?fecha=YYYY-MM-DD
+  obtenerTomas: function(pacienteId, fecha) {
+    if (!pacienteId) {
+      return Promise.resolve({
+        ok: false,
+        status: 400,
+        body: { detail: 'pacienteId es obligatorio' }
+      });
+    }
+
+    const query = fecha ? ('?fecha=' + fecha) : '';
+
+    return fetchConFallback([
+      API_URL + '/tomas/dia/' + pacienteId + query,
+      API_URL + '/tomas/' + pacienteId + query
+    ]);
+  },
+
   obtenerTomasDelDia: function(pacienteId, fecha) {
-    var url = API_URL + '/tomas/' + pacienteId;
-    if (fecha) url += '?fecha=' + fecha;
-    return fetch(url)
-      .then(function(r) {
-        return r.json().then(function(b) { return { ok: r.ok, body: b }; });
-      });
+    return this.obtenerTomas(pacienteId, fecha);
   },
 
-  // ─── HISTORIAL ────────────────────────────────────────────
-
-  // GET /historial/{paciente_id}
-  // Devuelve: { historial: [...], resumen: { total, a_tiempo, tarde, omitidas, porcentaje_cumplimiento } }
+  // HISTORIAL
   obtenerHistorial: function(pacienteId) {
-    return fetch(API_URL + '/historial/' + pacienteId)
-      .then(function(r) {
-        return r.json().then(function(b) { return { ok: r.ok, body: b }; });
+    if (!pacienteId) {
+      return Promise.resolve({
+        ok: false,
+        status: 400,
+        body: { detail: 'pacienteId es obligatorio' }
       });
+    }
+
+    return fetchConFallback([
+      API_URL + '/tomas/historial/' + pacienteId,
+      API_URL + '/historial/' + pacienteId
+    ]);
   },
 
-  // ─── AUTH ─────────────────────────────────────────────────
-
+  // AUTH
   iniciarSesion: function(username, password) {
-    return fetch(API_URL + '/signin', {
+    return fetchJson(API_URL + '/signin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username, password: password })
-    }).then(function(r) {
-      return r.json().then(function(b) { return { ok: r.ok, body: b }; });
+      body: JSON.stringify({
+        username: username,
+        password: password
+      })
     });
   },
 
   registrarUsuario: function(datos) {
-    return fetch(API_URL + '/signup', {
+    return fetchJson(API_URL + '/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
-    }).then(function(r) {
-      return r.json().then(function(b) { return { ok: r.ok, body: b }; });
     });
   }
-
 };

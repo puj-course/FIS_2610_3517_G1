@@ -22,6 +22,9 @@ def obtener_paciente_id_de_medicamento(medicamento_id: int, conn):
     fila = cursor.fetchone()
     return fila["paciente_id"] if fila else None
 
+    hora = data.get("hora_recordatorio") or data.get("hora") or data.get("horario")
+    if not hora:
+        return "Favor ingresar la hora del recordatorio"
 
 @router.post("/")
 def crear_recordatorio(data: dict):
@@ -32,8 +35,6 @@ def crear_recordatorio(data: dict):
 
     conn = get_connection()
     try:
-        medicamento_id = int(data["medicamento_id"])
-
         if not verificar_medicamento_existe(medicamento_id, conn):
             raise HTTPException(status_code=404, detail="El medicamento no existe")
 
@@ -106,6 +107,11 @@ def obtener_panel_dia():
 
     return {"panel": panel}
 
+        if not paciente:
+            return {
+                "status": 404,
+                "recordatorios": []
+            }
 
 @router.get("/{paciente_id}")
 def listar_recordatorios(paciente_id: int):

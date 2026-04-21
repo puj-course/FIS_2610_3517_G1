@@ -158,21 +158,6 @@ def listar_recordatorios(paciente_id: int):
     conn.row_factory = sqlite3.Row
 
     try:
-        cursor = conn.cursor()
-
-        # 🔴 VALIDACIÓN QUE TE FALTABA
-        cursor.execute(
-            "SELECT id FROM pacientes WHERE id = ?",
-            (paciente_id,)
-        )
-        paciente = cursor.fetchone()
-
-        if not paciente:
-            raise HTTPException(
-                status_code=404,
-                detail="Paciente no encontrado"
-            )
-
         filas = get_recordatorios_por_paciente(paciente_id)
 
         recordatorios = []

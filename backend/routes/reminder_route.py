@@ -1,147 +1,111 @@
-from pathlib import Path
-import sqlite3
-from fastapi import APIRouter, HTTPException, status
+﻿from fastapi import APIRouter, HTTPException
+from backend.models import (
+    get_connection,
+    insertar_recordatorio,
+    get_recordatorios_por_paciente,
+    get_panel_dia_por_paciente
+)
+from backend.validaciones import validar_recordatorio, verificar_medicamento_existe
+from datetime import datetime, timedelta
+
+try:
+    from backend.alertas.bootstrap import publisher
+except Exception:
+    publisher = None
 
 router = APIRouter(prefix="/recordatorios", tags=["Recordatorios"])
-DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
 
 
-def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def verificar_medicamento_existe(medicamento_id: int, conn) -> bool:
+def obtener_paciente_id_de_medicamento(medicamento_id: int, conn):
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id FROM medicamentos WHERE id = ?",
-        (medicamento_id,)
-    )
-    return cursor.fetchone() is not None
-
-
-def validar_recordatorio(data: dict):
-    if not data.get("medicamento_id"):
-        return "Favor ingresar el medicamento del recordatorio"
+    cursor.execute("SELECT paciente_id FROM medicamentos WHERE id = ?", (medicamento_id,))
+    fila = cursor.fetchone()
+    return fila["paciente_id"] if fila else None
 
     hora = data.get("hora_recordatorio") or data.get("hora") or data.get("horario")
     if not hora:
         return "Favor ingresar la hora del recordatorio"
 
-    return None
-
-
-@router.post("/", status_code=status.HTTP_200_OK)
+@router.post("/")
 def crear_recordatorio(data: dict):
-    error = validar_recordatorio(data)
-    if error:
-        raise HTTPException(status_code=400, detail=error)
-
-    medicamento_id = data.get("medicamento_id")
-    hora_recordatorio = (
-        data.get("hora_recordatorio")
-        or data.get("hora")
-        or data.get("horario")
-    )
-    fecha_inicio = data.get("fecha_inicio")
-    activo = data.get("activo", 1)
-    observaciones = data.get("observaciones")
+    errores = validar_recordatorio(data)
+    if errores:
+        detalle = "; ".join(errores) if isinstance(errores, list) else str(errores)
+        raise HTTPException(status_code=400, detail=detalle)
 
     conn = get_connection()
-    cursor = conn.cursor()
-
     try:
         if not verificar_medicamento_existe(medicamento_id, conn):
-            raise HTTPException(
-                status_code=404,
-                detail="El medicamento no existe"
-            )
+            raise HTTPException(status_code=404, detail="El medicamento no existe")
 
-        try:
-            cursor.execute(
-                """
-                INSERT INTO recordatorios (
-                    medicamento_id,
-                    hora_recordatorio,
-                    fecha_inicio,
-                    activo,
-                    observaciones
-                )
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    medicamento_id,
-                    hora_recordatorio,
-                    fecha_inicio,
-                    activo,
-                    observaciones
-                )
-            )
-        except sqlite3.OperationalError:
-            try:
-                cursor.execute(
-                    """
-                    INSERT INTO recordatorios (
-                        medicamento_id,
-                        hora,
-                        fecha_inicio,
-                        activo,
-                        observaciones
-                    )
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (
-                        medicamento_id,
-                        hora_recordatorio,
-                        fecha_inicio,
-                        activo,
-                        observaciones
-                    )
-                )
-            except sqlite3.OperationalError:
-                cursor.execute(
-                    """
-                    INSERT INTO recordatorios (
-                        medicamento_id,
-                        horario,
-                        fecha_inicio,
-                        activo,
-                        observaciones
-                    )
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (
-                        medicamento_id,
-                        hora_recordatorio,
-                        fecha_inicio,
-                        activo,
-                        observaciones
-                    )
-                )
+        nuevo_id = insertar_recordatorio(
+            medicamento_id=medicamento_id,
+            hora_recordatorio=data["hora_recordatorio"].strip(),
+            fecha_inicio=data["fecha_inicio"].strip(),
+            activo=int(data.get("activo", 1)),
+            observaciones=data.get("observaciones", "").strip()
+        )
 
-        conn.commit()
+        paciente_id = obtener_paciente_id_de_medicamento(medicamento_id, conn)
 
-        return {
-            "status": 200,
-            "message": "Recordatorio creado exitosamente"
-        }
+        if publisher:
+            publisher.notify({
+                "type": "reminder_created",
+                "recordatorio_id": nuevo_id,
+                "medicamento_id": medicamento_id,
+                "paciente_id": paciente_id,
+                "hora_recordatorio": data["hora_recordatorio"].strip(),
+                "fecha_inicio": data["fecha_inicio"].strip(),
+                "activo": int(data.get("activo", 1)),
+                "observaciones": data.get("observaciones", "").strip()
+            })
 
+        return {"mensaje": "Recordatorio creado correctamente", "recordatorio_id": nuevo_id}
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="medicamento_id debe ser un entero válido")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
     finally:
         conn.close()
 
 
-@router.get("/{paciente_id}")
-def consultar_recordatorios(paciente_id: int):
+@router.get("/panel-dia")
+def obtener_panel_dia():
+    """
+    Devuelve los medicamentos programados para hoy de todos los pacientes.
+    """
     conn = get_connection()
     cursor = conn.cursor()
+    cursor.execute("SELECT id, nombres, apellidos FROM pacientes")
+    pacientes = cursor.fetchall()
+    conn.close()
 
-    try:
-        cursor.execute(
-            "SELECT id FROM pacientes WHERE id = ?",
-            (paciente_id,)
-        )
-        paciente = cursor.fetchone()
+    panel = []
+    for p in pacientes:
+        filas = get_panel_dia_por_paciente(p["id"])
+        medicamentos = []
+        for f in filas:
+            f = dict(f)
+            medicamentos.append({
+                "recordatorio_id": f.get("recordatorio_id"),
+                "medicamento_id":  f.get("medicamento_id"),
+                "medicamento":     f.get("medicamento_nombre"),
+                "dosis":           f.get("dosis"),
+                "hora":            f.get("hora_recordatorio"),
+                "tomado":          bool(f.get("tomada", 0))
+            })
+        if medicamentos:
+            panel.append({
+                "paciente_id": p["id"],
+                "nombres":     p["nombres"],
+                "apellidos":   p["apellidos"],
+                "medicamentos": medicamentos
+            })
+
+    return {"panel": panel}
 
         if not paciente:
             return {
@@ -149,40 +113,22 @@ def consultar_recordatorios(paciente_id: int):
                 "recordatorios": []
             }
 
-        cursor.execute(
-            """
-            SELECT
-                r.*,
-                m.nombre AS medicamento_nombre
-            FROM recordatorios r
-            JOIN medicamentos m ON r.medicamento_id = m.id
-            WHERE m.paciente_id = ?
-            """,
-            (paciente_id,)
-        )
-        filas = cursor.fetchall()
-
-        resultado = []
+@router.get("/{paciente_id}")
+def listar_recordatorios(paciente_id: int):
+    try:
+        filas = get_recordatorios_por_paciente(paciente_id)
+        recordatorios = []
         for fila in filas:
-            r = dict(fila)
-            resultado.append({
-                "id": r.get("id"),
-                "medicamento_id": r.get("medicamento_id"),
-                "medicamento_nombre": r.get("medicamento_nombre"),
-                "hora_recordatorio": (
-                    r.get("hora_recordatorio")
-                    or r.get("hora")
-                    or r.get("horario")
-                ),
-                "fecha_inicio": r.get("fecha_inicio"),
-                "activo": r.get("activo", 1),
-                "observaciones": r.get("observaciones")
+            recordatorios.append({
+                "id": fila["id"],
+                "medicamento_id": fila["medicamento_id"],
+                "medicamento_nombre": fila["medicamento_nombre"],
+                "dosis": fila["dosis"],
+                "hora_recordatorio": fila["hora_recordatorio"],
+                "fecha_inicio": fila["fecha_inicio"],
+                "activo": fila["activo"],
+                "observaciones": fila["observaciones"]
             })
-
-        return {
-            "status": 200,
-            "recordatorios": resultado
-        }
-
-    finally:
-        conn.close()
+        return {"recordatorios": recordatorios}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener recordatorios: {e}")

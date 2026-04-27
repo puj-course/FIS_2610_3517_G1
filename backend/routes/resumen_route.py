@@ -8,6 +8,17 @@ def obtener_resumen(paciente_id: int):
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        pass
+        # Verificar que el paciente existe
+        cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Paciente no encontrado")
+
+        # Medicamentos activos del paciente
+        cursor.execute("""
+            SELECT COUNT(*) as total
+            FROM medicamentos
+            WHERE paciente_id = ?
+        """, (paciente_id,))
+        total_medicamentos = cursor.fetchone()["total"]
     finally:
         conn.close()

@@ -24,6 +24,7 @@ def obtener_resumen(paciente_id: int):
         total_medicamentos = cursor.fetchone()["total"]
 
         # Tomas del día
+        hoy = str(date.today())
         cursor.execute("""
             SELECT * FROM tomas
             WHERE paciente_id = ? AND fecha = ?
@@ -32,9 +33,9 @@ def obtener_resumen(paciente_id: int):
 
         total_tomas_hoy = len(tomas_hoy)
         tomas_registradas = sum(1 for t in tomas_hoy if t["estado"] == "tomado")
-    
-    hora_actual = datetime.now()
 
+        # Tomas atrasadas
+        hora_actual = datetime.now()
         tomas_atrasadas = 0
         for t in tomas_hoy:
             if t["estado"] != "tomado":
@@ -52,7 +53,8 @@ def obtener_resumen(paciente_id: int):
                     pass
 
         porcentaje = round((tomas_registradas / total_tomas_hoy) * 100, 1) if total_tomas_hoy > 0 else 0
-    return {
+
+        return {
             "paciente_id": paciente_id,
             "total_medicamentos_activos": total_medicamentos,
             "tomas_registradas_hoy": tomas_registradas,

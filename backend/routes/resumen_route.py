@@ -20,5 +20,17 @@ def obtener_resumen(paciente_id: int):
             WHERE paciente_id = ?
         """, (paciente_id,))
         total_medicamentos = cursor.fetchone()["total"]
+
+        from datetime import date
+        hoy = str(date.today())
+        # Tomas del día
+        cursor.execute("""
+            SELECT * FROM tomas
+            WHERE paciente_id = ? AND fecha = ?
+        """, (paciente_id, hoy))
+        tomas_hoy = cursor.fetchall()
+
+        total_tomas_hoy = len(tomas_hoy)
+        tomas_registradas = sum(1 for t in tomas_hoy if t["estado"] == "tomado")
     finally:
         conn.close()

@@ -52,6 +52,13 @@ def obtener_resumen(paciente_id: int):
                     pass
 
         porcentaje = round((tomas_registradas / total_tomas_hoy) * 100, 1) if total_tomas_hoy > 0 else 0
-    
+    return {
+            "paciente_id": paciente_id,
+            "total_medicamentos_activos": total_medicamentos,
+            "tomas_registradas_hoy": tomas_registradas,
+            "tomas_atrasadas": tomas_atrasadas,
+            "total_tomas_esperadas_hoy": total_tomas_hoy,
+            "porcentaje_cumplimiento": porcentaje
+        }
     finally:
         conn.close()

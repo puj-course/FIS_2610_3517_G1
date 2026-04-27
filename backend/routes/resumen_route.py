@@ -32,5 +32,26 @@ def obtener_resumen(paciente_id: int):
 
         total_tomas_hoy = len(tomas_hoy)
         tomas_registradas = sum(1 for t in tomas_hoy if t["estado"] == "tomado")
+    
+    hora_actual = datetime.now()
+
+        tomas_atrasadas = 0
+        for t in tomas_hoy:
+            if t["estado"] != "tomado":
+                try:
+                    hora_prog = datetime.strptime(t["hora_programada"], "%H:%M")
+                    hora_prog = hora_actual.replace(
+                        hour=hora_prog.hour,
+                        minute=hora_prog.minute,
+                        second=0, microsecond=0
+                    )
+                    diferencia = (hora_actual - hora_prog).total_seconds() / 60
+                    if diferencia > 60:
+                        tomas_atrasadas += 1
+                except ValueError:
+                    pass
+
+        porcentaje = round((tomas_registradas / total_tomas_hoy) * 100, 1) if total_tomas_hoy > 0 else 0
+    
     finally:
         conn.close()

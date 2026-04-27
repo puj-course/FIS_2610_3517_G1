@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from datetime import date, datetime
 from backend.models import get_connection
 
 router = APIRouter()
@@ -8,6 +9,7 @@ def obtener_resumen(paciente_id: int):
     conn = get_connection()
     try:
         cursor = conn.cursor()
+
         # Verificar que el paciente existe
         cursor.execute("SELECT id FROM pacientes WHERE id = ?", (paciente_id,))
         if not cursor.fetchone():
@@ -21,8 +23,6 @@ def obtener_resumen(paciente_id: int):
         """, (paciente_id,))
         total_medicamentos = cursor.fetchone()["total"]
 
-        from datetime import date
-        hoy = str(date.today())
         # Tomas del día
         cursor.execute("""
             SELECT * FROM tomas

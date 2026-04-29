@@ -92,3 +92,32 @@ def obtener_pacientes():
         })
 
     return resultado
+
+@router.get("/pacientes/{paciente_id}")
+def obtener_paciente(paciente_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM pacientes WHERE id = ?", (paciente_id,))
+    p = cursor.fetchone()
+    conn.close()
+
+    if not p:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Paciente no encontrado"
+        )
+
+    return {
+        "id": p["id"],
+        "nombres": p["nombres"],
+        "apellidos": p["apellidos"],
+        "fecha_nacimiento": p["fecha_nacimiento"],
+        "genero": p["genero"],
+        "tipo_documento": p["tipo_documento"],
+        "numero_documento": p["numero_documento"],
+        "telefono_contacto": p["telefono_contacto"],
+        "eps_aseguradora": p["eps_aseguradora"],
+        "diagnostico_principal": p["diagnostico_principal"],
+        "alergias_conocidas": p["alergias_conocidas"],
+        "observaciones_adicionales": p["observaciones_adicionales"]
+    }

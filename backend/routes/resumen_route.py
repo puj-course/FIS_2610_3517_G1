@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from datetime import datetime
 from backend.models import get_connection
 
-router = APIRouter()
+router = APIRouter(prefix="/resumen", tags=["Resumen Paciente"])
 
 
 @router.get("/resumen/{paciente_id}")

@@ -2,7 +2,7 @@ import sys
 sys.path.insert(0, "./backend")
 
 import pytest
-from app import app
+from backend.main import app
 
 @pytest.fixture
 def cliente():

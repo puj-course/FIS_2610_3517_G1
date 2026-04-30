@@ -1,4 +1,3 @@
-import sqlite3
 from backend.models import get_connection
 
 
@@ -6,36 +5,61 @@ def test_crear_recordatorio():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Insertar paciente de prueba (si no existe)
+    # PACIENTE
     cursor.execute("""
-        INSERT INTO pacientes (nombres, apellidos)
-        VALUES ('Test', 'Paciente')
-    """)
+        INSERT INTO pacientes (
+            nombres, apellidos, fecha_nacimiento, genero,
+            tipo_documento, numero_documento, telefono_contacto
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        "Test",
+        "Paciente",
+        "1990-01-01",
+        "F",
+        "CC",
+        "123456",
+        "3001234567"
+    ))
+
     paciente_id = cursor.lastrowid
 
-    # Insertar medicamento de prueba
+    # MEDICAMENTO
     cursor.execute("""
         INSERT INTO medicamentos 
         (nombre, dosis, frecuencia, horario, fecha_inicio, paciente_id)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, ('Aspirina', '500mg', 'diaria', 'mañana', '2024-01-01', paciente_id))
-    
+    """, (
+        'Aspirina',
+        '500mg',
+        'diaria',
+        'mañana',
+        '2024-01-01',
+        paciente_id
+    ))
+
     medicamento_id = cursor.lastrowid
 
-    # Insertar recordatorio con estructura CORRECTA
+    #RECORDATORIO
     cursor.execute("""
         INSERT INTO recordatorios 
         (medicamento_id, hora_recordatorio, fecha_inicio, activo, observaciones)
         VALUES (?, ?, ?, ?, ?)
-    """, (medicamento_id, '08:00', '2024-01-01', 1, 'Tomar con comida'))
+    """, (
+        medicamento_id,
+        '08:00',
+        '2024-01-01',
+        1,
+        'Tomar con comida'
+    ))
 
     conn.commit()
 
-    # Verificar que se insertó correctamente
+    # VALIDACIÓN
     cursor.execute("""
         SELECT * FROM recordatorios WHERE medicamento_id = ?
     """, (medicamento_id,))
-    
+
     recordatorio = cursor.fetchone()
 
     conn.close()

@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
 from backend.models import get_connection
+from backend.auth import hash_password
 
 
 @pytest.fixture
@@ -23,7 +24,7 @@ def cliente():
     """, (
         "Admin Test",
         "admin@medtrack.com",
-        "admin123",
+        hash_password("admin123"),
         "administrador"
     ))
 
@@ -34,9 +35,9 @@ def cliente():
 
 
 def test_login_exitoso(cliente):
-    respuesta = cliente.post("/auth/login", json={
-        "correo": "admin@medtrack.com",
-        "contrasena": "admin123"
+    respuesta = cliente.post("/signin", json={
+        "username": "admin@medtrack.com",
+        "password": "admin123"
     })
     datos = respuesta.json()
     assert respuesta.status_code == 200
@@ -44,28 +45,28 @@ def test_login_exitoso(cliente):
 
 
 def test_login_contrasena_incorrecta(cliente):
-    respuesta = cliente.post("/auth/login", json={
-        "correo": "admin@medtrack.com",
-        "contrasena": "wrongpassword"
+    respuesta = cliente.post("/signin", json={
+        "username": "admin@medtrack.com",
+        "password": "wrongpassword"
     })
     assert respuesta.status_code == 401
 
 
 def test_login_usuario_no_existe(cliente):
-    respuesta = cliente.post("/auth/login", json={
-        "correo": "noexiste@medtrack.com",
-        "contrasena": "admin123"
+    respuesta = cliente.post("/signin", json={
+        "username": "noexiste@medtrack.com",
+        "password": "admin123"
     })
     assert respuesta.status_code == 401
 
 
 def test_login_campos_vacios(cliente):
-    respuesta = cliente.post("/auth/login", json={})
-    assert respuesta.status_code == 400
+    respuesta = cliente.post("/signin", json={})
+    assert respuesta.status_code == 422  # FastAPI valida esquema
 
 
 def test_login_sin_contrasena(cliente):
-    respuesta = cliente.post("/auth/login", json={
-        "correo": "admin@medtrack.com"
+    respuesta = cliente.post("/signin", json={
+        "username": "admin@medtrack.com"
     })
-    assert respuesta.status_code == 400
+    assert respuesta.status_code == 422

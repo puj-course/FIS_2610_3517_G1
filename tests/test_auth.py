@@ -37,7 +37,7 @@ def cliente():
 def test_login_exitoso(cliente):
     respuesta = cliente.post("/signin", json={
         "username": "admin@medtrack.com",
-        "password": "admin123"
+        "password": "admin123" # NOSONAR
     })
     datos = respuesta.json()
     assert respuesta.status_code == 200

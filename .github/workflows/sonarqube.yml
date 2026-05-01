@@ -1,0 +1,53 @@
+name: SonarQube Analysis
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - features-vanesa
+      - feature/pipelines
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  sonarqube:
+    name: Analisis de calidad con SonarQube
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
+          pip install pytest pytest-cov httpx
+
+      - name: Ejecutar pruebas con cobertura
+        run: |
+          PYTHONPATH=. python -m pytest -v tests \
+            --cov=backend \
+            --cov-report=xml:coverage.xml
+
+      - name: Verificar reporte de cobertura
+        run: |
+          ls -la coverage.xml
+          head -n 20 coverage.xml
+
+      - name: Ejecutar analisis SonarQube
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

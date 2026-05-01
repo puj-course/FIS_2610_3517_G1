@@ -121,7 +121,6 @@ def obtener_pacientes():
         """)
 
         pacientes = cursor.fetchall()
-
         resultado = []
 
         for p in pacientes:
@@ -153,8 +152,6 @@ def obtener_pacientes():
                 "diagnostico_principal": p["diagnostico_principal"],
                 "alergias_conocidas": p["alergias_conocidas"],
                 "observaciones_adicionales": p["observaciones_adicionales"],
-
-                # Campos nuevos para mostrar alertas visuales en frontend
                 "tiene_tomas_atrasadas": tiene_tomas_atrasadas,
                 "tiene_tomas_omitidas": tiene_tomas_omitidas,
                 "total_tomas_atrasadas": total_tomas_atrasadas,
@@ -169,6 +166,40 @@ def obtener_pacientes():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al obtener pacientes: {str(e)}"
         )
+
+    finally:
+        conn.close()
+
+
+@router.get("/pacientes/{paciente_id}")
+def obtener_paciente(paciente_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT * FROM pacientes WHERE id = ?", (paciente_id,))
+        p = cursor.fetchone()
+
+        if not p:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Paciente no encontrado"
+            )
+
+        return {
+            "id": p["id"],
+            "nombres": p["nombres"],
+            "apellidos": p["apellidos"],
+            "fecha_nacimiento": p["fecha_nacimiento"],
+            "genero": p["genero"],
+            "tipo_documento": p["tipo_documento"],
+            "numero_documento": p["numero_documento"],
+            "telefono_contacto": p["telefono_contacto"],
+            "eps_aseguradora": p["eps_aseguradora"],
+            "diagnostico_principal": p["diagnostico_principal"],
+            "alergias_conocidas": p["alergias_conocidas"],
+            "observaciones_adicionales": p["observaciones_adicionales"]
+        }
 
     finally:
         conn.close()

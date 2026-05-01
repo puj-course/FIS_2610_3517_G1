@@ -295,7 +295,7 @@
     contenedor.innerHTML = `<div class="estado">Cargando medicamentos...</div>`;
 
     try {
-      const respuesta = await fetch(BASE_URL + '/medicamentos/' + pacienteId);
+      const respuesta = await fetch(BASE_URL + '/medicamentos/paciente/' + pacienteId);
 
       // Si el paciente no existe retorna error
       if (respuesta.status === 404) {

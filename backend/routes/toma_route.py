@@ -1,8 +1,7 @@
-from fastapi import APIRouter
+﻿from fastapi import APIRouter
 from datetime import date
 from backend.toma_repository import TomaRepository
 from backend.models import get_connection
-
 from backend.decorators.historial import (
     HistorialTomas,
     CumplimientoDecorator,
@@ -12,12 +11,8 @@ from backend.decorators.historial import (
 router = APIRouter(prefix="/tomas", tags=["Tomas"])
 repositorio = TomaRepository()
 
-
 @router.post("/", status_code=201)
 def registrar_toma(datos: dict):
-    """
-    Registra una nueva toma de medicamento.
-    """
     toma_id = repositorio.registrar_toma(
         medicamento_id=datos.get("medicamento_id"),
         paciente_id=datos.get("paciente_id"),
@@ -27,54 +22,37 @@ def registrar_toma(datos: dict):
         estado=datos.get("estado", "pendiente"),
         observaciones=datos.get("observaciones")
     )
-
     return {
         "message": "Toma registrada exitosamente",
         "toma_id": toma_id
     }
 
-
 @router.get("/dia/{paciente_id}")
 def obtener_tomas(paciente_id: int, fecha: str = None):
-    """
-    Retorna las tomas del día de un paciente.
-    """
     if not fecha:
         fecha = str(date.today())
-
     tomas = repositorio.obtener_tomas_del_dia(paciente_id, fecha)
-
-    return {
-        "tomas": [dict(t) for t in tomas]
-    }
-
+    return {"tomas": [dict(t) for t in tomas]}
 
 @router.get("/historial/{paciente_id}")
 def obtener_historial(paciente_id: int):
-    """
-    Retorna el historial completo de tomas de un paciente
-    usando patrón Decorator (cumplimiento + alertas)
-    """
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute("""
         SELECT 
             t.id,
             t.paciente_id,
             t.medicamento_id,
             m.nombre AS medicamento_nombre,
-            t.fecha,
-            t.hora_programada,
-            t.hora_tomada,
+            t.fecha_programada AS fecha,
+            t.fecha_hora_toma AS hora_tomada,
             t.estado,
             t.observaciones
-        FROM tomas t
+        FROM tomas_medicamento t
         INNER JOIN medicamentos m ON t.medicamento_id = m.id
         WHERE t.paciente_id = ?
-        ORDER BY t.fecha DESC
+        ORDER BY t.fecha_programada DESC
     """, (paciente_id,))
-
     filas = cursor.fetchall()
     conn.close()
 
@@ -83,16 +61,11 @@ def obtener_historial(paciente_id: int):
     if not historial:
         return {
             "historial": [],
-            "cumplimiento": {
-                "total_tomas": 0,
-                "tomas_realizadas": 0,
-                "porcentaje": 0
-            },
+            "cumplimiento": {"total_tomas": 0, "tomas_realizadas": 0, "porcentaje": 0},
             "alertas": []
         }
 
     historial_base = HistorialTomas(historial)
     historial_decorado = CumplimientoDecorator(historial_base)
     historial_decorado = AlertasDecorator(historial_decorado)
-
     return historial_decorado.obtener_datos()

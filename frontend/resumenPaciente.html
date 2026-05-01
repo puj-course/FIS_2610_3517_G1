@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedTrack — Resumen del Paciente</title>
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --color-menta:        #2DD4BF;
+      --color-menta-oscuro: #0F9D8A;
+      --color-fondo:        #0F1B2D;
+      --color-campo:        #1E2D3D;
+      --color-tarjeta:      #162030;
+      --color-borde:        #243447;
+      --color-texto:        #E2EAF4;
+      --color-texto-suave:  #7A95B0;
+      --color-error:        #F4726A;
+      --color-exito:        #4ADE80;
+      --color-advertencia:  #FBBF24;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--color-fondo);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--color-texto);
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 80% 10%, rgba(45,212,191,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(45,212,191,.07) 0%, transparent 60%);
+    }
+
+    /* ── Encabezado ─────────────────────────────────────────── */
+    .encabezado-pagina {
+      max-width: 1100px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .marca {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    .marca-icono {
+      width: 36px; height: 36px;
+      background: var(--color-menta);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .marca-icono svg { width: 20px; height: 20px; color: var(--color-fondo); }
+    .marca-nombre {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+    }
+
+    .boton-volver {
+      background: transparent;
+      border: 1.5px solid var(--color-borde);
+      color: var(--color-texto-suave);
+      border-radius: 10px;
+      padding: .5rem 1.2rem;
+      font-size: .88rem;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      transition: border-color .2s, color .2s;
+    }
+    .boton-volver:hover {
+      border-color: var(--color-menta);
+      color: var(--color-menta);
+    }
+
+    /* ── Tarjetas ───────────────────────────────────────────── */
+    .tarjeta {
+      background: var(--color-tarjeta);
+      border: 1px solid var(--color-borde);
+      border-radius: 20px;
+      max-width: 1100px;
+      margin: 0 auto 1.5rem;
+      padding: 2rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      animation: aparecer .45s ease both;
+    }
+
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Perfil del paciente ────────────────────────────────── */
+    .perfil-header {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+    }
+
+    .avatar {
+      width: 64px; height: 64px;
+      background: rgba(45,212,191,.15);
+      border: 2px solid var(--color-menta);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .avatar svg { width: 30px; height: 30px; color: var(--color-menta); }
+
+    .perfil-nombre {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem;
+      margin: 0;
+      line-height: 1.2;
+    }
+    .perfil-meta {
+      color: var(--color-texto-suave);
+      font-size: .85rem;
+      margin-top: .25rem;
+    }
+
+    /* ── Grid de datos del paciente ─────────────────────────── */
+    .grid-datos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .dato-item label {
+      display: block;
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--color-texto-suave);
+      margin-bottom: .2rem;
+    }
+    .dato-item span {
+      font-size: .9rem;
+      font-weight: 500;
+    }
+
+    /* ── Métricas ───────────────────────────────────────────── */
+    .titulo-seccion {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.15rem;
+      margin-bottom: 1.25rem;
+      color: var(--color-texto);
+    }
+
+    .grid-metricas {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .metrica {
+      background: var(--color-campo);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 1.2rem 1rem;
+      text-align: center;
+    }
+
+    .metrica-valor {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
+      line-height: 1;
+      margin-bottom: .3rem;
+    }
+
+    .metrica-valor.verde  { color: var(--color-exito); }
+    .metrica-valor.menta  { color: var(--color-menta); }
+    .metrica-valor.amarillo { color: var(--color-advertencia); }
+    .metrica-valor.rojo   { color: var(--color-error); }
+
+    .metrica-etiqueta {
+      font-size: .78rem;
+      color: var(--color-texto-suave);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* ── Barra de cumplimiento ──────────────────────────────── */
+    .barra-contenedor {
+      margin-top: 1.2rem;
+    }
+    .barra-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .82rem;
+      color: var(--color-texto-suave);
+      margin-bottom: .4rem;
+    }
+    .barra-progreso {
+      height: 8px;
+      background: var(--color-campo);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .barra-relleno {
+      height: 100%;
+      border-radius: 99px;
+      background: var(--color-menta);
+      transition: width .6s ease;
+    }
+
+    /* ── Alertas ────────────────────────────────────────────── */
+    .lista-alertas { list-style: none; padding: 0; margin: 0; }
+
+    .alerta-item {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      padding: .9rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--color-borde);
+      margin-bottom: .6rem;
+      background: var(--color-campo);
+    }
+
+    .alerta-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: .35rem;
+    }
+    .alerta-dot.alta   { background: var(--color-error); }
+    .alerta-dot.media  { background: var(--color-advertencia); }
+    .alerta-dot.baja   { background: var(--color-menta); }
+
+    .alerta-mensaje { font-size: .88rem; line-height: 1.4; }
+    .alerta-fecha   { font-size: .75rem; color: var(--color-texto-suave); margin-top: .15rem; }
+
+    .sin-alertas {
+      text-align: center;
+      color: var(--color-texto-suave);
+      padding: 1.5rem;
+      font-size: .88rem;
+    }
+
+    /* ── Error / Carga ──────────────────────────────────────── */
+    .alerta-error {
+      background: rgba(244,114,106,.1);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      max-width: 1100px;
+      margin-left: auto;
+      margin-right: auto;
+      display: none;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid var(--color-borde);
+      border-top-color: var(--color-menta);
+      border-radius: 50%;
+      animation: girar .7s linear infinite;
+      vertical-align: middle;
+      margin-right: .5rem;
+    }
+    @keyframes girar { to { transform: rotate(360deg); } }
+
+    .cargando {
+      text-align: center;
+      padding: 3rem;
+      color: var(--color-texto-suave);
+    }
+
+    @media (max-width: 600px) {
+      .tarjeta { padding: 1.25rem; }
+      .grid-metricas { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Encabezado ──────────────────────────────── -->
+  <div class="encabezado-pagina">
+    <div class="marca">
+      <div class="marca-icono">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </div>
+      <span class="marca-nombre">MedTrack</span>
+    </div>
+
+    <!-- HU-43 (Task #519): volver a la lista en un solo clic -->
+    <a href="ListarPacientes.html" class="boton-volver">
+      ← Volver a pacientes
+    </a>
+  </div>
+
+  <!-- ── Error global ──────────────────────────────── -->
+  <div class="alerta-error" id="alertaError"></div>
+
+  <!-- ── Perfil del paciente ───────────────────────── -->
+  <div class="tarjeta" id="seccionPerfil" style="display:none">
+    <div class="perfil-header">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="perfil-nombre" id="nombrePaciente">—</h1>
+        <p class="perfil-meta" id="metaPaciente">—</p>
+      </div>
+    </div>
+
+    <div class="grid-datos" id="gridDatos"></div>
+  </div>
+
+  <!-- ── Métricas de cumplimiento ──────────────────── -->
+  <div class="tarjeta" id="seccionMetricas" style="display:none">
+    <h2 class="titulo-seccion">Resumen del día</h2>
+    <div class="grid-metricas">
+      <div class="metrica">
+        <div class="metrica-valor menta" id="valMeds">—</div>
+        <div class="metrica-etiqueta">Medicamentos activos</div>
+      </div>
+      <div class="metrica">
+        <div class="metrica-valor verde" id="valTomadas">—</div>
+        <div class="metrica-etiqueta">Tomas registradas hoy</div>
+      </div>
+      <div class="metrica">
+        <div class="metrica-valor amarillo" id="valAtrasadas">—</div>
+        <div class="metrica-etiqueta">Tomas pendientes</div>
+      </div>
+      <div class="metrica">
+        <div class="metrica-valor" id="valPorcentaje">—</div>
+        <div class="metrica-etiqueta">Cumplimiento</div>
+      </div>
+    </div>
+
+    <div class="barra-contenedor">
+      <div class="barra-label">
+        <span>Cumplimiento del tratamiento hoy</span>
+        <span id="labelPorcentaje">—</span>
+      </div>
+      <div class="barra-progreso">
+        <div class="barra-relleno" id="barraRelleno" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Alertas activas ───────────────────────────── -->
+  <div class="tarjeta" id="seccionAlertas" style="display:none">
+    <h2 class="titulo-seccion">Alertas activas</h2>
+    <ul class="lista-alertas" id="listaAlertas"></ul>
+  </div>
+
+  <!-- ── Estado de carga inicial ───────────────────── -->
+  <div class="tarjeta" id="seccionCargando">
+    <div class="cargando">
+      <span class="spinner"></span> Cargando información del paciente…
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    // HU-43 (Task #520): leer el ID del paciente de la URL
+    function obtenerIdDesdUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const id = parseInt(params.get('id'), 10);
+      return isNaN(id) ? null : id;
+    }
+
+    function mostrarError(mensaje) {
+      const el = document.getElementById('alertaError');
+      el.textContent = mensaje;
+      el.style.display = 'block';
+      document.getElementById('seccionCargando').style.display = 'none';
+    }
+
+    function ocultarCargando() {
+      document.getElementById('seccionCargando').style.display = 'none';
+    }
+
+    function mostrarSecciones() {
+      document.getElementById('seccionPerfil').style.display   = 'block';
+      document.getElementById('seccionMetricas').style.display = 'block';
+      document.getElementById('seccionAlertas').style.display  = 'block';
+    }
+
+    // ── Renderizar datos del paciente (Task #522) ────────────
+    function renderizarPerfil(paciente) {
+      document.getElementById('nombrePaciente').textContent =
+        (paciente.nombres || '') + ' ' + (paciente.apellidos || '');
+
+      document.getElementById('metaPaciente').textContent =
+        [
+          paciente.tipo_documento,
+          paciente.numero_documento,
+          paciente.diagnostico_principal
+        ].filter(Boolean).join(' · ');
+
+      const campos = [
+        { label: 'Fecha de nacimiento', valor: paciente.fecha_nacimiento },
+        { label: 'Género',              valor: paciente.genero },
+        { label: 'Teléfono',            valor: paciente.telefono_contacto },
+        { label: 'EPS / Aseguradora',   valor: paciente.eps_aseguradora },
+        { label: 'Alergias conocidas',  valor: paciente.alergias_conocidas },
+        { label: 'Observaciones',       valor: paciente.observaciones_adicionales }
+      ];
+
+      const grid = document.getElementById('gridDatos');
+      grid.innerHTML = '';
+      campos.forEach(function(c) {
+        if (!c.valor) return;
+        const div = document.createElement('div');
+        div.className = 'dato-item';
+        div.innerHTML =
+          '<label>' + c.label + '</label>' +
+          '<span>' + c.valor + '</span>';
+        grid.appendChild(div);
+      });
+    }
+
+    // ── Renderizar métricas del resumen ──────────────────────
+    function renderizarResumen(resumen) {
+      const pct = resumen.porcentaje_cumplimiento || 0;
+
+      document.getElementById('valMeds').textContent      = resumen.total_medicamentos_activos ?? '0';
+      document.getElementById('valTomadas').textContent   = resumen.tomas_registradas_hoy ?? '0';
+      document.getElementById('valAtrasadas').textContent = resumen.tomas_atrasadas ?? '0';
+      document.getElementById('valPorcentaje').textContent = pct + '%';
+      document.getElementById('labelPorcentaje').textContent = pct + '%';
+
+      // Color dinámico del porcentaje
+      const elPct = document.getElementById('valPorcentaje');
+      elPct.className = 'metrica-valor';
+      if (pct >= 80)      elPct.classList.add('verde');
+      else if (pct >= 50) elPct.classList.add('amarillo');
+      else                elPct.classList.add('rojo');
+
+      // Barra
+      setTimeout(function() {
+        document.getElementById('barraRelleno').style.width = pct + '%';
+      }, 50);
+
+      // Alertas
+      const alertas = resumen.alertas_activas || [];
+      const lista = document.getElementById('listaAlertas');
+      lista.innerHTML = '';
+
+      if (alertas.length === 0) {
+        lista.innerHTML = '<li class="sin-alertas">✓ Sin alertas activas</li>';
+      } else {
+        alertas.forEach(function(a) {
+          const sev = (a.severidad || '').toLowerCase();
+          const li = document.createElement('li');
+          li.className = 'alerta-item';
+          li.innerHTML =
+            '<span class="alerta-dot ' + sev + '"></span>' +
+            '<div>' +
+              '<div class="alerta-mensaje">' + (a.mensaje || '') + '</div>' +
+              '<div class="alerta-fecha">' + (a.fecha_creacion || '') + '</div>' +
+            '</div>';
+          lista.appendChild(li);
+        });
+      }
+    }
+
+    // ── Carga principal (HU-43 Criterio de aceptación #3 y #5) ──
+    async function cargar() {
+      const pacienteId = obtenerIdDesdUrl();
+
+      if (!pacienteId) {
+        mostrarError('No se especificó un paciente. Por favor, selecciona uno desde la lista.');
+        return;
+      }
+
+      try {
+        // Peticiones en paralelo para mayor rendimiento
+        const [resPaciente, resResumen] = await Promise.all([
+          api.obtenerPaciente(pacienteId),
+          api.obtenerResumen(pacienteId)
+        ]);
+
+        // Criterio de aceptación #5: manejo de errores con mensaje claro
+        if (!resPaciente.ok) {
+          if (resPaciente.status === 404) {
+            mostrarError('El paciente seleccionado no existe o fue eliminado.');
+          } else {
+            mostrarError('No se pudo cargar la información del paciente. Intenta de nuevo.');
+          }
+          return;
+        }
+
+        if (!resResumen.ok) {
+          mostrarError('Se cargó el paciente pero no se pudo obtener su resumen. Intenta de nuevo.');
+          return;
+        }
+
+        ocultarCargando();
+        renderizarPerfil(resPaciente.body);
+        renderizarResumen(resResumen.body);
+        mostrarSecciones();
+
+      } catch (error) {
+        mostrarError('No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.');
+        console.error(error);
+      }
+    }
+
+    cargar();
+  </script>
+
+</body>
+</html>

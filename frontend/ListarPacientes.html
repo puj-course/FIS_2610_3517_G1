@@ -158,6 +158,28 @@
 
     .table tbody tr:hover { background: rgba(45,212,191,.05); }
 
+    .table tbody tr.fila-paciente {
+      cursor: pointer;
+    }
+    .table tbody tr.fila-paciente:hover {
+      background: rgba(45,212,191,.10);
+    }
+    .badge-ver {
+      background: transparent;
+      border: 1px solid var(--color-menta);
+      color: var(--color-menta);
+      border-radius: 8px;
+      padding: .25rem .65rem;
+      font-size: .78rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background .15s, color .15s;
+    }
+    .fila-paciente:hover .badge-ver {
+      background: var(--color-menta);
+      color: var(--color-fondo);
+    }
+
     .table tbody td {
       border-color: var(--color-borde);
       padding: .8rem 1rem;
@@ -244,6 +266,7 @@
                         <th>Diagnóstico</th>
                         <th>Alergias</th>
                         <th>Observaciones</th>
+                        <th>Acción</th>  
                     </tr>
                 </thead>
                 <tbody id="tablaPacientes">
@@ -262,7 +285,7 @@
 
     <script src="api.js"></script>
     <script>
-        const COLUMNAS_TABLA = 11;
+        const COLUMNAS_TABLA = 12;
 
         const tbody = document.getElementById('tablaPacientes');
         const alertaError = document.getElementById('alertaError');
@@ -312,6 +335,12 @@
         function crearFilaPaciente(paciente) {
             const tr = document.createElement('tr');
 
+            tr.classList.add('fila-paciente');
+            tr.setAttribute('title', 'Ver resumen de ' + (paciente.nombres || '') + ' ' + (paciente.apellidos || ''));
+            tr.addEventListener('click', function() {
+                navegarAResumen(paciente.id);
+            });
+
             tr.appendChild(crearCelda(paciente.nombres, false));
             tr.appendChild(crearCelda(paciente.apellidos, false));
             tr.appendChild(crearCelda(paciente.fecha_nacimiento, false));
@@ -324,7 +353,17 @@
             tr.appendChild(crearCelda(paciente.alergias_conocidas));
             tr.appendChild(crearCelda(paciente.observaciones_adicionales));
 
+            // Columna acción
+            const tdAccion = document.createElement('td');
+            tdAccion.innerHTML = '<span class="badge-ver">Ver resumen</span>';
+            tr.appendChild(tdAccion);
+
             return tr;
+        }
+
+        function navegarAResumen(pacienteId) {
+            if (!pacienteId) return;
+            window.location.href = 'resumenPaciente.html?id=' + pacienteId;
         }
 
         function renderizarFilas(pacientes) {

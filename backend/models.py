@@ -193,3 +193,67 @@ def insertar_recordatorio(
 
 if __name__ == "__main__":
     init_db()
+
+def get_recordatorios_por_paciente(paciente_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT
+                r.id,
+                r.medicamento_id,
+                m.nombre AS medicamento_nombre,
+                m.dosis,
+                r.hora_recordatorio,
+                r.fecha_inicio,
+                r.activo,
+                r.observaciones
+            FROM recordatorios r
+            INNER JOIN medicamentos m
+                ON r.medicamento_id = m.id
+            WHERE m.paciente_id = ?
+            ORDER BY r.hora_recordatorio ASC
+        """, (paciente_id,))
+
+        return cursor.fetchall()
+
+    finally:
+        conn.close()
+
+
+def get_panel_dia_por_paciente(paciente_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT
+                r.id AS recordatorio_id,
+                m.id AS medicamento_id,
+                m.nombre AS medicamento_nombre,
+                m.dosis,
+                r.hora_recordatorio,
+                COALESCE(
+                    CASE
+                        WHEN t.estado IN ('tomada', 'a_tiempo', 'tarde') THEN 1
+                        ELSE 0
+                    END,
+                    0
+                ) AS tomada
+            FROM recordatorios r
+            INNER JOIN medicamentos m
+                ON r.medicamento_id = m.id
+            LEFT JOIN tomas t
+                ON t.medicamento_id = m.id
+                AND t.hora_programada = r.hora_recordatorio
+                AND t.fecha = DATE('now')
+            WHERE m.paciente_id = ?
+              AND r.activo = 1
+            ORDER BY r.hora_recordatorio ASC
+        """, (paciente_id,))
+
+        return cursor.fetchall()
+
+    finally:
+        conn.close()

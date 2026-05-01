@@ -324,3 +324,27 @@ def test_get_recordatorios_lista_vacia():
 
     assert response.status_code == 200
     assert response.json() == {"recordatorios": []}
+
+def test_hora_limite_inferior():
+    data = recordatorio_valido()
+    data["hora_recordatorio"] = "00:00"
+
+    errores = validar_recordatorio(data)
+
+    assert errores == []
+
+def test_hora_limite_superior():
+    data = recordatorio_valido()
+    data["hora_recordatorio"] = "23:59"
+
+    errores = validar_recordatorio(data)
+
+    assert errores == []
+
+def test_recordatorio_inactivo():
+    data = recordatorio_valido()
+    data["activo"] = 0
+
+    errores = validar_recordatorio(data)
+
+    assert errores == []

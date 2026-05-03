@@ -191,8 +191,6 @@ def insertar_recordatorio(
     conn.close()
 
 
-if __name__ == "__main__":
-    init_db()
 
 def get_recordatorios_por_paciente(paciente_id: int):
     conn = get_connection()
@@ -257,3 +255,36 @@ def get_panel_dia_por_paciente(paciente_id: int):
 
     finally:
         conn.close()
+
+
+def obtener_historial_tomas(paciente_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT
+                h.id,
+                h.paciente_id,
+                h.medicamento_id,
+                m.nombre AS nombre,
+                DATE(h.fecha_programada) AS fecha,
+                TIME(h.fecha_programada) AS hora_programada,
+                TIME(h.fecha_hora_toma) AS hora_tomada,
+                h.estado,
+                h.observaciones
+            FROM tomas_medicamento h
+            INNER JOIN medicamentos m
+                ON h.medicamento_id = m.id
+            WHERE h.paciente_id = ?
+            ORDER BY h.fecha_programada DESC
+        """, (paciente_id,))
+
+        return cursor.fetchall()
+
+    finally:
+        conn.close()
+
+
+if __name__ == "__main__":
+    init_db()

@@ -1,4 +1,4 @@
-from backend.models import get_connection, obtener_historial_tomas
+﻿from backend.models import get_connection, obtener_historial_tomas
 from backend.decorators.historial import (
     HistorialTomas,
     CumplimientoDecorator,
@@ -46,17 +46,23 @@ class ResumenPacienteService:
         historial = []
 
         for t in tomas:
-            historial.append({
-                "id": t["id"],
-                "paciente_id": t["paciente_id"],
-                "medicamento_id": t["medicamento_id"],
-                "medicamento": t["nombre"],
-                "fecha": t["fecha"],
-                "hora_programada": t["hora_programada"],
-                "hora_tomado": t["hora_tomada"],
-                "estado": t["estado"],
-                "observaciones": t["observaciones"]
-            })
+           historial.append({
+            "id": t["id"],
+            "paciente_id": t["paciente_id"],
+            "medicamento_id": t["medicamento_id"],
+
+            "medicamento": t["nombre"],
+            "medicamento_nombre": t["nombre"],
+
+            "fecha": t["fecha"],
+            "hora_programada": t["hora_programada"],
+
+            "hora_tomada": t["hora_tomada"],
+            "hora_tomado": t["hora_tomada"],
+
+            "estado": t["estado"],
+            "observaciones": t["observaciones"]
+        })
 
         return historial
 

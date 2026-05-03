@@ -1,4 +1,4 @@
-########################################################################################
+﻿########################################################################################
 #   test_toma_service.py
 ########################################################################################
 
@@ -41,13 +41,14 @@ def db_path(tmp_path, monkeypatch):
             medicamento_id INTEGER NOT NULL
         );
 
-        CREATE TABLE tomas_medicamento (
+        CREATE TABLE historial_tomas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             paciente_id INTEGER NOT NULL,
             medicamento_id INTEGER NOT NULL,
             recordatorio_id INTEGER NOT NULL,
             fecha_programada TEXT NOT NULL,
-            fecha_hora_toma TEXT NOT NULL,
+            fecha_hora_toma TEXT,
+            diferencia_minutos REAL,
             estado TEXT NOT NULL,
             observaciones TEXT,
             UNIQUE(recordatorio_id, fecha_programada)
@@ -115,10 +116,15 @@ def test_registrar_toma_exitoso(db_path, monkeypatch):
     assert resultado["ok"] is True
     assert resultado["mensaje"] == "Toma registrada correctamente"
     assert resultado["toma_id"] == 1
+
     assert resultado["data"]["paciente_id"] == 1
     assert resultado["data"]["medicamento_id"] == 1
     assert resultado["data"]["recordatorio_id"] == 1
-    assert resultado["data"]["estado"] == "tomada"
+    assert resultado["data"]["fecha_programada"] == "2026-04-12 08:00:00"
+    assert resultado["data"]["fecha_hora_toma"] == "2026-04-12 08:03:00"
+    assert resultado["data"]["estado"] == "a_tiempo"
+    assert resultado["data"]["diferencia_minutos"] == 3.0
+    assert resultado["data"]["observaciones"] == "Prueba automatizada"
 
     publisher_falso.notify.assert_called_once()
 
@@ -128,6 +134,31 @@ def test_registrar_toma_exitoso(db_path, monkeypatch):
     assert evento["toma_id"] == 1
     assert evento["paciente_id"] == 1
     assert evento["medicamento_id"] == 1
+    assert evento["recordatorio_id"] == 1
+    assert evento["fecha_programada"] == "2026-04-12 08:00:00"
+    assert evento["fecha_hora_toma"] == "2026-04-12 08:03:00"
+    assert evento["estado"] == "a_tiempo"
+    assert evento["diferencia_minutos"] == 3.0
+    assert evento["observaciones"] == "Prueba automatizada"
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM historial_tomas WHERE id = ?", (1,))
+    toma = cursor.fetchone()
+
+    conn.close()
+
+    assert toma is not None
+    assert toma["paciente_id"] == 1
+    assert toma["medicamento_id"] == 1
+    assert toma["recordatorio_id"] == 1
+    assert toma["fecha_programada"] == "2026-04-12 08:00:00"
+    assert toma["fecha_hora_toma"] == "2026-04-12 08:03:00"
+    assert toma["estado"] == "a_tiempo"
+    assert toma["diferencia_minutos"] == 3.0
+    assert toma["observaciones"] == "Prueba automatizada"
 
 
 # =========================

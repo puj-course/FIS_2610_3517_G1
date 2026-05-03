@@ -7,6 +7,8 @@ import sqlite3
 from typing import Any, Dict, Optional
 
 from backend.models import DB_PATH
+from backend.historial_toma import HistorialTomaBuilder
+
 try:
     from backend.alertas.bootstrap import publisher
 except Exception:
@@ -17,7 +19,7 @@ class TomaService:
     Receiver del patrón Command.
 
     Esta clase contiene la lógica real de negocio para registrar
-    una toma de medicamento en la tabla `tomas_medicamento`.
+    una toma de medicamento en la tabla `historial_tomas`.
     """
 
     def registrar_toma(
@@ -106,31 +108,44 @@ class TomaService:
                     "Ya existe una toma registrada para ese recordatorio y fecha programada"
                 )
 
-            # 7. Insertar la toma
-            cur.execute(
-                """
-                INSERT INTO tomas_medicamento (
-                    paciente_id,
-                    medicamento_id,
-                    recordatorio_id,
-                    fecha_programada,
-                    fecha_hora_toma,
-                    estado,
-                    observaciones
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    paciente_id,
-                    medicamento_id,
-                    recordatorio_id,
-                    fecha_programada,
-                    fecha_hora_toma,
-                    estado,
-                    observaciones
-                )
+          # 7. Construir historial de toma con estado calculado
+            toma = (
+                HistorialTomaBuilder()
+                .set_paciente(paciente_id)
+                .set_medicamento(medicamento_id)
+                .set_recordatorio(recordatorio_id)
+                .set_fecha_programada(fecha_programada)
+                .set_fecha_hora_toma(fecha_hora_toma)
+                .set_observaciones(observaciones)
+                .build()
             )
 
+        # 8. Insertar la toma en historial_tomas
+            cur.execute(
+                """
+                INSERT INTO historial_tomas (
+                    paciente_id,
+                    medicamento_id,
+                    recordatorio_id,
+                    fecha_programada,
+                    fecha_hora_toma,
+                    diferencia_minutos,
+                    estado,
+                    observaciones
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    toma.paciente_id,
+                    toma.medicamento_id,
+                    toma.recordatorio_id,
+                    toma.fecha_programada,
+                    toma.fecha_hora_toma,
+                    toma.diferencia_minutos,
+                    toma.estado,
+                    toma.observaciones
+                )
+            )
             conn.commit()
             toma_id = cur.lastrowid
 
@@ -138,27 +153,29 @@ class TomaService:
                 publisher.notify({
                     "type": "medication_taken",
                     "toma_id": toma_id,
-                    "paciente_id": paciente_id,
-                    "medicamento_id": medicamento_id,
-                    "recordatorio_id": recordatorio_id,
-                    "fecha_programada": fecha_programada,
-                    "fecha_hora_toma": fecha_hora_toma,
-                    "estado": estado,
-                    "observaciones": observaciones
-                })
+                    "paciente_id": toma.paciente_id,
+                    "medicamento_id": toma.medicamento_id,
+                    "recordatorio_id": toma.recordatorio_id,
+                    "fecha_programada": toma.fecha_programada,
+                    "fecha_hora_toma": toma.fecha_hora_toma,
+                    "diferencia_minutos": toma.diferencia_minutos,
+                    "estado": toma.estado,
+                    "observaciones": toma.observaciones
+            })
 
             return {
                 "ok": True,
                 "mensaje": "Toma registrada correctamente",
                 "toma_id": toma_id,
                 "data": {
-                    "paciente_id": paciente_id,
-                    "medicamento_id": medicamento_id,
-                    "recordatorio_id": recordatorio_id,
-                    "fecha_programada": fecha_programada,
-                    "fecha_hora_toma": fecha_hora_toma,
-                    "estado": estado,
-                    "observaciones": observaciones
+                    "paciente_id": toma.paciente_id,
+                    "medicamento_id": toma.medicamento_id,
+                    "recordatorio_id": toma.recordatorio_id,
+                    "fecha_programada": toma.fecha_programada,
+                    "fecha_hora_toma": toma.fecha_hora_toma,
+                    "diferencia_minutos": toma.diferencia_minutos,
+                    "estado": toma.estado,
+                    "observaciones": toma.observaciones
                 }
             }
 
@@ -262,7 +279,7 @@ class TomaService:
         cur.execute(
             """
             SELECT id
-            FROM tomas_medicamento
+            FROM historial_tomas
             WHERE recordatorio_id = ? AND fecha_programada = ?
             """,
             (recordatorio_id, fecha_programada)

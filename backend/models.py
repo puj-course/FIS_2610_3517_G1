@@ -267,13 +267,17 @@ def obtener_historial_tomas(paciente_id: int):
                 h.id,
                 h.paciente_id,
                 h.medicamento_id,
+                h.recordatorio_id,
                 m.nombre AS nombre,
                 DATE(h.fecha_programada) AS fecha,
                 TIME(h.fecha_programada) AS hora_programada,
                 TIME(h.fecha_hora_toma) AS hora_tomada,
+                h.fecha_programada,
+                h.fecha_hora_toma,
+                h.diferencia_minutos,
                 h.estado,
                 h.observaciones
-            FROM tomas_medicamento h
+            FROM historial_tomas h
             INNER JOIN medicamentos m
                 ON h.medicamento_id = m.id
             WHERE h.paciente_id = ?

@@ -6,7 +6,13 @@ router = APIRouter(prefix="/resumen", tags=["Resumen Paciente"])
 service = ResumenPacienteService()
 
 
-@router.get("/{paciente_id}")
+@router.get(
+    "/{paciente_id}",
+    responses={
+        404: {"description": "Paciente no encontrado"},
+        500: {"description": "Error interno al construir el resumen del paciente"},
+    },
+)
 def obtener_resumen(paciente_id: int):
     try:
         resumen = service.construir_resumen(paciente_id)

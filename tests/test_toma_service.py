@@ -287,3 +287,6 @@ def test_error_base_datos_lanza_runtime_error(tmp_path, monkeypatch):
 
     with pytest.raises(RuntimeError, match="Error de base de datos"):
         TomaService().registrar_toma(**datos_validos())
+
+
+

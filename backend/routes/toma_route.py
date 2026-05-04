@@ -17,7 +17,16 @@ repositorio = TomaRepository()
 toma_service = TomaService()
 
 
-@router.post("/", status_code=201)
+@router.post(
+    "/",
+    status_code=201,
+    responses={
+        400: {"description": "Datos inválidos para registrar la toma"},
+        404: {"description": "Paciente, medicamento o recordatorio no encontrado"},
+        409: {"description": "Ya existe una toma registrada para ese recordatorio y fecha"},
+        500: {"description": "Error interno al registrar la toma"},
+    },
+)
 def registrar_toma(datos: dict):
     """
     Registra una toma de medicamento usando TomaService.

@@ -1,12 +1,10 @@
-﻿name: SonarQube Analysis
+name: SonarQube Analysis
 
 on:
   push:
     branches:
       - main
       - develop
-      - features-vanesa
-      - feature/pipelines
   pull_request:
     branches:
       - main
@@ -17,6 +15,15 @@ jobs:
   sonarqube:
     name: Analisis de calidad con SonarQube
     runs-on: ubuntu-latest
+
+    env:
+      MONGO_URI: mongodb://localhost:27017/medtrack_test
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
 
     steps:
       - name: Clonar repositorio
@@ -32,7 +39,7 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
           pip install pytest pytest-cov httpx
 
@@ -50,12 +57,6 @@ jobs:
       - name: Ejecutar analisis SonarQube
         uses: SonarSource/sonarqube-scan-action@v7
         env:
-            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-            args: >
-                -Dsonar.projectKey=puj-course_FIS_2610_3517_G1
-                -Dsonar.organization=puj-course
-                -Dsonar.host.url=https://sonarcloud.io
-                -Dsonar.projectBaseDir=.
-                -Dsonar.python.coverage.reportPaths=coverage.xml
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+

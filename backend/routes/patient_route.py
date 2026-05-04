@@ -156,7 +156,14 @@ def obtener_pacientes():
                 "tiene_tomas_omitidas": tiene_tomas_omitidas,
                 "total_tomas_atrasadas": total_tomas_atrasadas,
                 "total_tomas_omitidas": total_tomas_omitidas,
-                "alerta_tomas": alerta_tomas
+                "alerta_tomas": alerta_tomas,
+                "alerta": {
+                    "tiene_alerta": tiene_tomas_atrasadas or tiene_tomas_omitidas,
+                    "tipo": alerta_tomas if alerta_tomas else "sin_alerta",
+                    "atrasadas": total_tomas_atrasadas,
+                    "omitidas": total_tomas_omitidas,
+                    "total": total_tomas_atrasadas + total_tomas_omitidas
+}
             })
 
         return resultado

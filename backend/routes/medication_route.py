@@ -25,7 +25,7 @@ def registrar_medicamento(data: dict):
                 detail="El paciente no existe"
             )
 
-        nombre_medicamento = data["nombre_medicamento"].strip()
+        nombre_medicamento = data["nombre_medicamento"].strip().lower()
 
         # Verificar duplicado
         duplicado = medicamentos_col.find_one({

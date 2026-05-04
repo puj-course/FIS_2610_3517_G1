@@ -59,7 +59,7 @@ def registrar_paciente(data: dict, authorization: str = Header(None)):
     fabrica = PacienteGeneralFactory()
     paciente = fabrica.crear(data)
 
-    # Convertimos a diccionario y agregamos el cuidador_id
+    # Convertimos a diccionario y agregamos el cuidador_id para evitar que cualquier paciente se le agregue a todos
     doc = paciente.como_dict()
     doc["cuidador_id"] = cuidador_id
 

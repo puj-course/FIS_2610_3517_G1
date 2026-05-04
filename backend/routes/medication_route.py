@@ -1,21 +1,9 @@
-#############################################################################
-# medication_route.py
-# APIRouter: Para crear rutas en FastAPI
-# HTTPException: Para devolver errores HTTP
-# Se importa la función validar_medicamento de validaciones.py
-#############################################################################
 
-from pathlib import Path
-import sqlite3
 from fastapi import APIRouter, HTTPException
-from backend.validaciones import (
-    validar_medicamento,
-    verificar_paciente_existe,
-    verificar_medicamento_duplicado
-)
+from backend.validaciones import validar_medicamento
+from backend.database import medicamentos_col, pacientes_col
 
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
-DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
 
 
 @router.post("/")
@@ -25,20 +13,27 @@ def registrar_medicamento(data: dict):
     if errores:
         raise HTTPException(status_code=400, detail=errores)
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
     try:
-        if not verificar_paciente_existe(int(data["paciente_id"]), conn):
-            raise HTTPException(status_code=404, detail="El paciente no existe")
+        paciente_id = int(data["paciente_id"])
+
+        # Verificar paciente existe
+        paciente = pacientes_col.find_one({"id": paciente_id})
+
+        if not paciente:
+            raise HTTPException(
+                status_code=404,
+                detail="El paciente no existe"
+            )
 
         nombre_medicamento = data["nombre_medicamento"].strip()
 
-        if verificar_medicamento_duplicado(
-            nombre_medicamento,
-            int(data["paciente_id"]),
-            conn
-        ):
+        # Verificar duplicado
+        duplicado = medicamentos_col.find_one({
+            "paciente_id": paciente_id,
+            "nombre": nombre_medicamento
+        })
+
+        if duplicado:
             raise HTTPException(
                 status_code=400,
                 detail="El paciente ya tiene registrado este medicamento"
@@ -61,59 +56,44 @@ def registrar_medicamento(data: dict):
         else:
             observaciones = observaciones_extra
 
-        cursor.execute(
-            """
-            INSERT INTO medicamentos (
-                nombre, dosis, frecuencia, horario,
-                fecha_inicio, observaciones, paciente_id
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                nombre_medicamento,
-                dosis,
-                frecuencia,
-                horario,
-                fecha_inicio,
-                observaciones,
-                int(data["paciente_id"])
-            )
-        )
+        nuevo_medicamento = {
+            "nombre": nombre_medicamento,
+            "dosis": dosis,
+            "frecuencia": frecuencia,
+            "horario": horario,
+            "fecha_inicio": fecha_inicio,
+            "observaciones": observaciones,
+            "paciente_id": paciente_id
+        }
 
-        conn.commit()
-        return {"mensaje": "Medicamento registrado existosamente"}
+        medicamentos_col.insert_one(nuevo_medicamento)
+
+        return {"mensaje": "Medicamento registrado exitosamente"}
 
     except HTTPException:
         raise
 
-    except sqlite3.Error as e:
+    except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Error al registrar el medicamento: {str(e)}"
         )
 
-    finally:
-        conn.close()
-
 
 @router.get("/paciente/{paciente_id}")
 def obtener_medicamentos_paciente(paciente_id: int):
-    """
-    Devuelve todos los medicamentos de un paciente específico.
-    URL: GET /medicamentos/paciente/{paciente_id}
-    """
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    try:
+        meds = list(
+            medicamentos_col.find(
+                {"paciente_id": paciente_id},
+                {"_id": 0}
+            ).sort("nombre", 1)
+        )
 
-    cursor.execute(
-        "SELECT * FROM medicamentos WHERE paciente_id = ? ORDER BY nombre",
-        (paciente_id,)
-    )
-    meds = [dict(r) for r in cursor.fetchall()]
-    conn.close()
+        return meds
 
-    if not meds:
-        return []
-
-    return meds
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener medicamentos: {str(e)}"
+        )

@@ -217,6 +217,41 @@
     }
     @keyframes girar { to { transform: rotate(360deg); } }
 
+    .badge-alerta-tomas {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  border-radius: 999px;
+  padding: .28rem .65rem;
+  font-size: .76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.badge-alerta-atrasada {
+  background: rgba(250, 204, 21, .12);
+  border-color: rgba(250, 204, 21, .45);
+  color: #FACC15;
+}
+
+.badge-alerta-omitida {
+  background: rgba(248, 113, 113, .12);
+  border-color: rgba(248, 113, 113, .45);
+  color: #F87171;
+}
+
+.badge-alerta-mixta {
+  background: rgba(251, 146, 60, .12);
+  border-color: rgba(251, 146, 60, .45);
+  color: #FB923C;
+}
+
+.texto-sin-alerta {
+  color: var(--color-texto-suave);
+  font-size: .8rem;
+}
+
     @media (max-width: 768px) {
       .tarjeta { padding: 1.25rem; }
     }
@@ -266,12 +301,13 @@
                         <th>Diagnóstico</th>
                         <th>Alergias</th>
                         <th>Observaciones</th>
+                        <th>Alertas</th>
                         <th>Acción</th>  
                     </tr>
                 </thead>
                 <tbody id="tablaPacientes">
                     <tr>
-                        <td class="vacio" colspan="11">
+                        <td class="vacio" colspan="13">
                             <span class="spinner"></span> Cargando pacientes…
                         </td>
                     </tr>
@@ -285,7 +321,7 @@
 
     <script src="api.js"></script>
     <script>
-        const COLUMNAS_TABLA = 12;
+        const COLUMNAS_TABLA = 13;
 
         const tbody = document.getElementById('tablaPacientes');
         const alertaError = document.getElementById('alertaError');
@@ -332,6 +368,54 @@
             return td;
         }
 
+        function crearCeldaAlerta(paciente) {
+            const td = document.createElement('td');
+
+            const alerta = paciente.alerta || {
+                tiene_alerta: Boolean(
+                    paciente.tiene_tomas_atrasadas || paciente.tiene_tomas_omitidas
+                ),
+                tipo: paciente.alerta_tomas || 'sin_alerta',
+                atrasadas: paciente.total_tomas_atrasadas || 0,
+                omitidas: paciente.total_tomas_omitidas || 0,
+                total: (paciente.total_tomas_atrasadas || 0) + (paciente.total_tomas_omitidas || 0)
+           };
+
+            if (!alerta.tiene_alerta || alerta.tipo === 'sin_alerta') {
+                td.innerHTML = '<span class="texto-sin-alerta">Sin alerta</span>';
+                return td;
+            }
+
+            if (alerta.tipo === 'mixta') {
+                td.innerHTML = `
+                     <span class="badge-alerta-tomas badge-alerta-mixta">
+                        ⚠️ ${alerta.atrasadas} atrasada(s) / ${alerta.omitidas} omitida(s)
+                      </span>
+                `;
+                return td;
+             }
+
+            if (alerta.tipo === 'omitida') {
+                td.innerHTML = `
+                    <span class="badge-alerta-tomas badge-alerta-omitida">
+                        🚨 ${alerta.omitidas} omitida(s)
+                    </span>
+                `;
+                return td;
+             }
+
+              if (alerta.tipo === 'atrasada') {
+                  td.innerHTML = `
+                      <span class="badge-alerta-tomas badge-alerta-atrasada">
+                          ⏰ ${alerta.atrasadas} atrasada(s)
+                      </span>
+                  `;
+                  return td;
+              }
+
+               td.innerHTML = '<span class="texto-sin-alerta">Sin alerta</span>';
+              return td;
+        }
         function crearFilaPaciente(paciente) {
             const tr = document.createElement('tr');
 
@@ -352,6 +436,7 @@
             tr.appendChild(crearCelda(paciente.diagnostico_principal));
             tr.appendChild(crearCelda(paciente.alergias_conocidas));
             tr.appendChild(crearCelda(paciente.observaciones_adicionales));
+            tr.appendChild(crearCeldaAlerta(paciente));
 
             // Columna acción
             const tdAccion = document.createElement('td');

@@ -1,5 +1,7 @@
 ﻿# Subissue - Encriptar contraseñas
 
+import os
+import secrets
 import hashlib
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -9,7 +11,8 @@ Módulo de autenticación para la aplicación.
 Proporciona funciones para hash de contraseñas y generación/verificación de JWT.
 """
 
-SECRET_KEY = "PLACEHOLDER"
+SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
+
 ALGORITHM = "HS256"
 
 

@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+﻿from abc import ABC, abstractmethod
 
 
 class Historial(ABC):
@@ -34,9 +34,11 @@ class CumplimientoDecorator(HistorialDecorator):
         tomas = datos.get("historial", [])
 
         total = len(tomas)
+        estados_realizados = ["tomado", "tomada", "a_tiempo", "tarde"]
+
         tomadas = sum(
             1 for toma in tomas
-            if toma.get("estado") in ["tomado", "a_tiempo", "tarde"]
+            if toma.get("estado") in estados_realizados
         )
         porcentaje = round((tomadas / total) * 100, 1) if total > 0 else 0
 
@@ -56,10 +58,10 @@ class AlertasDecorator(HistorialDecorator):
 
         alertas = [
             {
-                "medicamento": t.get("medicamento_nombre"),
+                "medicamento": t.get("medicamento_nombre") or t.get("medicamento"),
                 "fecha": t.get("fecha"),
                 "hora_programada": t.get("hora_programada"),
-                "mensaje": f"Toma de {t.get('medicamento_nombre')} no registrada el {t.get('fecha')}"
+                "mensaje": f"Toma de {t.get('medicamento_nombre') or t.get('medicamento')} no registrada el {t.get('fecha')}"
             }
             for t in tomas
             if t.get("estado") in ["omitida", "atrasado", "pendiente"]

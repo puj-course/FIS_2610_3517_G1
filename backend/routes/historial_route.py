@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+﻿from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from backend.models import get_connection
@@ -51,7 +51,7 @@ def registrar_toma_historial(data: RegistrarTomaRequest):
 
         # Verificar duplicado
         cursor.execute("""
-            SELECT id FROM tomas_medicamento
+            SELECT id FROM historial_tomas
             WHERE recordatorio_id = ? AND fecha_programada = ?
         """, (toma.recordatorio_id, toma.fecha_programada))
         if cursor.fetchone():
@@ -61,7 +61,7 @@ def registrar_toma_historial(data: RegistrarTomaRequest):
             )
 
         cursor.execute("""
-            INSERT INTO tomas_medicamento (
+            INSERT INTO historial_tomas (
                 paciente_id, medicamento_id, recordatorio_id,
                 fecha_programada, fecha_hora_toma,
                 diferencia_minutos, estado, observaciones
@@ -117,7 +117,7 @@ def obtener_historial(paciente_id: int):
                 h.diferencia_minutos,
                 h.estado,
                 h.observaciones
-            FROM tomas_medicamento h
+            FROM historial_tomas h
             INNER JOIN medicamentos m ON h.medicamento_id = m.id
             WHERE h.paciente_id = ?
             ORDER BY h.fecha_programada DESC

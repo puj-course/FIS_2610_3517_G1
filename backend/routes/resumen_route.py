@@ -1,77 +1,77 @@
-from fastapi import APIRouter, HTTPException
-from datetime import datetime
-from backend.models import get_connection
+﻿from fastapi import APIRouter, HTTPException
+from backend.services.resumen_paciente_service import ResumenPacienteService
 
 router = APIRouter(prefix="/resumen", tags=["Resumen Paciente"])
 
+service = ResumenPacienteService()
 
-@router.get("/resumen/{paciente_id}")
+
+@router.get(
+    "/{paciente_id}",
+    responses={
+        404: {"description": "Paciente no encontrado"},
+        500: {"description": "Error interno al construir el resumen del paciente"},
+    },
+)
 def obtener_resumen(paciente_id: int):
-
-    conn = get_connection()
     try:
-        cursor = conn.cursor()
+        resumen = service.construir_resumen(paciente_id)
 
-        # 1. Verificar que el paciente existe
-        cursor.execute(
-            "SELECT id, nombres, apellidos FROM pacientes WHERE id = ?",
-            (paciente_id,)
-        )
-        paciente = cursor.fetchone()
-        if not paciente:
-            raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
 
-        # 2. Medicamentos activos
-        cursor.execute(
-            "SELECT COUNT(*) AS total FROM medicamentos WHERE paciente_id = ?",
-            (paciente_id,)
-        )
-        total_medicamentos = cursor.fetchone()["total"]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
-        # 3. Tomas del día (tabla correcta: tomas_medicamento)
-        hoy = datetime.now().strftime("%Y-%m-%d")
-        cursor.execute(
-            """
-            SELECT estado
-            FROM tomas_medicamento
-            WHERE paciente_id = ?
-              AND fecha_programada LIKE ?
-            """,
-            (paciente_id, hoy + "%")
-        )
-        tomas_hoy = cursor.fetchall()
+    paciente = resumen.get("paciente", {})
+    medicamentos = resumen.get("medicamentos_activos", [])
+    historial = resumen.get("historial", [])
+    cumplimiento = resumen.get("cumplimiento", {})
 
-        total_tomas_hoy   = len(tomas_hoy)
-        tomas_tomadas     = sum(1 for t in tomas_hoy if t["estado"] == "tomado")
-        tomas_atrasadas   = sum(1 for t in tomas_hoy if t["estado"] == "pendiente")
-        porcentaje        = (
-            round((tomas_tomadas / total_tomas_hoy) * 100, 1)
-            if total_tomas_hoy > 0 else 0
-        )
+    total_tomas = cumplimiento.get("total_tomas", 0)
+    tomas_realizadas = cumplimiento.get("tomas_realizadas", 0)
+    porcentaje = cumplimiento.get("porcentaje", 0)
 
-        # 4. Alertas activas (no atendidas)
-        cursor.execute(
-            """
-            SELECT id, tipo, mensaje, severidad, fecha_creacion
-            FROM alertas
-            WHERE paciente_id = ? AND atendida = 0
-            ORDER BY fecha_creacion DESC
-            LIMIT 10
-            """,
-            (paciente_id,)
-        )
-        alertas = [dict(a) for a in cursor.fetchall()]
+    tomas_a_tiempo = sum(
+        1 for toma in historial
+        if toma.get("estado") in ["a_tiempo", "tomado", "tomada"]
+    )
 
-        return {
-            "paciente_id":                 paciente_id,
-            "nombre_paciente":             f"{paciente['nombres']} {paciente['apellidos']}",
-            "total_medicamentos_activos":  total_medicamentos,
-            "tomas_registradas_hoy":       tomas_tomadas,
-            "tomas_atrasadas":             tomas_atrasadas,
-            "total_tomas_esperadas_hoy":   total_tomas_hoy,
-            "porcentaje_cumplimiento":     porcentaje,
-            "alertas_activas":             alertas
-        }
+    tomas_tarde = sum(
+        1 for toma in historial
+        if toma.get("estado") == "tarde"
+    )
 
-    finally:
-        conn.close()
+    tomas_omitidas = sum(
+        1 for toma in historial
+        if toma.get("estado") == "omitida"
+    )
+
+    tomas_pendientes = sum(
+        1 for toma in historial
+        if toma.get("estado") == "pendiente"
+    )
+
+    return {
+        "paciente_id": paciente_id,
+        "nombre_paciente": f"{paciente.get('nombres', '')} {paciente.get('apellidos', '')}".strip(),
+
+        "total_medicamentos_activos": len(medicamentos),
+
+        "total_tomas_esperadas": total_tomas,
+        "total_tomas_esperadas_hoy": total_tomas,
+
+        "tomas_realizadas": tomas_realizadas,
+        "tomas_registradas_hoy": tomas_realizadas,
+
+        "tomas_a_tiempo": tomas_a_tiempo,
+        "tomas_tarde": tomas_tarde,
+        "tomas_omitidas": tomas_omitidas,
+        "tomas_pendientes": tomas_pendientes,
+
+        "tomas_atrasadas": tomas_pendientes + tomas_omitidas,
+
+        "porcentaje_cumplimiento": porcentaje,
+        "alertas_activas": resumen.get("alertas", []),
+        "historial": historial
+    }

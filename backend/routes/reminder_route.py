@@ -1,16 +1,18 @@
-﻿from fastapi import APIRouter, HTTPException
-import sqlite3
+﻿import sqlite3 
+from fastapi import APIRouter, HTTPException
+from bson import ObjectId
+
+from backend.database import (
+    medicamentos_col,
+    recordatorios_col
+)
 
 from backend.models import (
-    insertar_recordatorio,
     get_recordatorios_por_paciente,
     get_panel_dia_por_paciente
 )
 
-from backend.validaciones import (
-    validar_recordatorio,
-    verificar_medicamento_existe
-)
+from backend.validaciones import validar_recordatorio
 
 try:
     from backend.alertas.bootstrap import publisher
@@ -25,22 +27,31 @@ router = APIRouter(
 
 
 # 🔹 Helper
-def obtener_paciente_id_de_medicamento(medicamento_id: int, conn):
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT paciente_id FROM medicamentos WHERE id = ?",
-        (medicamento_id,)
-    )
-    fila = cursor.fetchone()
-    return fila["paciente_id"] if fila else None
+def obtener_medicamento_por_id(medicamento_id: int):
+    return medicamentos_col.find_one({
+        "$or": [
+            {"id": medicamento_id},
+            {"medicamento_id": medicamento_id}
+        ]
+    })
+
+
+def obtener_paciente_id_de_medicamento(medicamento: dict):
+    return medicamento.get("paciente_id")
 
 
 # =========================
 # POST: crear recordatorio
 # =========================
-@router.post("/")
+@router.post(
+    "/",
+    responses={
+        400: {"description": "Datos inválidos para crear el recordatorio"},
+        404: {"description": "El medicamento asociado no existe"},
+        500: {"description": "Error interno al crear el recordatorio"},
+    },
+)
 def crear_recordatorio(data: dict):
-
     errores = validar_recordatorio(data)
 
     if errores:
@@ -51,54 +62,61 @@ def crear_recordatorio(data: dict):
 
     try:
         medicamento_id = int(data["medicamento_id"])
-    except (KeyError, ValueError):
+    except (KeyError, TypeError, ValueError):
         raise HTTPException(
             status_code=400,
             detail="medicamento_id debe ser un entero válido"
         )
 
-    conn = sqlite3.connect("database.db")
-    conn.row_factory = sqlite3.Row
+    medicamento = obtener_medicamento_por_id(medicamento_id)
+
+    if not medicamento:
+        raise HTTPException(
+            status_code=404,
+            detail="El medicamento no existe"
+        )
+
+    paciente_id = obtener_paciente_id_de_medicamento(medicamento)
+
+    nuevo_id = ObjectId()
+
+    recordatorio = {
+        "_id": nuevo_id,
+        "id": str(nuevo_id),
+        "medicamento_id": medicamento_id,
+        "paciente_id": paciente_id,
+        "hora_recordatorio": data["hora_recordatorio"].strip(),
+        "fecha_inicio": data["fecha_inicio"].strip(),
+        "activo": int(data.get("activo", 1)),
+        "observaciones": data.get("observaciones", "").strip(),
+        "tomado": False
+    }
 
     try:
-        if not verificar_medicamento_existe(medicamento_id, conn):
-            raise HTTPException(
-                status_code=404,
-                detail="El medicamento no existe"
-            )
-
-        nuevo_id = insertar_recordatorio(
-            medicamento_id=medicamento_id,
-            hora_recordatorio=data["hora_recordatorio"].strip(),
-            fecha_inicio=data["fecha_inicio"].strip(),
-            activo=int(data.get("activo", 1)),
-            observaciones=data.get("observaciones", "").strip()
-        )
-
-        paciente_id = obtener_paciente_id_de_medicamento(
-            medicamento_id,
-            conn
-        )
+        recordatorios_col.insert_one(recordatorio)
 
         if publisher:
             publisher.notify({
                 "type": "reminder_created",
-                "recordatorio_id": nuevo_id,
+                "recordatorio_id": str(nuevo_id),
                 "medicamento_id": medicamento_id,
                 "paciente_id": paciente_id,
-                "hora_recordatorio": data["hora_recordatorio"].strip(),
-                "fecha_inicio": data["fecha_inicio"].strip(),
-                "activo": int(data.get("activo", 1)),
-                "observaciones": data.get("observaciones", "").strip()
+                "hora_recordatorio": recordatorio["hora_recordatorio"],
+                "fecha_inicio": recordatorio["fecha_inicio"],
+                "activo": recordatorio["activo"],
+                "observaciones": recordatorio["observaciones"]
             })
 
         return {
             "mensaje": "Recordatorio creado correctamente",
-            "recordatorio_id": nuevo_id
+            "recordatorio_id": str(nuevo_id)
         }
 
-    finally:
-        conn.close()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al crear el recordatorio: {str(e)}"
+        )
 
 
 # =========================

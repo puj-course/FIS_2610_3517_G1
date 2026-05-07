@@ -1,4 +1,5 @@
 ﻿import sqlite3
+import pytest
 from unittest.mock import patch, MagicMock
 
 from fastapi.testclient import TestClient
@@ -310,20 +311,67 @@ def test_verificar_medicamento_existe_devuelve_false():
 # =========================
 # ENDPOINT POST
 # =========================
+class ColeccionMedicamentosFalsa:
+    def __init__(self, medicamento=None):
+        self.medicamento = medicamento
 
-def test_post_recordatorio_exitoso():
+    def find_one(self, filtro):
+        return self.medicamento
+
+
+class ColeccionRecordatoriosFalsa:
+    def __init__(self):
+        self.documento_insertado = None
+
+    def insert_one(self, documento):
+        self.documento_insertado = documento
+        return None
+
+def test_post_recordatorio_exitoso(monkeypatch):
     data = recordatorio_valido()
-    conexion_falsa = MagicMock()
 
-    with patch("backend.routes.reminder_route.sqlite3.connect", return_value=conexion_falsa), \
-         patch("backend.routes.reminder_route.verificar_medicamento_existe", return_value=True), \
-         patch("backend.routes.reminder_route.insertar_recordatorio", return_value=1):
+    medicamentos_col_falsa = ColeccionMedicamentosFalsa({
+        "id": int(data["medicamento_id"]),
+        "medicamento_id": int(data["medicamento_id"]),
+        "paciente_id": 1,
+        "nombre": "Aspirina",
+        "dosis": "1 tableta"
+    })
 
-        response = client.post("/recordatorios/", json=data)
+    recordatorios_col_falsa = ColeccionRecordatoriosFalsa()
 
-    assert response.status_code == 200
-    assert response.json()["mensaje"] == "Recordatorio creado correctamente"
-    assert response.json()["recordatorio_id"] == 1
+    monkeypatch.setattr(
+        "backend.routes.reminder_route.medicamentos_col",
+        medicamentos_col_falsa
+    )
+
+    monkeypatch.setattr(
+        "backend.routes.reminder_route.recordatorios_col",
+        recordatorios_col_falsa
+    )
+
+    monkeypatch.setattr(
+        "backend.routes.reminder_route.publisher",
+        None
+    )
+
+    from backend.routes.reminder_route import crear_recordatorio
+
+    respuesta = crear_recordatorio(data)
+
+    assert respuesta["mensaje"] == "Recordatorio creado correctamente"
+    assert "recordatorio_id" in respuesta
+
+    documento = recordatorios_col_falsa.documento_insertado
+
+    assert documento is not None
+    assert documento["medicamento_id"] == int(data["medicamento_id"])
+    assert documento["paciente_id"] == 1
+    assert documento["hora_recordatorio"] == data["hora_recordatorio"].strip()
+    assert documento["fecha_inicio"] == data["fecha_inicio"].strip()
+    assert documento["activo"] == int(data.get("activo", 1))
+    assert documento["observaciones"] == data.get("observaciones", "").strip()
+    assert documento["tomado"] is False
 
 
 def test_post_recordatorio_datos_invalidos():
@@ -336,17 +384,22 @@ def test_post_recordatorio_datos_invalidos():
     assert "Favor ingresar la hora del recordatorio" in response.json()["detail"]
 
 
-def test_post_recordatorio_medicamento_no_existe():
+def test_post_recordatorio_medicamento_no_existe(monkeypatch):
     data = recordatorio_valido()
-    conexion_falsa = MagicMock()
 
-    with patch("backend.routes.reminder_route.sqlite3.connect", return_value=conexion_falsa), \
-         patch("backend.routes.reminder_route.verificar_medicamento_existe", return_value=False):
+    monkeypatch.setattr(
+        "backend.routes.reminder_route.medicamentos_col",
+        ColeccionMedicamentosFalsa(None)
+    )
 
-        response = client.post("/recordatorios/", json=data)
+    from backend.routes.reminder_route import crear_recordatorio
+    from fastapi import HTTPException
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == "El medicamento no existe"
+    with pytest.raises(HTTPException) as exc_info:
+        crear_recordatorio(data)
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "El medicamento no existe"
 
 
 # =========================

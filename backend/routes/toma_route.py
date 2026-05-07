@@ -2,9 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 
-from backend.models import get_connection
 from backend.services.toma_service import TomaService
-from backend.toma_repository import TomaRepository
 from backend.decorators.historial import (
     HistorialTomas,
     CumplimientoDecorator,
@@ -13,7 +11,6 @@ from backend.decorators.historial import (
 
 router = APIRouter(prefix="/tomas", tags=["Tomas"])
 
-repositorio = TomaRepository()
 toma_service = TomaService()
 
 
@@ -28,39 +25,25 @@ toma_service = TomaService()
     },
 )
 def registrar_toma(datos: dict):
-    """
-    Registra una toma de medicamento usando TomaService.
-
-    Este endpoint acepta el formato nuevo:
-    - fecha_programada
-    - fecha_hora_toma
-
-    Y también conserva compatibilidad con el formato antiguo:
-    - fecha
-    - hora_programada
-    - hora_tomada
-    """
-
     fecha_programada = datos.get("fecha_programada")
     fecha_hora_toma = datos.get("fecha_hora_toma")
 
-    # Compatibilidad con formato anterior
     if not fecha_programada:
         fecha = datos.get("fecha", str(date.today()))
         hora_programada = datos.get("hora_programada")
 
         if hora_programada:
-            fecha_programada = f"{fecha} {hora_programada}"
+            fecha_programada = f"{fecha} {hora_programada}:00" if len(hora_programada) == 5 else f"{fecha} {hora_programada}"
 
     if not fecha_hora_toma:
         fecha = datos.get("fecha", str(date.today()))
         hora_tomada = datos.get("hora_tomada")
 
         if hora_tomada:
-            fecha_hora_toma = f"{fecha} {hora_tomada}"
+            fecha_hora_toma = f"{fecha} {hora_tomada}:00" if len(hora_tomada) == 5 else f"{fecha} {hora_tomada}"
 
     try:
-        resultado = toma_service.registrar_toma(
+        return toma_service.registrar_toma(
             paciente_id=datos.get("paciente_id"),
             medicamento_id=datos.get("medicamento_id"),
             recordatorio_id=datos.get("recordatorio_id"),
@@ -69,8 +52,6 @@ def registrar_toma(datos: dict):
             estado=datos.get("estado", "tomada"),
             observaciones=datos.get("observaciones")
         )
-
-        return resultado
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -84,51 +65,28 @@ def registrar_toma(datos: dict):
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error inesperado al registrar la toma: {str(e)}"
+        )
+
 
 @router.get("/dia/{paciente_id}")
-def obtener_tomas(paciente_id: int, fecha: str = None):
+def obtener_tomas(paciente_id: str, fecha: str = None):
     if not fecha:
         fecha = str(date.today())
 
-    tomas = repositorio.obtener_tomas_del_dia(paciente_id, fecha)
+    tomas = toma_service.obtener_tomas_del_dia(paciente_id, fecha)
 
     return {
-        "tomas": [dict(t) for t in tomas]
+        "tomas": tomas
     }
 
 
 @router.get("/historial/{paciente_id}")
-def obtener_historial(paciente_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            h.id,
-            h.paciente_id,
-            h.medicamento_id,
-            m.nombre AS medicamento_nombre,
-            m.nombre AS medicamento,
-            h.recordatorio_id,
-            DATE(h.fecha_programada) AS fecha,
-            TIME(h.fecha_programada) AS hora_programada,
-            TIME(h.fecha_hora_toma) AS hora_tomada,
-            h.fecha_programada,
-            h.fecha_hora_toma,
-            h.diferencia_minutos,
-            h.estado,
-            h.observaciones
-        FROM historial_tomas h
-        INNER JOIN medicamentos m
-            ON h.medicamento_id = m.id
-        WHERE h.paciente_id = ?
-        ORDER BY h.fecha_programada DESC
-    """, (paciente_id,))
-
-    filas = cursor.fetchall()
-    conn.close()
-
-    historial = [dict(f) for f in filas]
+def obtener_historial(paciente_id: str):
+    historial = toma_service.obtener_historial(paciente_id)
 
     if not historial:
         return {

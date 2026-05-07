@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sqlite3
 
 # Esto asegura que la BD siempre quede en backend/database.db
@@ -86,7 +86,6 @@ def init_db():
     """)
 
     # Tabla de tomas
-    # Esta tabla se usa por toma_repository.py y toma_route.py
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tomas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,8 +102,6 @@ def init_db():
     """)
 
     # Tabla de historial de tomas
-    # Esta tabla guarda el estado real calculado de cada toma:
-    # a_tiempo, tarde u omitida.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS historial_tomas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,7 +111,9 @@ def init_db():
             fecha_programada TEXT NOT NULL,
             fecha_hora_toma TEXT,
             diferencia_minutos INTEGER,
-            estado TEXT NOT NULL CHECK(estado IN ('a_tiempo', 'tarde', 'omitida')),
+            estado TEXT NOT NULL CHECK(
+                estado IN ('a_tiempo', 'tarde', 'omitida')
+            ),
             observaciones TEXT,
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
             FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id),
@@ -142,6 +141,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+
     print("Base de datos inicializada correctamente.")
 
 
@@ -150,11 +150,12 @@ def get_recordatorios_activos(medicamento_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT * FROM recordatorios 
+        SELECT * FROM recordatorios
         WHERE medicamento_id = ? AND activo = 1
     """, (medicamento_id,))
 
     recordatorios = cursor.fetchall()
+
     conn.close()
 
     return recordatorios
@@ -189,7 +190,6 @@ def insertar_recordatorio(
 
     conn.commit()
     conn.close()
-
 
 
 def get_recordatorios_por_paciente(paciente_id: int):

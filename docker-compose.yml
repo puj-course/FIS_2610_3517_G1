@@ -1,6 +1,9 @@
 services:
   app:
     build: .
-    container_name: fis_app
     ports:
       - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MONGO_URI=${MONGO_URI}
+    restart: unless-stopped

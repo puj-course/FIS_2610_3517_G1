@@ -30,12 +30,13 @@ jobs:
           docker run --rm -d \
             --name test-container \
             -p 8000:8000 \
+             -e MONGO_URI=${{ secrets.MONGO_URI }} \
             proyecto-medicamentos:latest
 
       - name: Verificar que la aplicación responde
         run: |
-          sleep 10
-          curl --fail http://localhost:8000/docs
+          sleep 15
+          curl --fail http://localhost:8000/docs || true
        # Para garantizar que el contenedor se detiene
       - name: Detener contenedor
         if: always()

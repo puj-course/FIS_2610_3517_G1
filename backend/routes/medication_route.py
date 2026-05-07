@@ -1,7 +1,7 @@
-
 from fastapi import APIRouter, HTTPException
 from backend.validaciones import validar_medicamento
 from backend.database import medicamentos_col, pacientes_col
+from bson import ObjectId
 
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
 
@@ -14,10 +14,18 @@ def registrar_medicamento(data: dict):
         raise HTTPException(status_code=400, detail=errores)
 
     try:
-        paciente_id = int(data["paciente_id"])
+        paciente_id = data["paciente_id"]
 
         # Verificar paciente existe
-        paciente = pacientes_col.find_one({"id": paciente_id})
+        try:
+            paciente = pacientes_col.find_one({
+                "_id": ObjectId(paciente_id)
+            })
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail="ID de paciente inválido"
+            )
 
         if not paciente:
             raise HTTPException(
@@ -81,7 +89,7 @@ def registrar_medicamento(data: dict):
 
 
 @router.get("/paciente/{paciente_id}")
-def obtener_medicamentos_paciente(paciente_id: int):
+def obtener_medicamentos_paciente(paciente_id: str):
     try:
         meds = list(
             medicamentos_col.find(

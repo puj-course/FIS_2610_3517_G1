@@ -29,7 +29,6 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 uvicorn==0.41.0
 zope.interface==8.2
-<<<<<<< HEAD
+
 pymongo[srv]
-=======
->>>>>>> 02a007d34cecb4eec3698b19a19507aeba633620
+

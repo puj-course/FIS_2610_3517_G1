@@ -187,5 +187,14 @@ const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
     });
+  },
+
+  obtenerPaciente: function(pacienteId) {
+    return fetchJson(API_URL + '/pacientes/' + pacienteId);
+  },
+
+  // HU-43: obtener resumen detallado del paciente (Task #522)
+  obtenerResumen: function(pacienteId) {
+    return fetchJson(API_URL + '/resumen/' + pacienteId);
   }
 };

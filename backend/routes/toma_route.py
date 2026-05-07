@@ -1,8 +1,8 @@
-from fastapi import APIRouter
-from datetime import date
-from backend.toma_repository import TomaRepository
-from backend.models import get_connection
+﻿from datetime import date
 
+from fastapi import APIRouter, HTTPException
+
+from backend.services.toma_service import TomaService
 from backend.decorators.historial import (
     HistorialTomas,
     CumplimientoDecorator,
@@ -10,75 +10,83 @@ from backend.decorators.historial import (
 )
 
 router = APIRouter(prefix="/tomas", tags=["Tomas"])
-repositorio = TomaRepository()
+
+toma_service = TomaService()
 
 
-@router.post("/", status_code=201)
+@router.post(
+    "/",
+    status_code=201,
+    responses={
+        400: {"description": "Datos inválidos para registrar la toma"},
+        404: {"description": "Paciente, medicamento o recordatorio no encontrado"},
+        409: {"description": "Ya existe una toma registrada para ese recordatorio y fecha"},
+        500: {"description": "Error interno al registrar la toma"},
+    },
+)
 def registrar_toma(datos: dict):
-    """
-    Registra una nueva toma de medicamento.
-    """
-    toma_id = repositorio.registrar_toma(
-        medicamento_id=datos.get("medicamento_id"),
-        paciente_id=datos.get("paciente_id"),
-        fecha=datos.get("fecha", str(date.today())),
-        hora_programada=datos.get("hora_programada"),
-        hora_tomada=datos.get("hora_tomada"),
-        estado=datos.get("estado", "pendiente"),
-        observaciones=datos.get("observaciones")
-    )
+    fecha_programada = datos.get("fecha_programada")
+    fecha_hora_toma = datos.get("fecha_hora_toma")
 
-    return {
-        "message": "Toma registrada exitosamente",
-        "toma_id": toma_id
-    }
+    if not fecha_programada:
+        fecha = datos.get("fecha", str(date.today()))
+        hora_programada = datos.get("hora_programada")
+
+        if hora_programada:
+            fecha_programada = f"{fecha} {hora_programada}:00" if len(hora_programada) == 5 else f"{fecha} {hora_programada}"
+
+    if not fecha_hora_toma:
+        fecha = datos.get("fecha", str(date.today()))
+        hora_tomada = datos.get("hora_tomada")
+
+        if hora_tomada:
+            fecha_hora_toma = f"{fecha} {hora_tomada}:00" if len(hora_tomada) == 5 else f"{fecha} {hora_tomada}"
+
+    try:
+        return toma_service.registrar_toma(
+            paciente_id=datos.get("paciente_id"),
+            medicamento_id=datos.get("medicamento_id"),
+            recordatorio_id=datos.get("recordatorio_id"),
+            fecha_programada=fecha_programada,
+            fecha_hora_toma=fecha_hora_toma,
+            estado=datos.get("estado", "tomada"),
+            observaciones=datos.get("observaciones")
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    except FileExistsError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error inesperado al registrar la toma: {str(e)}"
+        )
 
 
 @router.get("/dia/{paciente_id}")
-def obtener_tomas(paciente_id: int, fecha: str = None):
-    """
-    Retorna las tomas del día de un paciente.
-    """
+def obtener_tomas(paciente_id: str, fecha: str = None):
     if not fecha:
         fecha = str(date.today())
 
-    tomas = repositorio.obtener_tomas_del_dia(paciente_id, fecha)
+    tomas = toma_service.obtener_tomas_del_dia(paciente_id, fecha)
 
     return {
-        "tomas": [dict(t) for t in tomas]
+        "tomas": tomas
     }
 
 
 @router.get("/historial/{paciente_id}")
-def obtener_historial(paciente_id: int):
-    """
-    Retorna el historial completo de tomas de un paciente
-    usando patrón Decorator (cumplimiento + alertas)
-    """
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT 
-            t.id,
-            t.paciente_id,
-            t.medicamento_id,
-            m.nombre AS medicamento_nombre,
-            t.fecha,
-            t.hora_programada,
-            t.hora_tomada,
-            t.estado,
-            t.observaciones
-        FROM tomas t
-        INNER JOIN medicamentos m ON t.medicamento_id = m.id
-        WHERE t.paciente_id = ?
-        ORDER BY t.fecha DESC
-    """, (paciente_id,))
-
-    filas = cursor.fetchall()
-    conn.close()
-
-    historial = [dict(f) for f in filas]
+def obtener_historial(paciente_id: str):
+    historial = toma_service.obtener_historial(paciente_id)
 
     if not historial:
         return {

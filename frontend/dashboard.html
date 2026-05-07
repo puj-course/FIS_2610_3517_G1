@@ -181,18 +181,18 @@
     </div>
     <div class="seccion">
       <div class="seccion-header">
-        <h2 class="seccion-titulo">Pacientes recientes</h2>
-        <button class="btn-primario" onclick="irA('pacientes')" style="font-size:.82rem;padding:.45rem 1rem">Ver todos →</button>
-      </div>
-      <div class="alerta-err" id="errInicio"></div>
-      <div style="overflow-x:auto">
-        <table class="tabla">
-          <thead><tr><th>Paciente</th><th>Documento</th><th>Diagnóstico</th><th>EPS</th><th>Acción</th></tr></thead>
-          <tbody id="tbodyInicio"><tr><td class="vacio" colspan="5"><span class="spinner"></span> Cargando…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+        <h2 class="seccion-titulo">Resumen de pacientes</h2>
+        <button class="btn-primario" onclick="irA('pacientes')" style="font-size:.82rem;padding:.45rem 1rem">
+      Ver todos →
+    </button>
   </div>
+
+  <div class="alerta-err" id="errInicio"></div>
+
+  <div id="tarjetasPacientes"
+       style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
+  </div>
+</div>
 
   <!-- PANEL DEL DÍA -->
   <!-- GET /recordatorios/panel-dia → {panel:[{paciente_id,nombres,apellidos,medicamentos:[{medicamento,dosis,hora,tomado,recordatorio_id}]}]} -->
@@ -289,42 +289,111 @@ function nulo(v){return v||'<span style="color:var(--suave)">—</span>';}
 /* INICIO */
 async function cargarInicio() {
   ocultarErr('errInicio');
-  var tb=document.getElementById('tbodyInicio');
-  tb.innerHTML='<tr><td class="vacio" colspan="5"><span class="spinner"></span> Cargando…</td></tr>';
+  var ctn = document.getElementById('tarjetasPacientes');
+
+  ctn.innerHTML = '<div style="color:var(--suave);padding:1rem"><span class="spinner"></span> Cargando…</div>';
+
   try {
-    var res=await api.obtenerPacientes();
-    if(!res.ok) throw new Error('Error al cargar pacientes.');
-    // El backend devuelve array directo (no envuelto en {pacientes:[...]})
-    var pacs=Array.isArray(res.body)?res.body:(res.body.pacientes||[]);
-    document.getElementById('statPac').textContent=pacs.length;
+    var res = await api.obtenerPacientes();
+    if (!res.ok) throw new Error('Error al cargar pacientes.');
 
-    // Stats del panel del día → GET /recordatorios/panel-dia
+    var pacs = Array.isArray(res.body) ? res.body : (res.body.pacientes || []);
+    document.getElementById('statPac').textContent = pacs.length;
+
+    /* stats (lo dejas igual) */
     try {
-      var rp=await api.obtenerPanelDia();
-      if(rp.ok){
-        var panel=rp.body.panel||[];
-        var tom=0,pend=0,meds=0;
-        panel.forEach(function(p){(p.medicamentos||[]).forEach(function(m){meds++;if(m.tomado)tom++;else pend++;});});
-        document.getElementById('statTom').textContent=tom;
-        document.getElementById('statPend').textContent=pend;
-        document.getElementById('statMed').textContent=meds;
-      }
-    } catch(e2){}
+      var rp = await api.obtenerPanelDia();
+      if (rp.ok) {
+        var panel = rp.body.panel || [];
+        var tom = 0, pend = 0, meds = 0;
 
-    if(!pacs.length){tb.innerHTML='<tr><td class="vacio" colspan="5">No hay pacientes registrados.</td></tr>';return;}
-    tb.innerHTML=pacs.slice(0,8).map(function(p){
-      return '<tr>'+
-        '<td><div style="display:flex;align-items:center;gap:.6rem">'+
-          '<div style="width:28px;height:28px;border-radius:50%;background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.25);display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--menta);font-weight:700;flex-shrink:0">'+(p.nombres||'?').charAt(0).toUpperCase()+'</div>'+
-          '<span style="font-weight:500">'+p.nombres+' '+p.apellidos+'</span>'+
-        '</div></td>'+
-        '<td><span class="badge bm">'+(p.tipo_documento||'')+' '+(p.numero_documento||'')+'</span></td>'+
-        '<td>'+nulo(p.diagnostico_principal)+'</td>'+
-        '<td>'+nulo(p.eps_aseguradora)+'</td>'+
-        '<td><a href="patients.html?id='+p.id+'" style="background:rgba(45,212,191,.1);color:var(--menta);border:1px solid rgba(45,212,191,.25);border-radius:7px;padding:.28rem .7rem;font-size:.78rem;text-decoration:none">Ver →</a></td>'+
-        '</tr>';
-    }).join('');
-  } catch(e){mostrarErr('errInicio',e.message);tb.innerHTML='<tr><td class="vacio" colspan="5">Error al cargar los pacientes.</td></tr>';}
+        panel.forEach(function(p) {
+          (p.medicamentos || []).forEach(function(m) {
+            meds++;
+            if (m.tomado) tom++; else pend++;
+          });
+        });
+
+        document.getElementById('statTom').textContent = tom;
+        document.getElementById('statPend').textContent = pend;
+        document.getElementById('statMed').textContent = meds;
+      }
+    } catch(e) {}
+
+    if (!pacs.length) {
+      ctn.innerHTML = '<div style="color:var(--suave);padding:2rem;text-align:center">No hay pacientes registrados.</div>';
+      return;
+    }
+
+    var tarjetas = await Promise.all(pacs.map(async function(p) {
+
+      var meds = [];
+      var proximaToma = '—';
+
+      try {
+        var rm = await api.obtenerMedicamentos(p.id);
+        if (rm.ok) {
+          meds = Array.isArray(rm.body) ? rm.body : (rm.body.medicamentos || []);
+
+          var ahora = new Date();
+          var minAhora = ahora.getHours() * 60 + ahora.getMinutes();
+          var menorDif = Infinity;
+
+          meds.forEach(function(m) {
+            (m.horario || '').split(',').forEach(function(h) {
+              var partes = h.trim().split(':');
+              if (partes.length >= 2) {
+                var minMed = parseInt(partes[0]) * 60 + parseInt(partes[1]);
+                var dif = minMed - minAhora;
+
+                if (dif >= 0 && dif < menorDif) {
+                  menorDif = dif;
+                  proximaToma = h.trim();
+                }
+              }
+            });
+          });
+        }
+      } catch(e) {}
+
+      var estado = meds.length
+        ? '<span class="badge bv">Activo</span>'
+        : '<span class="badge br">Sin tratamiento</span>';
+
+      var listaMeds = meds.length
+        ? meds.slice(0,3).map(function(m){
+            return `<div style="font-size:.82rem;padding:.2rem 0">💊 ${m.nombre}</div>`;
+          }).join('')
+        : '<div style="color:var(--suave);font-size:.82rem">Sin medicamentos activos</div>';
+
+      return `
+        <div style="background:var(--campo);border:1px solid var(--borde);border-radius:14px;padding:1.2rem;cursor:pointer"
+             onclick="window.location.href='patients.html?id=${p.id}'">
+
+          <div style="font-weight:600;margin-bottom:.5rem">
+            ${p.nombres} ${p.apellidos}
+          </div>
+
+          ${estado}
+
+          <div style="margin:.6rem 0">
+            ${listaMeds}
+          </div>
+
+          <div style="font-size:.8rem;color:var(--suave)">
+            Próxima toma: <span class="panel-hora">${proximaToma}</span>
+          </div>
+
+        </div>
+      `;
+    }));
+
+    ctn.innerHTML = tarjetas.join('');
+
+  } catch (e) {
+    mostrarErr('errInicio', e.message);
+    ctn.innerHTML = '';
+  }
 }
 
 /* PANEL DEL DÍA */

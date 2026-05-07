@@ -1,12 +1,14 @@
-﻿######################################################################################
-#	toma_service es el fichero que actuara como el Receiver del patron Command
-#	Es decir que es el que realmente sabe como realizar una toma.
-#
-#########################################################################################
-import sqlite3
-from typing import Any, Dict, Optional
+﻿from typing import Any, Dict, Optional
+from datetime import datetime
 
-from backend.models import DB_PATH
+from bson import ObjectId
+
+from backend.database import (
+    pacientes_col,
+    medicamentos_col,
+    recordatorios_col,
+    tomas_col
+)
 from backend.historial_toma import HistorialTomaBuilder
 
 try:
@@ -14,45 +16,22 @@ try:
 except Exception:
     publisher = None
 
+
 class TomaService:
     """
-    Receiver del patrón Command.
-
-    Esta clase contiene la lógica real de negocio para registrar
-    una toma de medicamento en la tabla `historial_tomas`.
+    Servicio encargado de registrar tomas de medicamentos usando MongoDB.
     """
 
     def registrar_toma(
         self,
-        paciente_id: int,
-        medicamento_id: int,
-        recordatorio_id: int,
+        paciente_id,
+        medicamento_id,
+        recordatorio_id,
         fecha_programada: str,
         fecha_hora_toma: str,
         estado: str = "tomada",
         observaciones: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Registra una toma de medicamento en la base de datos.
-
-        Parámetros:
-            paciente_id: ID del paciente
-            medicamento_id: ID del medicamento
-            recordatorio_id: ID del recordatorio asociado
-            fecha_programada: fecha/hora programada de la toma
-            fecha_hora_toma: fecha/hora real en que se tomó
-            estado: estado de la toma (por defecto: 'tomada')
-            observaciones: texto opcional
-
-        Retorna:
-            dict con resultado de la operación
-
-        Lanza:
-            ValueError: si faltan datos o hay inconsistencia en relaciones
-            LookupError: si paciente, medicamento o recordatorio no existen
-            FileExistsError: si ya existe una toma para ese recordatorio y fecha
-            RuntimeError: si ocurre un error inesperado en base de datos
-        """
 
         self._validar_campos_obligatorios(
             paciente_id=paciente_id,
@@ -63,153 +42,145 @@ class TomaService:
             estado=estado
         )
 
-        conn = None
+        paciente_id = str(paciente_id)
+        medicamento_id = str(medicamento_id)
+        recordatorio_id = str(recordatorio_id)
 
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
+        paciente = self._obtener_paciente(paciente_id)
+        if not paciente:
+            raise LookupError("El paciente no existe")
 
-            # 1. Validar paciente existente
-            paciente = self._obtener_paciente(cur, paciente_id)
+        medicamento = self._obtener_medicamento(medicamento_id)
+        if not medicamento:
+            raise LookupError("El medicamento no existe")
 
-            if not paciente:
-                raise LookupError("El paciente no existe")
+        paciente_medicamento_id = str(medicamento.get("paciente_id", ""))
 
-            # 2. Validar medicamento existente
-            medicamento = self._obtener_medicamento(cur, medicamento_id)
+        if paciente_medicamento_id and paciente_medicamento_id != paciente_id:
+            raise ValueError("El medicamento no pertenece al paciente")
 
-            if not medicamento:
-                raise LookupError("El medicamento no existe")
+        recordatorio = self._obtener_recordatorio(recordatorio_id)
+        if not recordatorio:
+            raise LookupError("El recordatorio no existe")
 
-            # 3. Validar que el medicamento pertenezca al paciente
-            if medicamento["paciente_id"] != paciente_id:
-                raise ValueError("El medicamento no pertenece al paciente")
+        medicamento_recordatorio_id = str(recordatorio.get("medicamento_id", ""))
 
-            # 4. Validar recordatorio existente
-            recordatorio = self._obtener_recordatorio(cur, recordatorio_id)
+        if medicamento_recordatorio_id and medicamento_recordatorio_id != medicamento_id:
+            raise ValueError("El recordatorio no pertenece al medicamento")
 
-            if not recordatorio:
-                raise LookupError("El recordatorio no existe")
+        duplicado = tomas_col.find_one({
+            "recordatorio_id": recordatorio_id,
+            "fecha_programada": fecha_programada
+        })
 
-            # 5. Validar que el recordatorio pertenezca al medicamento
-            if recordatorio["medicamento_id"] != medicamento_id:
-                raise ValueError("El recordatorio no pertenece al medicamento")
-
-            # 6. Validar duplicado por UNIQUE(recordatorio_id, fecha_programada)
-            duplicado = self._obtener_toma_duplicada(
-                cur,
-                recordatorio_id=recordatorio_id,
-                fecha_programada=fecha_programada
+        if duplicado:
+            raise FileExistsError(
+                "Ya existe una toma registrada para ese recordatorio y fecha programada"
             )
 
-            if duplicado:
-                raise FileExistsError(
-                    "Ya existe una toma registrada para ese recordatorio y fecha programada"
-                )
+        toma = (
+            HistorialTomaBuilder()
+            .set_paciente(paciente_id)
+            .set_medicamento(medicamento_id)
+            .set_recordatorio(recordatorio_id)
+            .set_fecha_programada(fecha_programada)
+            .set_fecha_hora_toma(fecha_hora_toma)
+            .set_observaciones(observaciones)
+            .build()
+        )
 
-          # 7. Construir historial de toma con estado calculado
-            toma = (
-                HistorialTomaBuilder()
-                .set_paciente(paciente_id)
-                .set_medicamento(medicamento_id)
-                .set_recordatorio(recordatorio_id)
-                .set_fecha_programada(fecha_programada)
-                .set_fecha_hora_toma(fecha_hora_toma)
-                .set_observaciones(observaciones)
-                .build()
-            )
+        documento = {
+            "paciente_id": toma.paciente_id,
+            "medicamento_id": toma.medicamento_id,
+            "recordatorio_id": toma.recordatorio_id,
+            "fecha_programada": toma.fecha_programada,
+            "fecha_hora_toma": toma.fecha_hora_toma,
+            "diferencia_minutos": toma.diferencia_minutos,
+            "estado": toma.estado,
+            "observaciones": toma.observaciones,
+            "created_at": datetime.utcnow()
+        }
 
-        # 8. Insertar la toma en historial_tomas
-            cur.execute(
-                """
-                INSERT INTO historial_tomas (
-                    paciente_id,
-                    medicamento_id,
-                    recordatorio_id,
-                    fecha_programada,
-                    fecha_hora_toma,
-                    diferencia_minutos,
-                    estado,
-                    observaciones
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    toma.paciente_id,
-                    toma.medicamento_id,
-                    toma.recordatorio_id,
-                    toma.fecha_programada,
-                    toma.fecha_hora_toma,
-                    toma.diferencia_minutos,
-                    toma.estado,
-                    toma.observaciones
-                )
-            )
-            conn.commit()
-            toma_id = cur.lastrowid
+        resultado = tomas_col.insert_one(documento)
+        toma_id = str(resultado.inserted_id)
 
-            if publisher:
-                publisher.notify({
-                    "type": "medication_taken",
-                    "toma_id": toma_id,
-                    "paciente_id": toma.paciente_id,
-                    "medicamento_id": toma.medicamento_id,
-                    "recordatorio_id": toma.recordatorio_id,
-                    "fecha_programada": toma.fecha_programada,
-                    "fecha_hora_toma": toma.fecha_hora_toma,
-                    "diferencia_minutos": toma.diferencia_minutos,
-                    "estado": toma.estado,
-                    "observaciones": toma.observaciones
+        if publisher:
+            publisher.notify({
+                "type": "medication_taken",
+                "toma_id": toma_id,
+                **documento
             })
 
-            return {
-                "ok": True,
-                "mensaje": "Toma registrada correctamente",
-                "toma_id": toma_id,
-                "data": {
-                    "paciente_id": toma.paciente_id,
-                    "medicamento_id": toma.medicamento_id,
-                    "recordatorio_id": toma.recordatorio_id,
-                    "fecha_programada": toma.fecha_programada,
-                    "fecha_hora_toma": toma.fecha_hora_toma,
-                    "diferencia_minutos": toma.diferencia_minutos,
-                    "estado": toma.estado,
-                    "observaciones": toma.observaciones
-                }
+        return {
+            "ok": True,
+            "mensaje": "Toma registrada correctamente",
+            "toma_id": toma_id,
+            "data": self._serializar_toma({
+                "_id": resultado.inserted_id,
+                **documento
+            })
+        }
+
+    def obtener_tomas_del_dia(self, paciente_id, fecha: str):
+        paciente_id = str(paciente_id)
+
+        consulta = {
+            "paciente_id": paciente_id,
+            "fecha_programada": {
+                "$regex": f"^{fecha}"
             }
+        }
 
-        except sqlite3.IntegrityError as e:
-            # Refuerzo por si la BD dispara la restricción UNIQUE
-            raise FileExistsError(
-                "Conflicto de integridad al registrar la toma"
-            ) from e
+        tomas = tomas_col.find(consulta).sort("fecha_programada", -1)
 
-        except (ValueError, LookupError, FileExistsError):
-            # Re-lanzamos errores de negocio tal cual
-            raise
+        return [self._serializar_toma(t) for t in tomas]
 
-        except sqlite3.Error as e:
-            raise RuntimeError(
-                f"Error de base de datos al registrar la toma: {str(e)}"
-            ) from e
+    def obtener_historial(self, paciente_id):
+        paciente_id = str(paciente_id)
 
-        finally:
-            if conn is not None:
-                conn.close()
+        tomas = tomas_col.find({
+            "paciente_id": paciente_id
+        }).sort("fecha_programada", -1)
+
+        historial = []
+
+        for t in tomas:
+            medicamento = self._obtener_medicamento(str(t.get("medicamento_id")))
+
+            estado_historial = self._normalizar_estado_historial(t.get("estado"))
+
+            fecha_programada = t.get("fecha_programada", "")
+            fecha_hora_toma = t.get("fecha_hora_toma", "")
+
+            historial.append({
+                "id": str(t.get("_id")),
+                "paciente_id": t.get("paciente_id"),
+                "medicamento_id": t.get("medicamento_id"),
+                "medicamento_nombre": medicamento.get("nombre", "") if medicamento else "",
+                "medicamento": medicamento.get("nombre", "") if medicamento else "",
+                "recordatorio_id": t.get("recordatorio_id"),
+                "fecha": fecha_programada[:10] if fecha_programada else "",
+                "hora_programada": fecha_programada[11:16] if len(fecha_programada) >= 16 else "",
+                "hora_tomada": fecha_hora_toma[11:16] if len(fecha_hora_toma) >= 16 else "",
+                "fecha_programada": fecha_programada,
+                "fecha_hora_toma": fecha_hora_toma,
+                "diferencia_minutos": t.get("diferencia_minutos"),
+                "estado": estado_historial,
+                "observaciones": t.get("observaciones")
+            })
+
+        return historial
 
     def _validar_campos_obligatorios(
         self,
-        paciente_id: int,
-        medicamento_id: int,
-        recordatorio_id: int,
+        paciente_id,
+        medicamento_id,
+        recordatorio_id,
         fecha_programada: str,
         fecha_hora_toma: str,
         estado: str
     ) -> None:
-        """
-        Valida que todos los campos requeridos estén presentes.
-        """
+
         if not paciente_id:
             raise ValueError("El paciente_id es obligatorio")
 
@@ -228,60 +199,50 @@ class TomaService:
         if not estado or not str(estado).strip():
             raise ValueError("El estado es obligatorio")
 
-    def _obtener_paciente(self, cur: sqlite3.Cursor, paciente_id: int) -> Optional[sqlite3.Row]:
-        """
-        Consulta un paciente por ID.
-        """
-        cur.execute(
-            "SELECT id FROM pacientes WHERE id = ?",
-            (paciente_id,)
-        )
-        return cur.fetchone()
+    def _obtener_paciente(self, paciente_id: str):
+        try:
+            paciente = pacientes_col.find_one({"_id": ObjectId(paciente_id)})
+            if paciente:
+                return paciente
+        except Exception:
+            pass
 
-    def _obtener_medicamento(self, cur: sqlite3.Cursor, medicamento_id: int) -> Optional[sqlite3.Row]:
-        """
-        Consulta un medicamento por ID.
-        """
-        cur.execute(
-            """
-            SELECT id, paciente_id
-            FROM medicamentos
-            WHERE id = ?
-            """,
-            (medicamento_id,)
-        )
-        return cur.fetchone()
+        return pacientes_col.find_one({"id": paciente_id})
 
-    def _obtener_recordatorio(self, cur: sqlite3.Cursor, recordatorio_id: int) -> Optional[sqlite3.Row]:
-        """
-        Consulta un recordatorio por ID.
-        """
-        cur.execute(
-            """
-            SELECT id, medicamento_id
-            FROM recordatorios
-            WHERE id = ?
-            """,
-            (recordatorio_id,)
-        )
-        return cur.fetchone()
+    def _obtener_medicamento(self, medicamento_id: str):
+        try:
+            medicamento = medicamentos_col.find_one({"_id": ObjectId(medicamento_id)})
+            if medicamento:
+                return medicamento
+        except Exception:
+            pass
 
-    def _obtener_toma_duplicada(
-        self,
-        cur: sqlite3.Cursor,
-        recordatorio_id: int,
-        fecha_programada: str
-    ) -> Optional[sqlite3.Row]:
-        """
-        Busca si ya existe una toma para la combinación
-        (recordatorio_id, fecha_programada).
-        """
-        cur.execute(
-            """
-            SELECT id
-            FROM historial_tomas
-            WHERE recordatorio_id = ? AND fecha_programada = ?
-            """,
-            (recordatorio_id, fecha_programada)
-        )
-        return cur.fetchone() 
+        return medicamentos_col.find_one({"id": medicamento_id})
+
+    def _obtener_recordatorio(self, recordatorio_id: str):
+        try:
+            recordatorio = recordatorios_col.find_one({"_id": ObjectId(recordatorio_id)})
+            if recordatorio:
+                return recordatorio
+        except Exception:
+            pass
+
+        return recordatorios_col.find_one({"id": recordatorio_id})
+
+    def _serializar_toma(self, toma: dict) -> dict:
+        toma["id"] = str(toma.get("_id"))
+        toma.pop("_id", None)
+
+        if "created_at" in toma and toma["created_at"]:
+            toma["created_at"] = str(toma["created_at"])
+
+        return toma
+
+    def _normalizar_estado_historial(self, estado: str) -> str:
+        if estado == "a_tiempo":
+            return "tomado"
+
+        if estado in ["tarde", "atrasada", "atrasado", "omitida"]:
+            return "atrasado"
+
+        return estado or "pendiente"

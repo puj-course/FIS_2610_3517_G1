@@ -1,0 +1,12 @@
+[run]
+source = backend
+omit =
+    tests/*
+    backend/seed.py
+    backend/main.py
+    backend/__init__.py
+    backend/**/__init__.py
+
+[report]
+show_missing = True
+skip_empty = True

@@ -3,3 +3,5 @@ uvicorn
 pyjwt
 pytest
 httpx
+pymongo
+dnspython

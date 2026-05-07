@@ -1,51 +1,80 @@
-from backend.services.toma_service import TomaService
-from backend.commands.regisToma_command import RegisToma_command
+﻿import pytest
+from unittest.mock import Mock
+
+from backend.commands.comand_base import Command
 from backend.commands.invoker import CommandInvoker
+from backend.commands.regisToma_command import RegisToma_command
 
 
-def main():
-    try:
-        receiver = TomaService()
+# =========================
+# COMMAND BASE
+# =========================
 
-        command = RegisToma_command(
-            receiver=receiver,
-            paciente_id=2,
-            medicamento_id=1,
-            recordatorio_id=1,
-            fecha_programada="2026-04-12 08:00:00",
-            fecha_hora_toma="2026-04-12 08:03:00",
-            estado="tomada",
-            observaciones="Prueba manual desde test_registrar_toma_command.py"
-        )
+def test_command_base_execute_lanza_not_implemented_error():
+    command = Command()
 
-        invoker = CommandInvoker()
-        invoker.set_command(command)
-
-        resultado = invoker.run()
-
-        print("Resultado exitoso:")
-        print(resultado)
-
-    except ValueError as e:
-        print("Error de validación:")
-        print(str(e))
-
-    except LookupError as e:
-        print("Error de búsqueda:")
-        print(str(e))
-
-    except FileExistsError as e:
-        print("Error de conflicto/duplicado:")
-        print(str(e))
-
-    except RuntimeError as e:
-        print("Error interno:")
-        print(str(e))
-
-    except Exception as e:
-        print("Error inesperado:")
-        print(str(e))
+    with pytest.raises(NotImplementedError, match="implementar execute"):
+        command.execute()
 
 
-if __name__ == "__main__":
-    main()
+# =========================
+# INVOKER
+# =========================
+
+def test_invoker_sin_comando_lanza_value_error():
+    invoker = CommandInvoker()
+
+    with pytest.raises(ValueError, match="No se ha configurado"):
+        invoker.run()
+
+
+def test_invoker_ejecuta_comando_configurado():
+    command = Mock()
+    command.execute.return_value = {"ok": True}
+
+    invoker = CommandInvoker()
+    invoker.set_command(command)
+
+    resultado = invoker.run()
+
+    assert resultado == {"ok": True}
+    command.execute.assert_called_once_with()
+
+
+# =========================
+# REGISTRAR TOMA COMMAND
+# =========================
+
+def test_registoma_command_delega_en_toma_service():
+    receiver = Mock()
+    receiver.registrar_toma.return_value = {
+        "ok": True,
+        "mensaje": "Toma registrada correctamente",
+        "toma_id": 10,
+    }
+
+    command = RegisToma_command(
+        receiver=receiver,
+        paciente_id=1,
+        medicamento_id=2,
+        recordatorio_id=3,
+        fecha_programada="2026-04-12 08:00:00",
+        fecha_hora_toma="2026-04-12 08:03:00",
+        estado="tomada",
+        observaciones="Prueba automatizada",
+    )
+
+    resultado = command.execute()
+
+    assert resultado["ok"] is True
+    assert resultado["toma_id"] == 10
+
+    receiver.registrar_toma.assert_called_once_with(
+        paciente_id=1,
+        medicamento_id=2,
+        recordatorio_id=3,
+        fecha_programada="2026-04-12 08:00:00",
+        fecha_hora_toma="2026-04-12 08:03:00",
+        estado="tomada",
+        observaciones="Prueba automatizada",
+    )

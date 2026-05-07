@@ -1,56 +1,84 @@
 # Subissue - Encriptar contraseñas
-# import section
+
+import os
+import secrets
 import hashlib
 import jwt
+
 from datetime import datetime, timedelta, timezone
 
 """
-Módulo de autenticación para la aplicación 
-Proporciona funciones para el hash de contraseñas, generación y verificación de JWTs,
-es decir, este módulo existe para proteger contraseñas con hash y manejar autenticación con JWT.
+Módulo de autenticación para la aplicación.
+Proporciona funciones para el hash de contraseñas,
+generación y verificación de JWTs.
 """
 
-# Variable Global
-SECRET_KEY = "PLACEHOLDER"
+# Clave secreta para firmar los JWT
+SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
 
 # Algoritmo de firma
-ALGORITHM = 'HS256'
+ALGORITHM = "HS256"
 
-# Esta funcion toma la contraseña, le agrega un salt (evita que dos contraseñas iguales tengan el mismo hash),
-# posteriormente calcula el SHA-256 y finalmente devuelve el hash en formato hexadecimal
+
+# Esta función toma la contraseña, le agrega un salt
+# y posteriormente calcula el SHA-256
 def hash_password(password):
-    salt     = b'some_salt'  # salt para agregar seguridad a la contraseña
-    pwd_salt = password + salt.decode("utf-8")  # así el hash no depende solo de la contraseña original
-    digest   = hashlib.sha256(pwd_salt.encode())
-    return digest.hexdigest()  # hexdigest es más sencillo de guardar en BD (TEXT) y comparar
+    salt = b'some_salt'
 
-# Funcion que hashea la contraseña que el usuario escribió y la compara con el hash guardado
+    # así el hash no depende solo de la contraseña original
+    pwd_salt = password + salt.decode("utf-8")
+
+    digest = hashlib.sha256(pwd_salt.encode())
+
+    # hexdigest es más sencillo de guardar en BD
+    return digest.hexdigest()
+
+
+# Función que compara la contraseña ingresada
+# con el hash almacenado
 def verify_password_hash(password, reference_hash):
     return hash_password(password) == reference_hash
 
-# Funcion que crea un payload y lo firma
+
+# Función que crea y firma un JWT
 def generate_jwt(user_id, correo, rol):
     payload = {
         'iss': 'MedTrack',
-        'sub': correo,        # identifica al usuario
-        'id':  user_id,       # id del usuario
-        'rol': rol,           # rol del usuario
-        'iat': int((datetime.now(timezone.utc)).timestamp()),
-        'exp': int((datetime.now(timezone.utc) + timedelta(hours=8)).timestamp()),
+        'sub': correo,
+        'id': user_id,
+        'rol': rol,
+        'iat': int(datetime.now(timezone.utc).timestamp()),
+        'exp': int(
+            (datetime.now(timezone.utc) + timedelta(hours=8)).timestamp()
+        ),
     }
-    encoded_jwt = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+    encoded_jwt = jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+
     return encoded_jwt
 
-# El objetivo de esta función es devolver el payload decodificado
+
+# Función que valida y decodifica un JWT
 def verify_jwt(token):
     try:
-        decoded_jwt = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
+        decoded_jwt = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
         return decoded_jwt
+
     # Validación de seguridad relacionada a sesión vencida
     except jwt.ExpiredSignatureError:
         print("Token has expired")
         return None
+
     # Protege contra tokens mal construidos
     except jwt.InvalidTokenError:
         print("Invalid token")
-        return None  # no rompemos el programa
+        return None

@@ -1,15 +1,10 @@
-﻿import sqlite3 
-from fastapi import APIRouter, HTTPException
+﻿from fastapi import APIRouter, HTTPException
 from bson import ObjectId
 
 from backend.database import (
     medicamentos_col,
-    recordatorios_col
-)
-
-from backend.models import (
-    get_recordatorios_por_paciente,
-    get_panel_dia_por_paciente
+    recordatorios_col,
+    pacientes_col
 )
 
 from backend.validaciones import validar_recordatorio
@@ -26,23 +21,28 @@ router = APIRouter(
 )
 
 
-# 🔹 Helper
-def obtener_medicamento_por_id(medicamento_id: int):
-    return medicamentos_col.find_one({
-        "$or": [
-            {"id": medicamento_id},
-            {"medicamento_id": medicamento_id}
-        ]
-    })
+def serializar_recordatorio(recordatorio: dict, medicamento: dict = None) -> dict:
+    return {
+        "id": str(recordatorio.get("_id")),
+        "medicamento_id": recordatorio.get("medicamento_id"),
+        "paciente_id": recordatorio.get("paciente_id"),
+        "medicamento_nombre": medicamento.get("nombre", "") if medicamento else recordatorio.get("medicamento_nombre", ""),
+        "dosis": medicamento.get("dosis", "") if medicamento else recordatorio.get("dosis", ""),
+        "hora_recordatorio": recordatorio.get("hora_recordatorio", ""),
+        "fecha_inicio": recordatorio.get("fecha_inicio", ""),
+        "activo": recordatorio.get("activo", 1),
+        "observaciones": recordatorio.get("observaciones", ""),
+        "tomado": recordatorio.get("tomado", False)
+    }
 
 
-def obtener_paciente_id_de_medicamento(medicamento: dict):
-    return medicamento.get("paciente_id")
+def obtener_medicamento_por_id(medicamento_id: str):
+    try:
+        return medicamentos_col.find_one({"_id": ObjectId(medicamento_id)})
+    except Exception:
+        return None
 
 
-# =========================
-# POST: crear recordatorio
-# =========================
 @router.post(
     "/",
     responses={
@@ -60,13 +60,7 @@ def crear_recordatorio(data: dict):
             detail="; ".join(errores)
         )
 
-    try:
-        medicamento_id = int(data["medicamento_id"])
-    except (KeyError, TypeError, ValueError):
-        raise HTTPException(
-            status_code=400,
-            detail="medicamento_id debe ser un entero válido"
-        )
+    medicamento_id = str(data["medicamento_id"]).strip()
 
     medicamento = obtener_medicamento_por_id(medicamento_id)
 
@@ -76,13 +70,15 @@ def crear_recordatorio(data: dict):
             detail="El medicamento no existe"
         )
 
-    paciente_id = obtener_paciente_id_de_medicamento(medicamento)
+    paciente_id = medicamento.get("paciente_id")
 
-    nuevo_id = ObjectId()
+    if not paciente_id:
+        raise HTTPException(
+            status_code=400,
+            detail="El medicamento no tiene paciente asociado"
+        )
 
-    recordatorio = {
-        "_id": nuevo_id,
-        "id": str(nuevo_id),
+    nuevo_recordatorio = {
         "medicamento_id": medicamento_id,
         "paciente_id": paciente_id,
         "hora_recordatorio": data["hora_recordatorio"].strip(),
@@ -93,23 +89,27 @@ def crear_recordatorio(data: dict):
     }
 
     try:
-        recordatorios_col.insert_one(recordatorio)
+        resultado = recordatorios_col.insert_one(nuevo_recordatorio)
+        recordatorio_id = str(resultado.inserted_id)
 
         if publisher:
-            publisher.notify({
-                "type": "reminder_created",
-                "recordatorio_id": str(nuevo_id),
-                "medicamento_id": medicamento_id,
-                "paciente_id": paciente_id,
-                "hora_recordatorio": recordatorio["hora_recordatorio"],
-                "fecha_inicio": recordatorio["fecha_inicio"],
-                "activo": recordatorio["activo"],
-                "observaciones": recordatorio["observaciones"]
-            })
+            try:
+                publisher.notify({
+                    "type": "reminder_created",
+                    "recordatorio_id": recordatorio_id,
+                    "medicamento_id": medicamento_id,
+                    "paciente_id": paciente_id,
+                    "hora_recordatorio": nuevo_recordatorio["hora_recordatorio"],
+                    "fecha_inicio": nuevo_recordatorio["fecha_inicio"],
+                    "activo": nuevo_recordatorio["activo"],
+                    "observaciones": nuevo_recordatorio["observaciones"]
+                })
+            except Exception:
+                pass
 
         return {
             "mensaje": "Recordatorio creado correctamente",
-            "recordatorio_id": str(nuevo_id)
+            "recordatorio_id": recordatorio_id
         }
 
     except Exception as e:
@@ -119,80 +119,54 @@ def crear_recordatorio(data: dict):
         )
 
 
-# =========================
-# GET: panel del día
-# =========================
 @router.get("/panel-dia")
 def obtener_panel_dia():
-
-    conn = sqlite3.connect("database.db")
-    conn.row_factory = sqlite3.Row
-
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, nombres, apellidos FROM pacientes")
-        pacientes = cursor.fetchall()
-
-    finally:
-        conn.close()
-
+    pacientes = list(pacientes_col.find())
     panel = []
 
     for p in pacientes:
+        paciente_id = str(p["_id"])
 
-        filas = get_panel_dia_por_paciente(p["id"])
+        recordatorios = list(recordatorios_col.find({
+            "paciente_id": paciente_id,
+            "activo": 1
+        }))
+
         medicamentos = []
 
-        for f in filas:
-            f = dict(f)
+        for r in recordatorios:
+            medicamento = obtener_medicamento_por_id(r.get("medicamento_id"))
 
             medicamentos.append({
-                "recordatorio_id": f.get("recordatorio_id"),
-                "medicamento_id": f.get("medicamento_id"),
-                "medicamento": f.get("medicamento_nombre"),
-                "dosis": f.get("dosis"),
-                "hora": f.get("hora_recordatorio"),
-                "tomado": bool(f.get("tomada", 0))
+                "recordatorio_id": str(r["_id"]),
+                "medicamento_id": r.get("medicamento_id"),
+                "medicamento": medicamento.get("nombre", "") if medicamento else "",
+                "dosis": medicamento.get("dosis", "") if medicamento else "",
+                "hora": r.get("hora_recordatorio", ""),
+                "tomado": r.get("tomado", False)
             })
 
         if medicamentos:
             panel.append({
-                "paciente_id": p["id"],
-                "nombres": p["nombres"],
-                "apellidos": p["apellidos"],
+                "paciente_id": paciente_id,
+                "nombres": p.get("nombres", ""),
+                "apellidos": p.get("apellidos", ""),
                 "medicamentos": medicamentos
             })
 
     return {"panel": panel}
 
 
-# =========================
-# GET: listar recordatorios
-# =========================
 @router.get("/{paciente_id}")
-def listar_recordatorios(paciente_id: int):
+def listar_recordatorios(paciente_id: str):
+    recordatorios = list(recordatorios_col.find({
+        "paciente_id": paciente_id
+    }))
 
-    conn = sqlite3.connect("database.db")
-    conn.row_factory = sqlite3.Row
+    resultado = []
 
-    try:
-        filas = get_recordatorios_por_paciente(paciente_id)
+    for r in recordatorios:
+        medicamento = obtener_medicamento_por_id(r.get("medicamento_id"))
+        resultado.append(serializar_recordatorio(r, medicamento))
 
-        recordatorios = []
-
-        for fila in filas:
-            recordatorios.append({
-                "id": fila["id"],
-                "medicamento_id": fila["medicamento_id"],
-                "medicamento_nombre": fila["medicamento_nombre"],
-                "dosis": fila["dosis"],
-                "hora_recordatorio": fila["hora_recordatorio"],
-                "fecha_inicio": fila["fecha_inicio"],
-                "activo": fila["activo"],
-                "observaciones": fila["observaciones"]
-            })
-
-        return {"recordatorios": recordatorios}
-
-    finally:
-        conn.close()
+    return {"recordatorios": resultado}

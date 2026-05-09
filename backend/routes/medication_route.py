@@ -74,9 +74,12 @@ def registrar_medicamento(data: dict):
             "paciente_id": paciente_id
         }
 
-        medicamentos_col.insert_one(nuevo_medicamento)
+        resultado = medicamentos_col.insert_one(nuevo_medicamento)
 
-        return {"mensaje": "Medicamento registrado exitosamente"}
+        return {
+            "mensaje": "Medicamento registrado exitosamente",
+            "medicamento_id": str(resultado.inserted_id)
+        }
 
     except HTTPException:
         raise
@@ -91,14 +94,27 @@ def registrar_medicamento(data: dict):
 @router.get("/paciente/{paciente_id}")
 def obtener_medicamentos_paciente(paciente_id: str):
     try:
-        meds = list(
+        medicamentos = list(
             medicamentos_col.find(
-                {"paciente_id": paciente_id},
-                {"_id": 0}
+                {"paciente_id": paciente_id}
             ).sort("nombre", 1)
         )
 
-        return meds
+        resultado = []
+
+        for m in medicamentos:
+            resultado.append({
+                "id": str(m["_id"]),
+                "nombre": m.get("nombre", ""),
+                "dosis": m.get("dosis", ""),
+                "frecuencia": m.get("frecuencia", ""),
+                "horario": m.get("horario", ""),
+                "fecha_inicio": m.get("fecha_inicio", ""),
+                "observaciones": m.get("observaciones", ""),
+                "paciente_id": m.get("paciente_id", "")
+            })
+
+        return resultado
 
     except Exception as e:
         raise HTTPException(

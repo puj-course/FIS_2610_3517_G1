@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import api from "../api";
 
 // ── Estilos ─────────────────────────────────────────────────────────────────
 const estilos = `
@@ -86,11 +87,10 @@ export default function PanelDia() {
       setCargando(true);
       setError("");
       try {
-        // Equivalente al api.obtenerPanelDia() del HTML original
-        const res = await fetch("http://localhost:8000/panel-dia");
-        const datos = await res.json();
+        // ✅ usa api.obtenerPanelDia — sin fetch directo ni URL hardcoded
+        const res = await api.obtenerPanelDia();
         if (!res.ok) { setError("Error al cargar el panel del día."); return; }
-        setPanel(datos.panel || []);
+        setPanel(res.body.panel || []);
       } catch {
         setError("No se pudo conectar con el servidor.");
       } finally {

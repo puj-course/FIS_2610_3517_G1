@@ -265,7 +265,7 @@ export default function ResumenPaciente() {
           </div>
           <span className="rp-marca-nombre">MedTrack</span>
         </div>
-        {/* ✅ CORREGIDO: usar navigate() en vez de href a un .html */}
+        {}
         <button className="rp-boton-volver" onClick={() => navigate('/pacientes')}>
           ← Volver a pacientes
         </button>

@@ -3,10 +3,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-// NOTA: el HTML original hacía fetch() directo. Aquí usamos api.obtenerHistorial()
-// que ya existe en tu api.js, centralizando la llamada al backend como corresponde
-// al patrón Fachada que tiene el proyecto.
-
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
 

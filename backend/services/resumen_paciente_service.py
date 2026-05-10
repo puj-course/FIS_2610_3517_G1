@@ -1,99 +1,82 @@
-﻿from backend.models import get_connection, obtener_historial_tomas
-from backend.decorators.historial import (
-    HistorialTomas,
-    CumplimientoDecorator,
-    AlertasDecorator
-)
+﻿from bson import ObjectId
+from backend.database import pacientes_col, medicamentos_col, tomas_col
 
 
 class ResumenPacienteService:
-    def obtener_paciente(self, paciente_id: int):
-        conn = get_connection()
-        cursor = conn.cursor()
+    def obtener_paciente(self, paciente_id: str):
+        try:
+            paciente = pacientes_col.find_one({"_id": ObjectId(paciente_id)})
+        except Exception:
+            paciente = pacientes_col.find_one({"id": paciente_id})
+        return paciente
 
-        cursor.execute("""
-            SELECT *
-            FROM pacientes
-            WHERE id = ?
-        """, (paciente_id,))
+    def obtener_medicamentos_activos(self, paciente_id: str):
+        try:
+            oid = ObjectId(paciente_id)
+            meds = list(medicamentos_col.find({"paciente_id": str(oid)}))
+            if not meds:
+                meds = list(medicamentos_col.find({"paciente_id": paciente_id}))
+        except Exception:
+            meds = list(medicamentos_col.find({"paciente_id": paciente_id}))
+        return meds
 
-        paciente = cursor.fetchone()
-        conn.close()
-
-        if not paciente:
-            return None
-
-        return dict(paciente)
-
-    def obtener_medicamentos_activos(self, paciente_id: int):
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT *
-            FROM medicamentos
-            WHERE paciente_id = ?
-        """, (paciente_id,))
-
-        medicamentos = cursor.fetchall()
-        conn.close()
-
-        return [dict(m) for m in medicamentos]
-
-    def obtener_historial_formateado(self, paciente_id: int):
-        tomas = obtener_historial_tomas(paciente_id)
+    def obtener_historial_formateado(self, paciente_id: str):
+        try:
+            oid = ObjectId(paciente_id)
+            tomas = list(tomas_col.find({"paciente_id": str(oid)}))
+            if not tomas:
+                tomas = list(tomas_col.find({"paciente_id": paciente_id}))
+        except Exception:
+            tomas = list(tomas_col.find({"paciente_id": paciente_id}))
 
         historial = []
-
         for t in tomas:
-           historial.append({
-            "id": t["id"],
-            "paciente_id": t["paciente_id"],
-            "medicamento_id": t["medicamento_id"],
-
-            "medicamento": t["nombre"],
-            "medicamento_nombre": t["nombre"],
-
-            "fecha": t["fecha"],
-            "hora_programada": t["hora_programada"],
-
-            "hora_tomada": t["hora_tomada"],
-            "hora_tomado": t["hora_tomada"],
-
-            "estado": t["estado"],
-            "observaciones": t["observaciones"]
-        })
-
+            historial.append({
+                "id": str(t.get("_id", "")),
+                "paciente_id": paciente_id,
+                "medicamento_id": str(t.get("medicamento_id", "")),
+                "medicamento": t.get("nombre", t.get("medicamento_nombre", "")),
+                "medicamento_nombre": t.get("nombre", t.get("medicamento_nombre", "")),
+                "fecha": t.get("fecha", ""),
+                "hora_programada": t.get("hora_programada", ""),
+                "hora_tomada": t.get("hora_tomada", ""),
+                "estado": t.get("estado", "pendiente"),
+                "observaciones": t.get("observaciones", ""),
+            })
         return historial
 
-    def construir_resumen(self, paciente_id: int):
+    def construir_resumen(self, paciente_id: str):
         paciente = self.obtener_paciente(paciente_id)
-
         if not paciente:
             raise LookupError("Paciente no encontrado")
 
         medicamentos = self.obtener_medicamentos_activos(paciente_id)
-        historial_base = self.obtener_historial_formateado(paciente_id)
+        historial = self.obtener_historial_formateado(paciente_id)
 
-        historial = HistorialTomas(historial_base)
-        historial = CumplimientoDecorator(historial)
-        historial = AlertasDecorator(historial)
-
-        historial_enriquecido = historial.obtener_datos()
+        tomas_realizadas = sum(1 for t in historial if t["estado"] in ["tomado", "tomada", "a_tiempo", "tarde"])
+        tomas_omitidas   = sum(1 for t in historial if t["estado"] == "omitida")
+        tomas_pendientes = sum(1 for t in historial if t["estado"] == "pendiente")
+        tomas_tarde      = sum(1 for t in historial if t["estado"] == "tarde")
+        total            = len(historial)
+        porcentaje       = round((tomas_realizadas / total * 100), 1) if total > 0 else 0
 
         return {
             "paciente": {
-                "id": paciente["id"],
-                "nombres": paciente["nombres"],
-                "apellidos": paciente["apellidos"],
-                "tipo_documento": paciente["tipo_documento"],
-                "numero_documento": paciente["numero_documento"],
-                "telefono_contacto": paciente["telefono_contacto"],
-                "eps_aseguradora": paciente["eps_aseguradora"],
-                "diagnostico_principal": paciente["diagnostico_principal"]
+                "id": str(paciente.get("_id", "")),
+                "nombres": paciente.get("nombres", ""),
+                "apellidos": paciente.get("apellidos", ""),
+                "tipo_documento": paciente.get("tipo_documento", ""),
+                "numero_documento": paciente.get("numero_documento", ""),
+                "telefono_contacto": paciente.get("telefono_contacto", ""),
+                "eps_aseguradora": paciente.get("eps_aseguradora", ""),
+                "diagnostico_principal": paciente.get("diagnostico_principal", ""),
             },
             "medicamentos_activos": medicamentos,
-            "historial": historial_enriquecido.get("historial", []),
-            "cumplimiento": historial_enriquecido.get("cumplimiento", {}),
-            "alertas": historial_enriquecido.get("alertas", [])
+            "historial": historial,
+            "cumplimiento": {
+                "total_tomas": total,
+                "tomas_realizadas": tomas_realizadas,
+                "porcentaje": porcentaje,
+            },
+            "alertas": [],
         }

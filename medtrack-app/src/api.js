@@ -3,8 +3,25 @@
   Adaptado para MongoDB: los IDs son strings (ObjectId), no enteros.
   Importar con: import api from './api';
 */
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+// Lee el token guardado en localStorage después del login
+function getToken() {
+  return localStorage.getItem('medtrack_token') || '';
+}
+
+// Headers para endpoints protegidos (requieren autenticación)
+function headersAuth() {
+  return {
+    'Content-Type': 'application/json',
+    'authorization': 'Bearer ' + getToken(),
+  };
+}
+
+// Headers solo para endpoints públicos (signin, signup)
+const headersPublicos = {
+  'Content-Type': 'application/json',
+};
 
 function procesarRespuesta(response) {
   return response.text().then(function (texto) {
@@ -46,69 +63,76 @@ function fetchConFallback(urls, options) {
 }
 
 const api = {
-  // ── AUTH ────────────────────────────────────────────────────────────────
+  //  AUTH (públicos, no necesitan token) 
   iniciarSesion: (username, password) =>
     fetchJson(API_URL + '/signin', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headersPublicos,
       body: JSON.stringify({ username, password }),
     }),
 
   registrarUsuario: (datos) =>
     fetchJson(API_URL + '/signup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headersPublicos,
       body: JSON.stringify(datos),
     }),
 
-  // ── PACIENTES ───────────────────────────────────────────────────────────
-  // MongoDB devuelve _id (string ObjectId); el backend lo puede exponer como "id"
+  //  PACIENTES 
   registrarPaciente: (datos) =>
     fetchJson(API_URL + '/pacientes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headersAuth(),
       body: JSON.stringify(datos),
     }),
 
-  obtenerPacientes: () => fetchJson(API_URL + '/pacientes'),
+  obtenerPacientes: () =>
+    fetchJson(API_URL + '/pacientes', {
+      headers: headersAuth(),
+    }),
 
-  // pacienteId es un string ObjectId de MongoDB
   obtenerPaciente: (pacienteId) =>
-    fetchJson(API_URL + '/pacientes/' + pacienteId),
+    fetchJson(API_URL + '/pacientes/' + pacienteId, {
+      headers: headersAuth(),
+    }),
 
-  // ── MEDICAMENTOS ────────────────────────────────────────────────────────
+  //  MEDICAMENTOS 
   registrarMedicamento: (datos) =>
     fetchJson(API_URL + '/medicamentos/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headersAuth(),
       body: JSON.stringify(datos),
     }),
 
-  // pacienteId es string ObjectId
   obtenerMedicamentos: (pacienteId) =>
-    fetchJson(API_URL + '/medicamentos/paciente/' + pacienteId),
+    fetchJson(API_URL + '/medicamentos/paciente/' + pacienteId, {
+      headers: headersAuth(),
+    }),
 
   // ── RECORDATORIOS ───────────────────────────────────────────────────────
   crearRecordatorio: (datos) =>
     fetchJson(API_URL + '/recordatorios/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headersAuth(),
       body: JSON.stringify(datos),
     }),
 
   obtenerRecordatorios: (pacienteId) =>
-    fetchJson(API_URL + '/recordatorios/' + pacienteId),
+    fetchJson(API_URL + '/recordatorios/' + pacienteId, {
+      headers: headersAuth(),
+    }),
 
   obtenerPanelDia: (pacienteId, fecha) => {
+    const opciones = { headers: headersAuth() };
     if (pacienteId) {
       const query = fecha ? '?fecha=' + fecha : '';
       return fetchConFallback([
         API_URL + '/recordatorios/panel-dia/' + pacienteId,
         API_URL + '/tomas/dia/' + pacienteId + query,
         API_URL + '/tomas/' + pacienteId + query,
-      ]);
+      ], opciones);
     }
-    return fetchJson(API_URL + '/recordatorios/panel-dia');
+    return fetchJson(API_URL + '/recordatorios/panel-dia', opciones);
   },
 
   obtenerPanelDiaPaciente: (pacienteId) =>
@@ -116,21 +140,24 @@ const api = {
       API_URL + '/recordatorios/panel-dia/' + pacienteId,
       API_URL + '/tomas/dia/' + pacienteId,
       API_URL + '/tomas/' + pacienteId,
-    ]),
+    ], { headers: headersAuth() }),
 
   obtenerRecordatoriosRetrasados: (pacienteId) =>
-    fetchJson(API_URL + '/recordatorios/retrasados/' + pacienteId),
+    fetchJson(API_URL + '/recordatorios/retrasados/' + pacienteId, {
+      headers: headersAuth(),
+    }),
 
   marcarRecordatorioTomado: (recordatorioId) =>
     fetchJson(API_URL + '/recordatorios/' + recordatorioId + '/tomado', {
       method: 'PATCH',
+      headers: headersAuth(),
     }),
 
-  // ── TOMAS ───────────────────────────────────────────────────────────────
+  //  TOMAS 
   registrarToma: (datos) =>
     fetchJson(API_URL + '/tomas/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headersAuth(),
       body: JSON.stringify(datos),
     }),
 
@@ -146,14 +173,14 @@ const api = {
     return fetchConFallback([
       API_URL + '/tomas/dia/' + pacienteId + query,
       API_URL + '/tomas/' + pacienteId + query,
-    ]);
+    ], { headers: headersAuth() });
   },
 
   obtenerTomasDelDia(pacienteId, fecha) {
     return this.obtenerTomas(pacienteId, fecha);
   },
 
-  // ── HISTORIAL ───────────────────────────────────────────────────────────
+  //  HISTORIAL 
   obtenerHistorial: (pacienteId) => {
     if (!pacienteId) {
       return Promise.resolve({
@@ -165,12 +192,14 @@ const api = {
     return fetchConFallback([
       API_URL + '/tomas/historial/' + pacienteId,
       API_URL + '/historial/' + pacienteId,
-    ]);
+    ], { headers: headersAuth() });
   },
 
-  // ── RESUMEN ─────────────────────────────────────────────────────────────
+  //  RESUMEN
   obtenerResumen: (pacienteId) =>
-    fetchJson(API_URL + '/resumen/' + pacienteId),
+    fetchJson(API_URL + '/resumen/' + pacienteId, {
+      headers: headersAuth(),
+    }),
 };
 
 export default api;

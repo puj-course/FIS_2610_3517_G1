@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.models import init_db
-
 from backend.routes.auth_route import router as auth_router
 from backend.routes.patient_route import router as patient_router
 from backend.routes.medication_route import router as medication_router
@@ -11,12 +10,17 @@ from backend.routes.historial_route import router as historial_router
 from backend.routes.resumen_route import router as resumen_router
 
 init_db()
-
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "*"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

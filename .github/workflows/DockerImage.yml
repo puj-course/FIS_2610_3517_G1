@@ -1,4 +1,5 @@
-﻿name: CD - Build Docker Image
+name: CD - Build & Deploy Docker Image
+
 on:
   push:
     branches:
@@ -12,24 +13,26 @@ on:
 jobs:
   docker-build:
     runs-on: ubuntu-latest
-
     steps:
-      # Descarga el código
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      # Construye la imagen Docker
-      # Esto verifica que el Dockerfile funciona y que todas
-      # las dependencias instalan correctamente
       - name: Build de imagen Docker
-        run: docker build -t proyecto-medicamentos:latest .
-
+        run: docker build -t medtrack:latest .
 
       - name: Levantar contenedor de prueba
         run: |
           docker run --rm -d \
             --name test-container \
             -p 8000:8000 \
+            -e MONGO_URI=${{ secrets.MONGO_URI }} \
+            medtrack:latest
+
+      - name: Verificar que la aplicación responde
+        run: |
+          sleep 10
+          curl --fail http://localhost:8000/docs
+
              -e MONGO_URI=${{ secrets.MONGO_URI }} \
             proyecto-medicamentos:latest
 
@@ -41,3 +44,26 @@ jobs:
       - name: Detener contenedor
         if: always()
         run: docker stop test-container || true
+
+  docker-push:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Login a DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build y push a DockerHub
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/medtrack:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/medtrack:${{ github.sha }}

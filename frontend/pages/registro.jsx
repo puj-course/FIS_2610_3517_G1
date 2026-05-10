@@ -1,4 +1,5 @@
 import { useState } from "react";
+import api from "../api";
 
 const estilos = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -128,13 +129,10 @@ export default function Registro({ onIrALogin }) {
     if (Object.values(errores).some(Boolean)) return;
     setCargando(true);
     try {
-      const res = await fetch("http://localhost:8000/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: form.nombre.trim(), username: form.correo.trim(), password: form.contrasena, rol: form.rol }),
-      });
-      const datos = await res.json();
-      if (!res.ok) { setAlertaError(datos.detail); return; }
+      // ✅ usa api.registrarUsuario — sin fetch directo ni URL hardcoded
+      const res = await api.registrarUsuario({ nombre: form.nombre.trim(), username: form.correo.trim(), password: form.contrasena, rol: form.rol });
+      const datos = res.body;
+      if (!res.ok) { setAlertaError(datos.detail || "Error al crear la cuenta."); return; }
       setAlertaExito("¡Cuenta creada exitosamente! Redirigiendo al login...");
       setTimeout(() => onIrALogin?.(), 2000);
     } catch {

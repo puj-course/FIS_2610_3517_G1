@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import api from "../api";  
 
-// ── Estilos ─────────────────────────────────────────────────────────────────
 const estilos = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
   :root {
@@ -91,7 +91,6 @@ const estilos = `
     cursor: pointer; transition: background .2s, box-shadow .2s;
   }
   .lr-boton-tomada:hover { background: var(--color-menta-oscuro); box-shadow: 0 8px 20px rgba(45,212,191,.25); }
-  /* Alertas flotantes de retraso */
   .lr-alertas-flotantes {
     position: fixed; top: 1rem; right: 1rem;
     z-index: 9999; max-width: 350px;
@@ -129,88 +128,64 @@ const IconMedtrack = () => (
   </svg>
 );
 
-// ── Helper: fecha/hora actual formateada para el backend ────────────────────
 const fechaHoraActual = () => {
   const a = new Date();
   const p = (n) => String(n).padStart(2, "0");
   return `${a.getFullYear()}-${p(a.getMonth()+1)}-${p(a.getDate())} ${p(a.getHours())}:${p(a.getMinutes())}:${p(a.getSeconds())}`;
 };
 
-// ── Componente principal ────────────────────────────────────────────────────
 export default function ListaRecordatorios({ pacienteId, onNuevoRecordatorio }) {
-  /*
-    Props:
-    - pacienteId (número/string): ID del paciente cuyos recordatorios se muestran.
-      En el HTML original venía de ?paciente_id= en la URL.
-      En React, el componente padre lo pasa como prop (lo obtiene del estado
-      de sesión o del routing, ej: useParams() de React Router).
-    - onNuevoRecordatorio: función que navega a la pantalla de crear recordatorio.
-  */
-
-  const token = localStorage.getItem("medtrack_token") || "test";
-
   const [recordatorios, setRecordatorios] = useState([]);
   const [error,         setError]         = useState("");
   const [cargando,      setCargando]      = useState(true);
   const [retrasados,    setRetrasados]    = useState([]);
 
-  // ── Cargar panel del día ────────────────────────────────────────────────
   const cargarPanelDia = useCallback(async () => {
     setError("");
     setCargando(true);
     if (!pacienteId) {
-      setError("Falta el paciente_id. El componente padre debe pasarlo como prop.");
+      setError("Falta el paciente. Selecciona uno desde la lista de pacientes.");
       setCargando(false);
       return;
     }
     try {
-      const res = await fetch(`http://127.0.0.1:8000/recordatorios/panel-dia/${pacienteId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const datos = await res.json();
+      const res = await api.obtenerPanelDiaPaciente(pacienteId);
       if (!res.ok) { setError("Error al cargar el panel del día."); return; }
-      setRecordatorios(datos.recordatorios || []);
+      setRecordatorios(res.body.recordatorios || []);
     } catch {
       setError("No se pudo conectar con el servidor.");
     } finally {
       setCargando(false);
     }
-  }, [pacienteId, token]);
+  }, [pacienteId]);
 
-  // ── Verificar retrasados ────────────────────────────────────────────────
   const verificarRetrasados = useCallback(async () => {
     if (!pacienteId) return;
     try {
-      const res = await fetch(`http://localhost:8000/recordatorios/retrasados/${pacienteId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const datos = await res.json();
-      if (res.ok && datos.retrasados?.length) setRetrasados(datos.retrasados);
+      const res = await api.obtenerRecordatoriosRetrasados(pacienteId);
+      if (res.ok && res.body.retrasados?.length) setRetrasados(res.body.retrasados);
     } catch { /* silencioso */ }
-  }, [pacienteId, token]);
+  }, [pacienteId]);
 
   useEffect(() => {
     cargarPanelDia();
     verificarRetrasados();
   }, [cargarPanelDia, verificarRetrasados]);
 
-  // ── Marcar como tomada ──────────────────────────────────────────────────
   const marcarComoTomada = async (pId, medId, recId, fechaProgramada) => {
     setError("");
-    const body = {
-      paciente_id: pId, medicamento_id: medId, recordatorio_id: recId,
+    const datos = {
+      paciente_id:     pId,      
+      medicamento_id:  medId,    
+      recordatorio_id: recId,    
       fecha_programada: fechaProgramada,
       fecha_hora_toma: fechaHoraActual(),
       estado: "tomada",
       observaciones: "Marcada desde el panel del día",
     };
     try {
-      const res = await fetch("http://127.0.0.1:8000/tomas/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
+      const res = await api.registrarToma(datos);
+      const data = res.body;
       if (!res.ok) { setError(data.detail || "No se pudo registrar la toma."); return; }
       await cargarPanelDia();
     } catch {
@@ -218,18 +193,13 @@ export default function ListaRecordatorios({ pacienteId, onNuevoRecordatorio }) 
     }
   };
 
-  // ── Marcar retrasado como tomado y quitar alerta ────────────────────────
   const marcarRetrasadoTomado = async (recId) => {
     try {
-      const res = await fetch(`http://localhost:8000/recordatorios/${recId}/tomado`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.marcarRecordatorioTomado(recId);
       if (res.ok) setRetrasados((prev) => prev.filter((r) => r.id !== recId));
     } catch { /* silencioso */ }
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────
   const renderFilas = () => {
     if (cargando) return (
       <tr><td className="lr-vacio" colSpan={7}>Cargando...</td></tr>
@@ -238,7 +208,7 @@ export default function ListaRecordatorios({ pacienteId, onNuevoRecordatorio }) 
       <tr><td className="lr-vacio" colSpan={7}>No hay recordatorios para mostrar hoy.</td></tr>
     );
     return recordatorios.map((r, i) => (
-      <tr key={i}>
+      <tr key={r.recordatorio_id || i}>
         <td>{r.medicamento_nombre}</td>
         <td>{r.dosis || "—"}</td>
         <td>{r.hora_recordatorio}</td>
@@ -266,8 +236,6 @@ export default function ListaRecordatorios({ pacienteId, onNuevoRecordatorio }) 
   return (
     <>
       <style>{estilos}</style>
-
-      {/* Alertas flotantes de retraso */}
       <div className="lr-alertas-flotantes">
         {retrasados.map((r) => (
           <div key={r.id} className="lr-alerta-retraso">
@@ -281,19 +249,16 @@ export default function ListaRecordatorios({ pacienteId, onNuevoRecordatorio }) 
           </div>
         ))}
       </div>
-
       <div className="lr-body">
         <div className="lr-encabezado">
           <div className="lr-marca">
             <div className="lr-marca-icono"><IconMedtrack /></div>
             <span className="lr-marca-nombre">MedTrack</span>
           </div>
-          {/* En React usamos onClick en vez de href para navegar sin recargar */}
           <button className="lr-boton-nuevo" onClick={onNuevoRecordatorio}>
             + Nuevo recordatorio
           </button>
         </div>
-
         <div className="lr-tarjeta">
           <h2 className="lr-titulo">Panel del día</h2>
           {error && <div className="lr-alerta-error">{error}</div>}
@@ -301,13 +266,9 @@ export default function ListaRecordatorios({ pacienteId, onNuevoRecordatorio }) 
             <table className="lr-table">
               <thead>
                 <tr>
-                  <th>Medicamento</th>
-                  <th>Dosis</th>
-                  <th>Hora</th>
-                  <th>Fecha programada</th>
-                  <th>Estado</th>
-                  <th>Observaciones</th>
-                  <th>Acción</th>
+                  <th>Medicamento</th><th>Dosis</th><th>Hora</th>
+                  <th>Fecha programada</th><th>Estado</th>
+                  <th>Observaciones</th><th>Acción</th>
                 </tr>
               </thead>
               <tbody>{renderFilas()}</tbody>

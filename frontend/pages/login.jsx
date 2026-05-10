@@ -1,4 +1,5 @@
 import { useState } from "react";
+import api from "../api";
 
 const IconMedtrack = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -208,12 +209,9 @@ export default function Login({ onLoginExitoso, onIrARegistro }) {
 
     setCargando(true);
     try {
-      const respuesta = await fetch("http://localhost:8000/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: correo.trim(), password: contrasena }),
-      });
-      const datos = await respuesta.json();
+      // ✅ usa api.iniciarSesion — sin fetch directo ni URL hardcoded
+      const respuesta = await api.iniciarSesion(correo.trim(), contrasena);
+      const datos = respuesta.body;
       if (!respuesta.ok) {
         setAlertaError(datos.detail || "Credenciales incorrectas.");
         return;

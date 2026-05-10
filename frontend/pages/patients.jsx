@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import api from "../api";
 
 const estilos = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');

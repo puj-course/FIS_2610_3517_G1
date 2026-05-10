@@ -15,6 +15,8 @@ except Exception:
     publisher = None
 
 from fastapi import Depends
+from typing import Annotated
+
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from backend.auth import verify_jwt
 
@@ -130,7 +132,7 @@ def obtener_usuario_actual(credentials: HTTPAuthorizationCredentials = Depends(s
     return payload
 
 @router.get("/panel-dia")
-def obtener_panel_dia(usuario=Depends(obtener_usuario_actual)):
+def obtener_panel_dia(usuario: Annotated[dict, Depends(obtener_usuario_actual)]):
     from datetime import date
     hoy = date.today().strftime("%m/%d/%Y")
     cuidador_id = usuario.get("id")

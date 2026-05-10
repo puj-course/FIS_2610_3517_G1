@@ -14,6 +14,11 @@ try:
 except Exception:
     publisher = None
 
+from fastapi import Depends
+from typing import Annotated
+
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from backend.auth import verify_jwt
 
 router = APIRouter(
     prefix="/recordatorios",
@@ -118,25 +123,34 @@ def crear_recordatorio(data: dict):
             detail=f"Error al crear el recordatorio: {str(e)}"
         )
 
+security = HTTPBearer()
+
+def obtener_usuario_actual(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    payload = verify_jwt(credentials.credentials)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token inválido")
+    return payload
 
 @router.get("/panel-dia")
-def obtener_panel_dia():
-    pacientes = list(pacientes_col.find())
+def obtener_panel_dia(usuario: Annotated[dict, Depends(obtener_usuario_actual)]):
+    from datetime import date
+    hoy = date.today().strftime("%m/%d/%Y")
+    cuidador_id = usuario.get("id")
+
+    pacientes = list(pacientes_col.find({"cuidador_id": cuidador_id}))
     panel = []
 
     for p in pacientes:
         paciente_id = str(p["_id"])
-
         recordatorios = list(recordatorios_col.find({
             "paciente_id": paciente_id,
-            "activo": 1
+            "activo": 1,
+            "fecha_inicio": {"$lte": hoy}
         }))
 
         medicamentos = []
-
         for r in recordatorios:
             medicamento = obtener_medicamento_por_id(r.get("medicamento_id"))
-
             medicamentos.append({
                 "recordatorio_id": str(r["_id"]),
                 "medicamento_id": r.get("medicamento_id"),

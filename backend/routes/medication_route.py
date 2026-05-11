@@ -71,9 +71,10 @@ def registrar_medicamento(data: dict):
             "frecuencia": frecuencia,
             "horario": horario,
             "fecha_inicio": fecha_inicio,
+            "fecha_fin": data.get("fecha_fin", "").strip(),
             "observaciones": observaciones,
             "paciente_id": paciente_id
-        }
+}
 
         resultado = medicamentos_col.insert_one(nuevo_medicamento)
 
@@ -122,3 +123,63 @@ def obtener_medicamentos_paciente(paciente_id: str):
             status_code=500,
             detail=f"Error al obtener medicamentos: {str(e)}"
         )
+
+from datetime import date as date_type
+
+@router.get("/panel-completo")
+def obtener_panel_completo(usuario: Annotated[dict, Depends(obtener_usuario_actual)]):
+    from backend.database import tomas_col
+    hoy = date_type.today().strftime("%m/%d/%Y")
+    hoy_iso = date_type.today().isoformat()
+    cuidador_id = usuario.get("id")
+
+    pacientes = list(pacientes_col.find({"cuidador_id": cuidador_id}))
+    panel = []
+
+    for p in pacientes:
+        paciente_id = str(p["_id"])
+        
+        # Medicamentos activos hoy
+        medicamentos = list(medicamentos_col.find({
+            "paciente_id": paciente_id,
+            "fecha_inicio": {"$lte": hoy}
+        }))
+        
+        items = []
+        for m in medicamentos:
+            fecha_fin = m.get("fecha_fin", "")
+            if fecha_fin:
+                try:
+                    from datetime import datetime
+                    fin = datetime.strptime(fecha_fin, "%m/%d/%Y").date()
+                    if fin < date_type.today():
+                        continue
+                except:
+                    pass
+            
+            horarios = [h.strip() for h in m.get("horario", "").split(",") if h.strip()]
+            med_id = str(m["_id"])
+            
+            for hora in horarios:
+                # Buscar si ya fue tomada
+                toma = tomas_col.find_one({
+                    "medicamento_id": med_id,
+                    "fecha_programada": {"$regex": f"^{hoy_iso}.*{hora}"}
+                })
+                items.append({
+                    "medicamento_id": med_id,
+                    "medicamento": m.get("nombre", ""),
+                    "dosis": m.get("dosis", ""),
+                    "hora": hora,
+                    "tomado": toma is not None and toma.get("estado") in ["tomada", "a_tiempo", "tarde"]
+                })
+        
+        if items:
+            panel.append({
+                "paciente_id": paciente_id,
+                "nombres": p.get("nombres", ""),
+                "apellidos": p.get("apellidos", ""),
+                "medicamentos": items
+            })
+
+    return {"panel": panel}

@@ -1,6 +1,7 @@
-﻿# toma_service.py
-from typing import Any, Dict, Optional
+﻿from typing import Any, Dict, Optional
+from datetime import datetime
 from datetime import datetime, timezone
+
 
 from bson import ObjectId
 
@@ -100,6 +101,7 @@ class TomaService:
             "estado": toma.estado,
             "observaciones": toma.observaciones,
             "created_at": datetime.now(timezone.utc)
+
         }
 
         resultado = tomas_col.insert_one(documento)

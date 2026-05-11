@@ -1,200 +1,174 @@
 ﻿########################################################################################
-#   test_resumen_service.py
+# test_resumen_service.py
 ########################################################################################
 
-import sqlite3
-
+from unittest.mock import MagicMock
+from bson import ObjectId
 import pytest
 
 from backend.services import resumen_paciente_service as resumen_module
 from backend.services.resumen_paciente_service import ResumenPacienteService
 
 
-# =========================
-# FIXTURE DE BASE DE DATOS
-# =========================
-
-@pytest.fixture
-def db_path(tmp_path, monkeypatch):
-    path = tmp_path / "test_resumen_service.db"
-
-    def get_test_conn():
-        conn = sqlite3.connect(path)
-        conn.row_factory = sqlite3.Row
-        return conn
-
-    monkeypatch.setattr(resumen_module, "get_connection", get_test_conn)
-
-    conn = sqlite3.connect(path)
-    cursor = conn.cursor()
-
-    cursor.executescript("""
-        CREATE TABLE pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombres TEXT NOT NULL,
-            apellidos TEXT NOT NULL,
-            tipo_documento TEXT,
-            numero_documento TEXT,
-            telefono_contacto TEXT,
-            eps_aseguradora TEXT,
-            diagnostico_principal TEXT
-        );
-
-        CREATE TABLE medicamentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            dosis TEXT,
-            frecuencia TEXT,
-            horario TEXT,
-            fecha_inicio TEXT,
-            observaciones TEXT,
-            paciente_id INTEGER NOT NULL
-        );
-    """)
-
-    cursor.execute("""
-        INSERT INTO pacientes (
-            nombres, apellidos, tipo_documento, numero_documento,
-            telefono_contacto, eps_aseguradora, diagnostico_principal
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Ana",
-        "Lopez",
-        "CC",
-        "12345678",
-        "3001234567",
-        "Sura",
-        "Hipertension",
-    ))
-
-    cursor.execute("""
-        INSERT INTO medicamentos (
-            nombre, dosis, frecuencia, horario,
-            fecha_inicio, observaciones, paciente_id
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Aspirina",
-        "500 mg",
-        "Cada 8 horas",
-        "08:00",
-        "2026-04-01",
-        "Con comida",
-        1,
-    ))
-
-    conn.commit()
-    conn.close()
-
-    return path
+PACIENTE_ID = "69feaac76a52afc46ed40c52"
+PACIENTE_ID_2 = "69feaac76a52afc46ed40c53"
+MEDICAMENTO_ID = "69feb355322be070cd1c97ce"
+TOMA_ID_1 = ObjectId("69feb500322be070cd1c97d0")
+TOMA_ID_2 = ObjectId("69feb500322be070cd1c97d1")
 
 
 @pytest.fixture
-def historial_mock(monkeypatch):
-    tomas = [
+def colecciones_mock(monkeypatch):
+    pacientes_col = MagicMock()
+    medicamentos_col = MagicMock()
+    tomas_col = MagicMock()
+
+    pacientes_col.find_one.return_value = {
+        "_id": ObjectId(PACIENTE_ID),
+        "nombres": "Ana",
+        "apellidos": "Lopez",
+        "fecha_nacimiento": "01/15/2000",
+        "genero": "Femenino",
+        "tipo_documento": "CC",
+        "numero_documento": "12345678",
+        "telefono_contacto": "3001234567",
+        "eps_aseguradora": "Sura",
+        "diagnostico_principal": "Hipertension",
+        "alergias_conocidas": "",
+        "observaciones_adicionales": ""
+    }
+
+    cursor_meds = MagicMock()
+    cursor_meds.sort.return_value = [
         {
-            "id": 1,
-            "paciente_id": 1,
-            "medicamento_id": 1,
+            "_id": ObjectId(MEDICAMENTO_ID),
             "nombre": "Aspirina",
-            "fecha": "2026-04-12",
-            "hora_programada": "08:00",
-            "hora_tomada": "08:05",
+            "dosis": "500 mg",
+            "frecuencia": "Cada 8 horas",
+            "horario": "08:00",
+            "fecha_inicio": "2026-04-01",
+            "observaciones": "Con comida",
+            "paciente_id": PACIENTE_ID
+        }
+    ]
+    medicamentos_col.find.return_value = cursor_meds
+
+    medicamentos_col.find_one.return_value = {
+        "_id": ObjectId(MEDICAMENTO_ID),
+        "nombre": "Aspirina",
+        "dosis": "500 mg",
+        "paciente_id": PACIENTE_ID
+    }
+
+    cursor_tomas = MagicMock()
+    cursor_tomas.sort.return_value = [
+        {
+            "_id": TOMA_ID_1,
+            "paciente_id": PACIENTE_ID,
+            "medicamento_id": MEDICAMENTO_ID,
+            "recordatorio_id": "recordatorio-1",
+            "fecha_programada": "2026-04-12 08:00:00",
+            "fecha_hora_toma": "2026-04-12 08:05:00",
+            "diferencia_minutos": 5.0,
             "estado": "tomado",
             "observaciones": "Tomada correctamente",
         },
         {
-            "id": 2,
-            "paciente_id": 1,
-            "medicamento_id": 1,
-            "nombre": "Aspirina",
-            "fecha": "2026-04-13",
-            "hora_programada": "08:00",
-            "hora_tomada": None,
+            "_id": TOMA_ID_2,
+            "paciente_id": PACIENTE_ID,
+            "medicamento_id": MEDICAMENTO_ID,
+            "recordatorio_id": "recordatorio-2",
+            "fecha_programada": "2026-04-13 08:00:00",
+            "fecha_hora_toma": None,
+            "diferencia_minutos": None,
             "estado": "pendiente",
             "observaciones": "Pendiente",
         },
     ]
+    tomas_col.find.return_value = cursor_tomas
 
-    monkeypatch.setattr(
-        resumen_module,
-        "obtener_historial_tomas",
-        lambda paciente_id: tomas,
-    )
+    monkeypatch.setattr(resumen_module, "pacientes_col", pacientes_col)
+    monkeypatch.setattr(resumen_module, "medicamentos_col", medicamentos_col)
+    monkeypatch.setattr(resumen_module, "tomas_col", tomas_col)
 
-    return tomas
+    return {
+        "pacientes_col": pacientes_col,
+        "medicamentos_col": medicamentos_col,
+        "tomas_col": tomas_col
+    }
 
 
-# =========================
-# PACIENTE
-# =========================
-
-def test_paciente_ok(db_path):
+def test_paciente_ok(colecciones_mock):
     service = ResumenPacienteService()
 
-    paciente = service.obtener_paciente(1)
+    paciente = service.obtener_paciente(PACIENTE_ID)
 
-    assert paciente["id"] == 1
+    assert paciente["id"] == PACIENTE_ID
     assert paciente["nombres"] == "Ana"
     assert paciente["apellidos"] == "Lopez"
 
 
-def test_paciente_none(db_path):
-    service = ResumenPacienteService()
+def test_paciente_none(colecciones_mock):
+    colecciones_mock["pacientes_col"].find_one.return_value = None
 
-    paciente = service.obtener_paciente(999)
+    service = ResumenPacienteService()
+    paciente = service.obtener_paciente("69feaac76a52afc46ed40999")
 
     assert paciente is None
 
 
-# =========================
-# MEDICAMENTOS
-# =========================
-
-def test_medicamentos_ok(db_path):
+def test_paciente_id_invalido(colecciones_mock):
     service = ResumenPacienteService()
 
-    medicamentos = service.obtener_medicamentos_activos(1)
+    paciente = service.obtener_paciente("id-invalido")
+
+    assert paciente is None
+
+
+def test_medicamentos_ok(colecciones_mock):
+    service = ResumenPacienteService()
+
+    medicamentos = service.obtener_medicamentos_activos(PACIENTE_ID)
 
     assert len(medicamentos) == 1
+    assert medicamentos[0]["id"] == MEDICAMENTO_ID
     assert medicamentos[0]["nombre"] == "Aspirina"
-    assert medicamentos[0]["paciente_id"] == 1
+    assert medicamentos[0]["paciente_id"] == PACIENTE_ID
 
 
-def test_medicamentos_vacio(db_path):
+def test_medicamentos_vacio(colecciones_mock):
+    cursor_vacio = MagicMock()
+    cursor_vacio.sort.return_value = []
+    colecciones_mock["medicamentos_col"].find.return_value = cursor_vacio
+
     service = ResumenPacienteService()
-
-    medicamentos = service.obtener_medicamentos_activos(999)
+    medicamentos = service.obtener_medicamentos_activos("69feaac76a52afc46ed40999")
 
     assert medicamentos == []
 
 
-# =========================
-# HISTORIAL
-# =========================
-
-def test_historial_ok(db_path, historial_mock):
+def test_historial_ok(colecciones_mock):
     service = ResumenPacienteService()
 
-    historial = service.obtener_historial_formateado(1)
+    historial = service.obtener_historial_formateado(PACIENTE_ID)
 
     assert len(historial) == 2
+    assert historial[0]["id"] == str(TOMA_ID_1)
     assert historial[0]["medicamento"] == "Aspirina"
+    assert historial[0]["medicamento_nombre"] == "Aspirina"
+    assert historial[0]["fecha"] == "2026-04-12"
+    assert historial[0]["hora_programada"] == "08:00:00"
+    assert historial[0]["hora_tomada"] == "08:05:00"
     assert historial[0]["estado"] == "tomado"
     assert historial[1]["estado"] == "pendiente"
 
 
-# =========================
-# RESUMEN DEL PACIENTE
-# =========================
-
-def test_resumen_ok(db_path, historial_mock):
+def test_resumen_ok(colecciones_mock):
     service = ResumenPacienteService()
 
-    resumen = service.construir_resumen(1)
+    resumen = service.construir_resumen(PACIENTE_ID)
 
-    assert resumen["paciente"]["id"] == 1
+    assert resumen["paciente"]["id"] == PACIENTE_ID
     assert resumen["paciente"]["nombres"] == "Ana"
     assert resumen["paciente"]["apellidos"] == "Lopez"
 
@@ -209,46 +183,43 @@ def test_resumen_ok(db_path, historial_mock):
     assert len(resumen["alertas"]) == 1
 
 
-def test_resumen_404(db_path):
+def test_resumen_404(colecciones_mock):
+    colecciones_mock["pacientes_col"].find_one.return_value = None
+
     service = ResumenPacienteService()
 
     with pytest.raises(LookupError, match="Paciente no encontrado"):
-        service.construir_resumen(999)
+        service.construir_resumen("69feaac76a52afc46ed40999")
 
 
-def test_resumen_vacio(db_path, monkeypatch):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+def test_resumen_vacio(colecciones_mock):
+    colecciones_mock["pacientes_col"].find_one.return_value = {
+        "_id": ObjectId(PACIENTE_ID_2),
+        "nombres": "Carlos",
+        "apellidos": "Perez",
+        "fecha_nacimiento": "02/20/2000",
+        "genero": "Masculino",
+        "tipo_documento": "CC",
+        "numero_documento": "87654321",
+        "telefono_contacto": "3111234567",
+        "eps_aseguradora": "Nueva EPS",
+        "diagnostico_principal": "Diabetes",
+        "alergias_conocidas": "",
+        "observaciones_adicionales": ""
+    }
 
-    cursor.execute("""
-        INSERT INTO pacientes (
-            nombres, apellidos, tipo_documento, numero_documento,
-            telefono_contacto, eps_aseguradora, diagnostico_principal
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Carlos",
-        "Perez",
-        "CC",
-        "87654321",
-        "3111234567",
-        "Nueva EPS",
-        "Diabetes",
-    ))
+    cursor_meds_vacio = MagicMock()
+    cursor_meds_vacio.sort.return_value = []
+    colecciones_mock["medicamentos_col"].find.return_value = cursor_meds_vacio
 
-    conn.commit()
-    conn.close()
-
-    monkeypatch.setattr(
-        resumen_module,
-        "obtener_historial_tomas",
-        lambda paciente_id: [],
-    )
+    cursor_tomas_vacio = MagicMock()
+    cursor_tomas_vacio.sort.return_value = []
+    colecciones_mock["tomas_col"].find.return_value = cursor_tomas_vacio
 
     service = ResumenPacienteService()
-    resumen = service.construir_resumen(2)
+    resumen = service.construir_resumen(PACIENTE_ID_2)
 
-    assert resumen["paciente"]["id"] == 2
+    assert resumen["paciente"]["id"] == PACIENTE_ID_2
     assert resumen["paciente"]["nombres"] == "Carlos"
     assert resumen["medicamentos_activos"] == []
     assert resumen["historial"] == []

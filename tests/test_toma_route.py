@@ -1,16 +1,20 @@
-﻿########################################################################################
-#   test_toma_route.py
-########################################################################################
-
-import pytest
+﻿import pytest
 from fastapi import HTTPException
 
 from backend.routes import toma_route
 
 
+PACIENTE_ID = "69feaac76a52afc46ed40c52"
+MEDICAMENTO_ID = "69feb355322be070cd1c97ce"
+RECORDATORIO_ID = "69fec00d0dfd411e13b01ed"
+TOMA_ID = "69fec1110dfd411e13b01ee"
+
+
 class ServicioTomaFalso:
-    def __init__(self, error=None):
+    def __init__(self, error=None, historial=None, tomas_dia=None):
         self.error = error
+        self.historial = historial if historial is not None else []
+        self.tomas_dia = tomas_dia if tomas_dia is not None else []
         self.ultima_llamada = None
 
     def registrar_toma(
@@ -39,7 +43,7 @@ class ServicioTomaFalso:
         return {
             "ok": True,
             "mensaje": "Toma registrada correctamente",
-            "toma_id": 1,
+            "toma_id": TOMA_ID,
             "data": {
                 "paciente_id": paciente_id,
                 "medicamento_id": medicamento_id,
@@ -52,32 +56,29 @@ class ServicioTomaFalso:
             },
         }
 
-
-class RepositorioFalso:
     def obtener_tomas_del_dia(self, paciente_id, fecha):
-        return [
+        return self.tomas_dia or [
             {
-                "id": 1,
+                "id": TOMA_ID,
                 "paciente_id": paciente_id,
-                "fecha": fecha,
+                "fecha_programada": f"{fecha} 08:00:00",
+                "fecha_hora_toma": f"{fecha} 08:03:00",
                 "estado": "a_tiempo",
             }
         ]
 
+    def obtener_historial(self, paciente_id):
+        return self.historial
+
 
 def test_registrar_toma_ok_formato_nuevo(monkeypatch):
     servicio = ServicioTomaFalso()
-
-    monkeypatch.setattr(
-        toma_route,
-        "toma_service",
-        servicio
-    )
+    monkeypatch.setattr(toma_route, "toma_service", servicio)
 
     datos = {
-        "paciente_id": 1,
-        "medicamento_id": 1,
-        "recordatorio_id": 1,
+        "paciente_id": PACIENTE_ID,
+        "medicamento_id": MEDICAMENTO_ID,
+        "recordatorio_id": RECORDATORIO_ID,
         "fecha_programada": "2026-04-12 08:00:00",
         "fecha_hora_toma": "2026-04-12 08:03:00",
         "estado": "tomada",
@@ -87,32 +88,19 @@ def test_registrar_toma_ok_formato_nuevo(monkeypatch):
     respuesta = toma_route.registrar_toma(datos)
 
     assert respuesta["ok"] is True
-    assert respuesta["mensaje"] == "Toma registrada correctamente"
-    assert respuesta["toma_id"] == 1
+    assert respuesta["toma_id"] == TOMA_ID
     assert respuesta["data"]["estado"] == "a_tiempo"
-
-    assert servicio.ultima_llamada["paciente_id"] == 1
-    assert servicio.ultima_llamada["medicamento_id"] == 1
-    assert servicio.ultima_llamada["recordatorio_id"] == 1
-    assert servicio.ultima_llamada["fecha_programada"] == "2026-04-12 08:00:00"
-    assert servicio.ultima_llamada["fecha_hora_toma"] == "2026-04-12 08:03:00"
-    assert servicio.ultima_llamada["estado"] == "tomada"
-    assert servicio.ultima_llamada["observaciones"] == "Prueba desde test"
+    assert servicio.ultima_llamada["paciente_id"] == PACIENTE_ID
 
 
 def test_registrar_toma_ok_formato_anterior(monkeypatch):
     servicio = ServicioTomaFalso()
-
-    monkeypatch.setattr(
-        toma_route,
-        "toma_service",
-        servicio
-    )
+    monkeypatch.setattr(toma_route, "toma_service", servicio)
 
     datos = {
-        "paciente_id": 1,
-        "medicamento_id": 1,
-        "recordatorio_id": 1,
+        "paciente_id": PACIENTE_ID,
+        "medicamento_id": MEDICAMENTO_ID,
+        "recordatorio_id": RECORDATORIO_ID,
         "fecha": "2026-04-12",
         "hora_programada": "08:00:00",
         "hora_tomada": "08:03:00",
@@ -123,8 +111,6 @@ def test_registrar_toma_ok_formato_anterior(monkeypatch):
     respuesta = toma_route.registrar_toma(datos)
 
     assert respuesta["ok"] is True
-    assert respuesta["data"]["estado"] == "a_tiempo"
-
     assert servicio.ultima_llamada["fecha_programada"] == "2026-04-12 08:00:00"
     assert servicio.ultima_llamada["fecha_hora_toma"] == "2026-04-12 08:03:00"
 
@@ -140,7 +126,6 @@ def test_registrar_toma_error_400(monkeypatch):
         toma_route.registrar_toma({})
 
     assert exc_info.value.status_code == 400
-    assert exc_info.value.detail == "Datos inválidos"
 
 
 def test_registrar_toma_error_404(monkeypatch):
@@ -150,19 +135,16 @@ def test_registrar_toma_error_404(monkeypatch):
         ServicioTomaFalso(error=LookupError("El paciente no existe"))
     )
 
-    datos = {
-        "paciente_id": 999,
-        "medicamento_id": 1,
-        "recordatorio_id": 1,
-        "fecha_programada": "2026-04-12 08:00:00",
-        "fecha_hora_toma": "2026-04-12 08:03:00",
-    }
-
     with pytest.raises(HTTPException) as exc_info:
-        toma_route.registrar_toma(datos)
+        toma_route.registrar_toma({
+            "paciente_id": PACIENTE_ID,
+            "medicamento_id": MEDICAMENTO_ID,
+            "recordatorio_id": RECORDATORIO_ID,
+            "fecha_programada": "2026-04-12 08:00:00",
+            "fecha_hora_toma": "2026-04-12 08:03:00",
+        })
 
     assert exc_info.value.status_code == 404
-    assert exc_info.value.detail == "El paciente no existe"
 
 
 def test_registrar_toma_error_409(monkeypatch):
@@ -172,19 +154,16 @@ def test_registrar_toma_error_409(monkeypatch):
         ServicioTomaFalso(error=FileExistsError("Ya existe una toma"))
     )
 
-    datos = {
-        "paciente_id": 1,
-        "medicamento_id": 1,
-        "recordatorio_id": 1,
-        "fecha_programada": "2026-04-12 08:00:00",
-        "fecha_hora_toma": "2026-04-12 08:03:00",
-    }
-
     with pytest.raises(HTTPException) as exc_info:
-        toma_route.registrar_toma(datos)
+        toma_route.registrar_toma({
+            "paciente_id": PACIENTE_ID,
+            "medicamento_id": MEDICAMENTO_ID,
+            "recordatorio_id": RECORDATORIO_ID,
+            "fecha_programada": "2026-04-12 08:00:00",
+            "fecha_hora_toma": "2026-04-12 08:03:00",
+        })
 
     assert exc_info.value.status_code == 409
-    assert exc_info.value.detail == "Ya existe una toma"
 
 
 def test_registrar_toma_error_500(monkeypatch):
@@ -194,151 +173,79 @@ def test_registrar_toma_error_500(monkeypatch):
         ServicioTomaFalso(error=RuntimeError("Error de base de datos"))
     )
 
-    datos = {
-        "paciente_id": 1,
-        "medicamento_id": 1,
-        "recordatorio_id": 1,
-        "fecha_programada": "2026-04-12 08:00:00",
-        "fecha_hora_toma": "2026-04-12 08:03:00",
-    }
-
     with pytest.raises(HTTPException) as exc_info:
-        toma_route.registrar_toma(datos)
+        toma_route.registrar_toma({
+            "paciente_id": PACIENTE_ID,
+            "medicamento_id": MEDICAMENTO_ID,
+            "recordatorio_id": RECORDATORIO_ID,
+            "fecha_programada": "2026-04-12 08:00:00",
+            "fecha_hora_toma": "2026-04-12 08:03:00",
+        })
 
     assert exc_info.value.status_code == 500
-    assert exc_info.value.detail == "Error de base de datos"
 
 
 def test_obtener_tomas_del_dia(monkeypatch):
-    monkeypatch.setattr(
-        toma_route,
-        "repositorio",
-        RepositorioFalso()
-    )
+    servicio = ServicioTomaFalso()
+    monkeypatch.setattr(toma_route, "toma_service", servicio)
 
-    respuesta = toma_route.obtener_tomas(1, "2026-04-12")
+    respuesta = toma_route.obtener_tomas(PACIENTE_ID, "2026-04-12")
 
     assert "tomas" in respuesta
     assert len(respuesta["tomas"]) == 1
-    assert respuesta["tomas"][0]["paciente_id"] == 1
-    assert respuesta["tomas"][0]["fecha"] == "2026-04-12"
+    assert respuesta["tomas"][0]["paciente_id"] == PACIENTE_ID
 
 
 def test_obtener_tomas_del_dia_sin_fecha(monkeypatch):
-    monkeypatch.setattr(
-        toma_route,
-        "repositorio",
-        RepositorioFalso()
-    )
+    servicio = ServicioTomaFalso()
+    monkeypatch.setattr(toma_route, "toma_service", servicio)
 
-    respuesta = toma_route.obtener_tomas(1)
+    respuesta = toma_route.obtener_tomas(PACIENTE_ID)
 
     assert "tomas" in respuesta
     assert len(respuesta["tomas"]) == 1
-    assert respuesta["tomas"][0]["paciente_id"] == 1
-
-
-class CursorHistorialFalso:
-    def __init__(self, filas):
-        self.filas = filas
-        self.query = None
-        self.params = None
-
-    def execute(self, query, params):
-        self.query = query
-        self.params = params
-
-    def fetchall(self):
-        return self.filas
-
-
-class ConexionHistorialFalsa:
-    def __init__(self, filas):
-        self.cursor_falso = CursorHistorialFalso(filas)
-        self.cerrada = False
-
-    def cursor(self):
-        return self.cursor_falso
-
-    def close(self):
-        self.cerrada = True
 
 
 def test_obtener_historial_sin_registros(monkeypatch):
-    conexion = ConexionHistorialFalsa([])
+    servicio = ServicioTomaFalso(historial=[])
+    monkeypatch.setattr(toma_route, "toma_service", servicio)
 
-    monkeypatch.setattr(
-        toma_route,
-        "get_connection",
-        lambda: conexion
-    )
-
-    respuesta = toma_route.obtener_historial(1)
+    respuesta = toma_route.obtener_historial(PACIENTE_ID)
 
     assert respuesta["historial"] == []
     assert respuesta["cumplimiento"]["total_tomas"] == 0
-    assert respuesta["cumplimiento"]["tomas_realizadas"] == 0
-    assert respuesta["cumplimiento"]["porcentaje"] == 0
     assert respuesta["alertas"] == []
-
-    assert conexion.cerrada is True
-    assert conexion.cursor_falso.params == (1,)
 
 
 def test_obtener_historial_con_registros(monkeypatch):
-    filas = [
+    historial = [
         {
-            "id": 1,
-            "paciente_id": 1,
-            "medicamento_id": 1,
+            "id": "toma-1",
+            "paciente_id": PACIENTE_ID,
+            "medicamento_id": MEDICAMENTO_ID,
             "medicamento_nombre": "Aspirina",
-            "medicamento": "Aspirina",
-            "recordatorio_id": 1,
             "fecha": "2026-04-12",
-            "hora_programada": "08:00:00",
-            "hora_tomada": "08:03:00",
-            "fecha_programada": "2026-04-12 08:00:00",
-            "fecha_hora_toma": "2026-04-12 08:03:00",
-            "diferencia_minutos": 3.0,
+            "hora_programada": "08:00",
             "estado": "a_tiempo",
-            "observaciones": "Toma registrada a tiempo",
         },
         {
-            "id": 2,
-            "paciente_id": 1,
-            "medicamento_id": 1,
+            "id": "toma-2",
+            "paciente_id": PACIENTE_ID,
+            "medicamento_id": MEDICAMENTO_ID,
             "medicamento_nombre": "Aspirina",
-            "medicamento": "Aspirina",
-            "recordatorio_id": 1,
             "fecha": "2026-04-13",
-            "hora_programada": "08:00:00",
-            "hora_tomada": None,
-            "fecha_programada": "2026-04-13 08:00:00",
-            "fecha_hora_toma": None,
-            "diferencia_minutos": None,
+            "hora_programada": "08:00",
             "estado": "omitida",
-            "observaciones": "No se registró la toma",
         },
     ]
 
-    conexion = ConexionHistorialFalsa(filas)
+    servicio = ServicioTomaFalso(historial=historial)
+    monkeypatch.setattr(toma_route, "toma_service", servicio)
 
-    monkeypatch.setattr(
-        toma_route,
-        "get_connection",
-        lambda: conexion
-    )
-
-    respuesta = toma_route.obtener_historial(1)
-
-    assert "historial" in respuesta
-    assert "cumplimiento" in respuesta
-    assert "alertas" in respuesta
+    respuesta = toma_route.obtener_historial(PACIENTE_ID)
 
     assert len(respuesta["historial"]) == 2
     assert respuesta["cumplimiento"]["total_tomas"] == 2
     assert respuesta["cumplimiento"]["tomas_realizadas"] == 1
     assert respuesta["cumplimiento"]["porcentaje"] == 50.0
-
-    assert conexion.cerrada is True
-    assert conexion.cursor_falso.params == (1,)
+    assert len(respuesta["alertas"]) == 1

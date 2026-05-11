@@ -47,3 +47,16 @@ jobs:
         with:
           name: reporte-html
           path: report.html
+
+      - name: Enviar resultado a Telegram
+        if: always()
+        run: |
+          if [ $? -eq 0 ]; then
+            MENSAJE="✅ MedTrack CI: Todas las pruebas pasaron correctamente."
+          else
+            MENSAJE="❌ MedTrack CI: Algunas pruebas fallaron."
+          fi
+
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
+          -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+          -d text="$MENSAJE"

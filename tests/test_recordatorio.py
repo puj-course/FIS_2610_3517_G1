@@ -1,19 +1,24 @@
-﻿import sqlite3
-import pytest
-from unittest.mock import patch, MagicMock
-
+﻿import pytest
+from unittest.mock import MagicMock
+from bson import ObjectId
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from backend.validaciones import validar_recordatorio, verificar_medicamento_existe
+from backend.validaciones import validar_recordatorio
 from backend.main import app
+from backend.routes import reminder_route
 
 
 client = TestClient(app)
 
+MEDICAMENTO_ID = "69feb355322be070cd1c97ce"
+PACIENTE_ID = "69feaac76a52afc46ed40c52"
+RECORDATORIO_ID = ObjectId("507f1f77bcf86cd799439011")
+
 
 def recordatorio_valido():
     return {
-        "medicamento_id": 1,
+        "medicamento_id": MEDICAMENTO_ID,
         "hora_recordatorio": "08:30",
         "fecha_inicio": "03/25/2026",
         "activo": 1,
@@ -22,144 +27,11 @@ def recordatorio_valido():
 
 
 # =========================
-# FUNCIONES AUXILIARES
-# =========================
-
-def crear_tabla_medicamentos(conn):
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE medicamentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            dosis TEXT NOT NULL,
-            frecuencia TEXT NOT NULL,
-            horario TEXT NOT NULL,
-            fecha_inicio TEXT NOT NULL,
-            observaciones TEXT,
-            paciente_id INTEGER NOT NULL
-        )
-    """)
-
-    conn.commit()
-
-
-def crear_tablas_recordatorios(conn):
-    cursor = conn.cursor()
-
-    # Tabla pacientes
-    cursor.execute("""
-        CREATE TABLE pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombres TEXT NOT NULL,
-            apellidos TEXT NOT NULL,
-            fecha_nacimiento TEXT NOT NULL,
-            genero TEXT NOT NULL,
-            tipo_documento TEXT NOT NULL,
-            numero_documento TEXT NOT NULL,
-            telefono_contacto TEXT NOT NULL,
-            eps_aseguradora TEXT,
-            diagnostico_principal TEXT,
-            alergias_conocidas TEXT,
-            observaciones_adicionales TEXT
-        )
-    """)
-
-    # Tabla medicamentos
-    cursor.execute("""
-        CREATE TABLE medicamentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            dosis TEXT NOT NULL,
-            frecuencia TEXT NOT NULL,
-            horario TEXT NOT NULL,
-            fecha_inicio TEXT NOT NULL,
-            observaciones TEXT,
-            paciente_id INTEGER NOT NULL
-        )
-    """)
-
-    # Tabla recordatorios
-    cursor.execute("""
-        CREATE TABLE recordatorios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            medicamento_id INTEGER NOT NULL,
-            hora_recordatorio TEXT NOT NULL,
-            fecha_inicio TEXT NOT NULL,
-            activo INTEGER NOT NULL DEFAULT 1,
-            observaciones TEXT
-        )
-    """)
-
-    conn.commit()
-
-
-def insertar_datos_recordatorio(conn):
-    cursor = conn.cursor()
-
-    # Insertar paciente
-    cursor.execute("""
-        INSERT INTO pacientes (
-            nombres, apellidos, fecha_nacimiento, genero,
-            tipo_documento, numero_documento, telefono_contacto,
-            eps_aseguradora, diagnostico_principal
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Ana",
-        "Lopez",
-        "01/15/1990",
-        "Femenino",
-        "CC",
-        "12345678",
-        "3001234567",
-        "Sura",
-        "Hipertension",
-    ))
-
-    # Insertar medicamento
-    cursor.execute("""
-        INSERT INTO medicamentos (
-            nombre, dosis, frecuencia, horario,
-            fecha_inicio, observaciones, paciente_id
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Acetaminofen",
-        "500 mg",
-        "Cada 8 horas",
-        "08:00 AM",
-        "03/16/2026",
-        "Ninguna",
-        1,
-    ))
-
-    # Insertar recordatorio
-    cursor.execute("""
-        INSERT INTO recordatorios (
-            medicamento_id, hora_recordatorio, fecha_inicio, activo, observaciones
-        )
-        VALUES (?, ?, ?, ?, ?)
-    """, (
-        1,
-        "08:30",
-        "03/25/2026",
-        1,
-        "Prueba",
-    ))
-
-    conn.commit()
-
-
-# =========================
 # VALIDACIONES
 # =========================
 
 def test_validar_recordatorio_exitoso():
-    data = recordatorio_valido()
-
-    errores = validar_recordatorio(data)
-
+    errores = validar_recordatorio(recordatorio_valido())
     assert errores == []
 
 
@@ -196,16 +68,16 @@ def test_medicamento_id_invalido_texto():
 
     errores = validar_recordatorio(data)
 
-    assert "La id del del medicamento debe ser un entero válido" in errores
+    assert "El medicamento_id debe ser un ObjectId válido" in errores
 
 
-def test_medicamento_id_invalido_menor_o_igual_a_cero():
+def test_medicamento_id_invalido_numero():
     data = recordatorio_valido()
     data["medicamento_id"] = 0
 
     errores = validar_recordatorio(data)
 
-    assert "La id del medicamento debe ser un número > 0" in errores
+    assert "El medicamento_id debe ser un ObjectId válido" in errores
 
 
 def test_hora_formato_invalido():
@@ -263,110 +135,39 @@ def test_recordatorio_inactivo():
 
 
 # =========================
-# BASE DE DATOS
+# ENDPOINT POST / FUNCIÓN
 # =========================
-
-def test_verificar_medicamento_existe_devuelve_true():
-    conn = sqlite3.connect(":memory:")
-    crear_tabla_medicamentos(conn)
-
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO medicamentos (
-            nombre, dosis, frecuencia, horario,
-            fecha_inicio, observaciones, paciente_id
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Acetaminofen",
-        "500 mg",
-        "Cada 8 horas",
-        "08:00 AM",
-        "03/16/2026",
-        "Ninguna",
-        1,
-    ))
-
-    conn.commit()
-
-    resultado = verificar_medicamento_existe(1, conn)
-
-    assert resultado is True
-
-    conn.close()
-
-
-def test_verificar_medicamento_existe_devuelve_false():
-    conn = sqlite3.connect(":memory:")
-    crear_tabla_medicamentos(conn)
-
-    resultado = verificar_medicamento_existe(99, conn)
-
-    assert resultado is False
-
-    conn.close()
-
-
-# =========================
-# ENDPOINT POST
-# =========================
-class ColeccionMedicamentosFalsa:
-    def __init__(self, medicamento=None):
-        self.medicamento = medicamento
-
-    def find_one(self, filtro):
-        return self.medicamento
-
-
-class ColeccionRecordatoriosFalsa:
-    def __init__(self):
-        self.documento_insertado = None
-
-    def insert_one(self, documento):
-        self.documento_insertado = documento
-        return None
 
 def test_post_recordatorio_exitoso(monkeypatch):
     data = recordatorio_valido()
 
-    medicamentos_col_falsa = ColeccionMedicamentosFalsa({
-        "id": int(data["medicamento_id"]),
-        "medicamento_id": int(data["medicamento_id"]),
-        "paciente_id": 1,
+    medicamentos_col_falsa = MagicMock()
+    medicamentos_col_falsa.find_one.return_value = {
+        "_id": ObjectId(MEDICAMENTO_ID),
+        "paciente_id": PACIENTE_ID,
         "nombre": "Aspirina",
         "dosis": "1 tableta"
-    })
+    }
 
-    recordatorios_col_falsa = ColeccionRecordatoriosFalsa()
+    recordatorios_col_falsa = MagicMock()
+    insert_result = MagicMock()
+    insert_result.inserted_id = RECORDATORIO_ID
+    recordatorios_col_falsa.insert_one.return_value = insert_result
 
-    monkeypatch.setattr(
-        "backend.routes.reminder_route.medicamentos_col",
-        medicamentos_col_falsa
-    )
+    monkeypatch.setattr(reminder_route, "medicamentos_col", medicamentos_col_falsa)
+    monkeypatch.setattr(reminder_route, "recordatorios_col", recordatorios_col_falsa)
+    monkeypatch.setattr(reminder_route, "publisher", None)
 
-    monkeypatch.setattr(
-        "backend.routes.reminder_route.recordatorios_col",
-        recordatorios_col_falsa
-    )
-
-    monkeypatch.setattr(
-        "backend.routes.reminder_route.publisher",
-        None
-    )
-
-    from backend.routes.reminder_route import crear_recordatorio
-
-    respuesta = crear_recordatorio(data)
+    respuesta = reminder_route.crear_recordatorio(data)
 
     assert respuesta["mensaje"] == "Recordatorio creado correctamente"
-    assert "recordatorio_id" in respuesta
+    assert respuesta["recordatorio_id"] == str(RECORDATORIO_ID)
 
-    documento = recordatorios_col_falsa.documento_insertado
+    recordatorios_col_falsa.insert_one.assert_called_once()
+    documento = recordatorios_col_falsa.insert_one.call_args.args[0]
 
-    assert documento is not None
-    assert documento["medicamento_id"] == int(data["medicamento_id"])
-    assert documento["paciente_id"] == 1
+    assert documento["medicamento_id"] == MEDICAMENTO_ID
+    assert documento["paciente_id"] == PACIENTE_ID
     assert documento["hora_recordatorio"] == data["hora_recordatorio"].strip()
     assert documento["fecha_inicio"] == data["fecha_inicio"].strip()
     assert documento["activo"] == int(data.get("activo", 1))
@@ -374,7 +175,7 @@ def test_post_recordatorio_exitoso(monkeypatch):
     assert documento["tomado"] is False
 
 
-def test_post_recordatorio_datos_invalidos():
+def test_post_recordatorio_datos_invalidos(monkeypatch):
     data = recordatorio_valido()
     data["hora_recordatorio"] = ""
 
@@ -387,64 +188,123 @@ def test_post_recordatorio_datos_invalidos():
 def test_post_recordatorio_medicamento_no_existe(monkeypatch):
     data = recordatorio_valido()
 
-    monkeypatch.setattr(
-        "backend.routes.reminder_route.medicamentos_col",
-        ColeccionMedicamentosFalsa(None)
-    )
+    medicamentos_col_falsa = MagicMock()
+    medicamentos_col_falsa.find_one.return_value = None
 
-    from backend.routes.reminder_route import crear_recordatorio
-    from fastapi import HTTPException
+    monkeypatch.setattr(reminder_route, "medicamentos_col", medicamentos_col_falsa)
 
     with pytest.raises(HTTPException) as exc_info:
-        crear_recordatorio(data)
+        reminder_route.crear_recordatorio(data)
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "El medicamento no existe"
 
 
+def test_post_recordatorio_medicamento_sin_paciente(monkeypatch):
+    data = recordatorio_valido()
+
+    medicamentos_col_falsa = MagicMock()
+    medicamentos_col_falsa.find_one.return_value = {
+        "_id": ObjectId(MEDICAMENTO_ID),
+        "nombre": "Aspirina"
+    }
+
+    monkeypatch.setattr(reminder_route, "medicamentos_col", medicamentos_col_falsa)
+
+    with pytest.raises(HTTPException) as exc_info:
+        reminder_route.crear_recordatorio(data)
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "El medicamento no tiene paciente asociado"
+
+
 # =========================
-# ENDPOINT GET
+# ENDPOINT GET / FUNCIÓN
 # =========================
 
-def test_get_recordatorios_paciente_no_encontrado():
-    conexion_falsa = MagicMock()
-    cursor_falso = MagicMock()
+def test_get_recordatorios_lista_vacia(monkeypatch):
+    recordatorios_col_falsa = MagicMock()
+    recordatorios_col_falsa.find.return_value = []
 
-    cursor_falso.fetchone.return_value = None
-    cursor_falso.fetchall.return_value = []
-    conexion_falsa.cursor.return_value = cursor_falso
+    monkeypatch.setattr(reminder_route, "recordatorios_col", recordatorios_col_falsa)
 
-    with patch("backend.routes.reminder_route.sqlite3.connect", return_value=conexion_falsa):
-        response = client.get("/recordatorios/1")
+    respuesta = reminder_route.listar_recordatorios(PACIENTE_ID)
 
-    assert response.status_code == 200
-    assert response.json() == {"recordatorios": []}
+    assert respuesta == {"recordatorios": []}
 
 
-def test_get_recordatorios_lista_vacia():
-    conexion_falsa = MagicMock()
-    cursor_falso = MagicMock()
+def test_get_recordatorios_exitoso(monkeypatch):
+    recordatorios_col_falsa = MagicMock()
+    recordatorios_col_falsa.find.return_value = [
+        {
+            "_id": RECORDATORIO_ID,
+            "medicamento_id": MEDICAMENTO_ID,
+            "paciente_id": PACIENTE_ID,
+            "hora_recordatorio": "08:30",
+            "fecha_inicio": "03/25/2026",
+            "activo": 1,
+            "observaciones": "Prueba",
+            "tomado": False
+        }
+    ]
 
-    cursor_falso.fetchone.return_value = {"id": 1}
-    cursor_falso.fetchall.return_value = []
-    conexion_falsa.cursor.return_value = cursor_falso
+    medicamentos_col_falsa = MagicMock()
+    medicamentos_col_falsa.find_one.return_value = {
+        "_id": ObjectId(MEDICAMENTO_ID),
+        "nombre": "Acetaminofen",
+        "dosis": "500 mg",
+        "paciente_id": PACIENTE_ID
+    }
 
-    with patch("backend.routes.reminder_route.sqlite3.connect", return_value=conexion_falsa):
-        response = client.get("/recordatorios/1")
+    monkeypatch.setattr(reminder_route, "recordatorios_col", recordatorios_col_falsa)
+    monkeypatch.setattr(reminder_route, "medicamentos_col", medicamentos_col_falsa)
 
-    assert response.status_code == 200
-    assert response.json() == {"recordatorios": []}
+    respuesta = reminder_route.listar_recordatorios(PACIENTE_ID)
+
+    assert "recordatorios" in respuesta
+    assert len(respuesta["recordatorios"]) == 1
+
+    r = respuesta["recordatorios"][0]
+
+    assert r["id"] == str(RECORDATORIO_ID)
+    assert r["medicamento_id"] == MEDICAMENTO_ID
+    assert r["paciente_id"] == PACIENTE_ID
+    assert r["medicamento_nombre"] == "Acetaminofen"
+    assert r["dosis"] == "500 mg"
+    assert r["hora_recordatorio"] == "08:30"
+    assert r["fecha_inicio"] == "03/25/2026"
+    assert r["activo"] == 1
+    assert r["observaciones"] == "Prueba"
+    assert r["tomado"] is False
 
 
-def test_get_recordatorios_exitoso():
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
-    conn.row_factory = sqlite3.Row
+def test_get_recordatorios_endpoint_exitoso(monkeypatch):
+    recordatorios_col_falsa = MagicMock()
+    recordatorios_col_falsa.find.return_value = [
+        {
+            "_id": RECORDATORIO_ID,
+            "medicamento_id": MEDICAMENTO_ID,
+            "paciente_id": PACIENTE_ID,
+            "hora_recordatorio": "08:30",
+            "fecha_inicio": "03/25/2026",
+            "activo": 1,
+            "observaciones": "Prueba",
+            "tomado": False
+        }
+    ]
 
-    crear_tablas_recordatorios(conn)
-    insertar_datos_recordatorio(conn)
+    medicamentos_col_falsa = MagicMock()
+    medicamentos_col_falsa.find_one.return_value = {
+        "_id": ObjectId(MEDICAMENTO_ID),
+        "nombre": "Acetaminofen",
+        "dosis": "500 mg",
+        "paciente_id": PACIENTE_ID
+    }
 
-    with patch("backend.routes.reminder_route.sqlite3.connect", return_value=conn):
-        response = client.get("/recordatorios/1")
+    monkeypatch.setattr(reminder_route, "recordatorios_col", recordatorios_col_falsa)
+    monkeypatch.setattr(reminder_route, "medicamentos_col", medicamentos_col_falsa)
+
+    response = client.get(f"/recordatorios/{PACIENTE_ID}")
 
     assert response.status_code == 200
 
@@ -454,5 +314,3 @@ def test_get_recordatorios_exitoso():
     assert len(cuerpo["recordatorios"]) == 1
     assert cuerpo["recordatorios"][0]["medicamento_nombre"] == "Acetaminofen"
     assert cuerpo["recordatorios"][0]["hora_recordatorio"] == "08:30"
-
-    conn.close()

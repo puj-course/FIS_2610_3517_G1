@@ -1,8 +1,9 @@
-# test_recordatorio.py
+﻿# test_recordatorio.py
 import os
 import sys
 import sqlite3
 import pytest
+from datetime import date
 
 from bson import ObjectId
 from fastapi.testclient import TestClient
@@ -30,6 +31,7 @@ auth_module.SECRET_KEY = os.environ["SECRET_KEY"]
 client = TestClient(app)
 
 
+CUIDADOR_ID_VALIDO = "cuidador-test-id"
 PACIENTE_ID_VALIDO = "507f1f77bcf86cd799439011"
 MEDICAMENTO_ID_VALIDO = "507f1f77bcf86cd799439012"
 RECORDATORIO_ID_VALIDO = "507f1f77bcf86cd799439013"
@@ -44,7 +46,7 @@ def headers_auth():
     el request puede ser rechazado antes de llegar a la ruta.
     """
     token = generate_jwt(
-        "cuidador-test-id",
+        CUIDADOR_ID_VALIDO,
         "admin@medtrack.com",
         "administrador"
     )
@@ -119,7 +121,7 @@ class CursorFalso(list):
     Cursor falso para simular el cursor de PyMongo.
 
     Algunas rutas hacen list(coleccion.find(...)).
-    Otras versiones pueden hacer coleccion.find(...).sort(...).
+    Otras pueden hacer coleccion.find(...).sort(...).
     Por eso implementamos sort() para que el fake sea estable.
     """
 
@@ -149,27 +151,71 @@ class ColeccionFalsa:
 
     def _coincide(self, documento, filtro):
         """
-        Verifica si un documento cumple un filtro simple de igualdad.
+        Verifica si un documento cumple un filtro simple de MongoDB.
 
-        Se permite comparar valores equivalentes aunque uno sea ObjectId y otro str,
-        porque las rutas convierten algunos IDs con str(ObjectId(...)).
+        Soporta:
+        - igualdad directa
+        - comparación ObjectId vs str
+        - $ne
+        - $in
+        - $regex
+        - $lte
+        - $gte
+        - $lt
+        - $gt
         """
         filtro = filtro or {}
 
         for clave, valor in filtro.items():
             valor_documento = documento.get(clave)
 
-            if valor_documento != valor and str(valor_documento) != str(valor):
-                return False
+            if isinstance(valor, dict):
+                for operador, valor_operador in valor.items():
+
+                    if operador == "$regex":
+                        patron = str(valor_operador).replace("^", "")
+
+                        if not str(valor_documento).startswith(patron):
+                            return False
+
+                    elif operador == "$ne":
+                        if valor_documento == valor_operador or str(valor_documento) == str(valor_operador):
+                            return False
+
+                    elif operador == "$in":
+                        valores_como_texto = [str(v) for v in valor_operador]
+
+                        if valor_documento not in valor_operador and str(valor_documento) not in valores_como_texto:
+                            return False
+
+                    elif operador == "$lte":
+                        if str(valor_documento) > str(valor_operador):
+                            return False
+
+                    elif operador == "$gte":
+                        if str(valor_documento) < str(valor_operador):
+                            return False
+
+                    elif operador == "$lt":
+                        if str(valor_documento) >= str(valor_operador):
+                            return False
+
+                    elif operador == "$gt":
+                        if str(valor_documento) <= str(valor_operador):
+                            return False
+
+                    else:
+                        return False
+
+            else:
+                if valor_documento != valor and str(valor_documento) != str(valor):
+                    return False
 
         return True
 
     def find_one(self, filtro):
         """
         Simula find_one() de MongoDB.
-
-        Retorna el primer documento que cumpla el filtro.
-        Si no encuentra ninguno, retorna None.
         """
         self.filtro_find_one = filtro
 
@@ -182,8 +228,6 @@ class ColeccionFalsa:
     def find(self, filtro=None):
         """
         Simula find() de MongoDB.
-
-        Retorna un cursor falso con documentos que cumplen el filtro.
         """
         self.filtro_find = filtro or {}
 
@@ -196,9 +240,6 @@ class ColeccionFalsa:
     def insert_one(self, documento):
         """
         Simula insert_one() de MongoDB.
-
-        Guarda el documento en memoria para poder verificar qué intentó insertar
-        la ruta.
         """
         self.documento_insertado = documento
         self.documentos.append(documento)
@@ -208,9 +249,6 @@ class ColeccionFalsa:
     def update_one(self, filtro, update):
         """
         Simula update_one() de MongoDB.
-
-        Se usa para probar el PATCH que marca un recordatorio como tomado.
-        Si encuentra un documento que coincide con el filtro, aplica el "$set".
         """
         self.filtro_update = filtro
         self.update_aplicado = update
@@ -251,11 +289,15 @@ def medicamento_mongo():
 def paciente_mongo():
     """
     Documento de paciente simulado en MongoDB.
+
+    Importante:
+    /recordatorios/panel-dia filtra pacientes por cuidador_id.
     """
     return {
         "_id": ObjectId(PACIENTE_ID_VALIDO),
         "nombres": "Ana",
-        "apellidos": "Lopez"
+        "apellidos": "Lopez",
+        "cuidador_id": CUIDADOR_ID_VALIDO
     }
 
 
@@ -692,9 +734,9 @@ def test_get_panel_dia_exitoso(monkeypatch):
     """
     CASO VÁLIDO: panel diario con un paciente y un recordatorio activo.
 
-    Para evitar diferencias entre entornos Linux/Windows al comparar ObjectId
-    contra string, el recordatorio se construye usando explícitamente el mismo
-    paciente_id que genera paciente_mongo().
+    La ruta /recordatorios/panel-dia filtra primero pacientes por cuidador_id.
+    Por eso el paciente falso debe tener el mismo id que viene en el JWT
+    creado por headers_auth().
     """
     paciente = paciente_mongo()
     medicamento = medicamento_mongo()
@@ -702,10 +744,15 @@ def test_get_panel_dia_exitoso(monkeypatch):
 
     paciente_id = str(paciente["_id"])
     medicamento_id = str(medicamento["_id"])
+    hoy = date.today().strftime("%m/%d/%Y")
 
     # Forzamos relación consistente entre paciente, medicamento y recordatorio.
+    medicamento["_id"] = ObjectId(medicamento_id)
+    medicamento["paciente_id"] = paciente_id
+
     recordatorio["paciente_id"] = paciente_id
     recordatorio["medicamento_id"] = medicamento_id
+    recordatorio["fecha_inicio"] = hoy
     recordatorio["activo"] = 1
     recordatorio["tomado"] = False
 
@@ -736,13 +783,6 @@ def test_get_panel_dia_exitoso(monkeypatch):
         medicamentos_col_falsa
     )
 
-    # Verificación previa del fake: antes de llamar la ruta, debe existir
-    # un recordatorio activo asociado al paciente.
-    assert len(recordatorios_col_falsa.find({
-        "paciente_id": paciente_id,
-        "activo": 1
-    })) == 1
-
     response = client.get(
         "/recordatorios/panel-dia",
         headers=headers_auth()
@@ -757,6 +797,7 @@ def test_get_panel_dia_exitoso(monkeypatch):
     assert cuerpo["panel"][0]["paciente_id"] == paciente_id
     assert cuerpo["panel"][0]["nombres"] == "Ana"
     assert cuerpo["panel"][0]["apellidos"] == "Lopez"
+
     assert len(cuerpo["panel"][0]["medicamentos"]) == 1
     assert cuerpo["panel"][0]["medicamentos"][0]["medicamento"] == "Aspirina"
     assert cuerpo["panel"][0]["medicamentos"][0]["dosis"] == "1 tableta"

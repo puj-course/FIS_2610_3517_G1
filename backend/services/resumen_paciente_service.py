@@ -1,4 +1,5 @@
 ﻿from bson import ObjectId
+from datetime import datetime
 from backend.database import pacientes_col, medicamentos_col, tomas_col
 
 
@@ -45,6 +46,28 @@ class ResumenPacienteService:
             })
         return historial
 
+    def _calcular_tomas_esperadas(self, medicamentos):
+        try:
+            fmt = "%m/%d/%Y"
+            total = 0
+            hoy = datetime.today().date()
+            for m in medicamentos:
+                fecha_inicio_str = m.get("fecha_inicio", "")
+                fecha_fin_str = m.get("fecha_fin", "")
+                if not fecha_inicio_str:
+                    continue
+                inicio = datetime.strptime(fecha_inicio_str, fmt).date()
+                fin = datetime.strptime(fecha_fin_str, fmt).date() if fecha_fin_str else hoy
+                dias = (min(fin, hoy) - inicio).days + 1
+                if dias < 1:
+                    continue
+                horarios = [h.strip() for h in m.get("horario", "").split(",") if h.strip()]
+                tomas_por_dia = len(horarios) if horarios else 1
+                total += dias * tomas_por_dia
+            return total if total > 0 else None
+        except Exception:
+            return None
+
     def construir_resumen(self, paciente_id: str):
         paciente = self.obtener_paciente(paciente_id)
         if not paciente:
@@ -56,9 +79,10 @@ class ResumenPacienteService:
         tomas_realizadas = sum(1 for t in historial if t["estado"] in ["tomado", "tomada", "a_tiempo", "tarde"])
         tomas_omitidas   = sum(1 for t in historial if t["estado"] == "omitida")
         tomas_pendientes = sum(1 for t in historial if t["estado"] == "pendiente")
-        tomas_tarde      = sum(1 for t in historial if t["estado"] == "tarde")
-        total            = len(historial)
-        porcentaje       = round((tomas_realizadas / total * 100), 1) if total > 0 else 0
+
+        total_esperado = self._calcular_tomas_esperadas(medicamentos)
+        total = total_esperado if total_esperado else len(historial)
+        porcentaje = round((tomas_realizadas / total * 100), 1) if total > 0 else 0
 
         return {
             "paciente": {

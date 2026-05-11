@@ -200,6 +200,11 @@ const api = {
     fetchJson(API_URL + '/resumen/' + pacienteId, {
       headers: headersAuth(),
     }),
+
+    obtenerPanelCompleto: () =>
+    fetchJson(API_URL + '/recordatorios/panel-completo', {
+      headers: headersAuth(),
+    }),
 };
 
 export default api;

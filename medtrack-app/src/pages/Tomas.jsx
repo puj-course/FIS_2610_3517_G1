@@ -159,22 +159,44 @@ export default function Tomas() {
   }
 
   async function cargarPanelPaciente() {
-    setErrorPanel('');
-    if (!pacienteId) { setErrorPanel('Selecciona un paciente primero.'); return; }
-    setCargandoPanel(true);
-    setRecordatorios(null);
-    setTomasLocales({});
-    try {
-      const res = await api.obtenerPanelDiaPaciente(pacienteId);
-      if (!res.ok) throw new Error(res.body?.detail || 'Error al cargar el panel.');
-      setRecordatorios(res.body.recordatorios || []);
-    } catch (e) {
-      setErrorPanel(e.message || 'Error de conexión con el servidor.');
-      setRecordatorios([]);
-    } finally {
-      setCargandoPanel(false);
+  setErrorPanel('');
+  if (!pacienteId) { setErrorPanel('Selecciona un paciente primero.'); return; }
+  setCargandoPanel(true);
+  setRecordatorios(null);
+  setTomasLocales({});
+  try {
+    const res = await api.obtenerMedicamentos(pacienteId);
+    if (!res.ok) throw new Error('Error al cargar medicamentos.');
+    
+    const meds = Array.isArray(res.body) ? res.body : [];
+    const hoy = new Date().toISOString().split('T')[0];
+    
+    // Expandir cada medicamento en sus horarios
+    const items = [];
+    for (const m of meds) {
+      const horarios = m.horario ? m.horario.split(',').map(h => h.trim()).filter(Boolean) : [];
+      for (const hora of horarios) {
+        items.push({
+          recordatorio_id: `${m.id}_${hora}`,
+          paciente_id: pacienteId,
+          medicamento_id: m.id,
+          medicamento_nombre: m.nombre,
+          dosis: m.dosis,
+          hora_recordatorio: hora,
+          fecha_inicio: m.fecha_inicio,
+          tomado: false,
+          observaciones: '',
+        });
+      }
     }
+    setRecordatorios(items);
+  } catch (e) {
+    setErrorPanel(e.message || 'Error de conexión.');
+    setRecordatorios([]);
+  } finally {
+    setCargandoPanel(false);
   }
+}
 
   async function marcarTomada(r) {
     setTomasGuardando(prev => ({ ...prev, [r.recordatorio_id]: true }));
@@ -183,11 +205,11 @@ export default function Tomas() {
     const datos = {
       paciente_id: r.paciente_id,
       medicamento_id: r.medicamento_id,
-      recordatorio_id: r.recordatorio_id,
-      fecha_programada: r.fecha_programada,
+      recordatorio_id: r.recordatorio_id.includes('_') ? null : r.recordatorio_id,
+      fecha_programada: new Date().toISOString().split('T')[0] + ' ' + r.hora_recordatorio + ':00',
       fecha_hora_toma: fechaHoraToma,
       estado: 'tomada',
-      observaciones: 'Marcada desde el panel del día'
+      observaciones: 'Marcada'
     };
     try {
       const res = await api.registrarToma(datos);
@@ -267,7 +289,7 @@ export default function Tomas() {
       </div>
 
       <div className="tm-tarjeta">
-        <h2 className="tm-titulo">Panel del día</h2>
+        <h2 className="tm-titulo">Marcar tomas</h2>
         <p className="tm-fecha-hoy">{fechaHoy}</p>
 
         <div className="tm-filtro-fila">

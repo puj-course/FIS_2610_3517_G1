@@ -1,5 +1,7 @@
 ﻿from typing import Any, Dict, Optional
 from datetime import datetime
+from datetime import datetime, timezone
+
 
 from bson import ObjectId
 
@@ -98,7 +100,8 @@ class TomaService:
             "diferencia_minutos": toma.diferencia_minutos,
             "estado": toma.estado,
             "observaciones": toma.observaciones,
-            "created_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc)
+
         }
 
         resultado = tomas_col.insert_one(documento)

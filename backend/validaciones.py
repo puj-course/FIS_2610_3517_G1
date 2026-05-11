@@ -1,10 +1,10 @@
-# validaciones.py
+﻿# validaciones.py
 from datetime import datetime
 from bson import ObjectId
 
 
 TIPOS_DOCUMENTO = ["CC", "TI", "CE", "PA", "RC"]
-GENEROS = ["Masculino", "Femenino", "Otro"]
+GENEROS = ["Masculino", "Femenino", "Otro","no_especifica"]
 
 
 def es_object_id_valido(valor) -> bool:

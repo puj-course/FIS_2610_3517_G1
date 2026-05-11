@@ -6,6 +6,7 @@ on:
       - develop
       - main
       - feature/**
+      - features/**
   pull_request:
     branches:
       - develop
@@ -14,6 +15,11 @@ on:
 jobs:
   pruebas:
     runs-on: ubuntu-latest
+
+    env:
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      SECRET_KEY: test-secret-key-for-pytest-medtrack
+      TESTING: "1"
 
     steps:
       - name: Clonar repositorio
@@ -31,6 +37,8 @@ jobs:
           pip install pytest pytest-html httpx
 
       - name: Ejecutar pruebas y generar reportes
+        id: pruebas
+        continue-on-error: true
         run: |
           PYTHONPATH=. pytest tests/ \
           --junitxml=report.xml \
@@ -47,3 +55,26 @@ jobs:
         with:
           name: reporte-html
           path: report.html
+
+      - name: Enviar resultado a Telegram
+        if: always()
+        run: |
+          STATUS="${{ steps.pruebas.outcome }}"
+          REPO="${{ github.repository }}"
+          BRANCH="${{ github.ref_name }}"
+          ACTOR="${{ github.actor }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ "$STATUS" = "success" ]; then
+            MENSAJE="✅ MedTrack CI: pruebas exitosas.%0A📦 Repo: $REPO%0A🌿 Rama: $BRANCH%0A👤 Autor: $ACTOR%0A🔗 Reporte: $RUN_URL"
+          else
+            MENSAJE="❌ MedTrack CI: pruebas fallidas.%0A📦 Repo: $REPO%0A🌿 Rama: $BRANCH%0A👤 Autor: $ACTOR%0A🔗 Reporte: $RUN_URL"
+          fi
+
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$MENSAJE"
+
+      - name: Fallar pipeline si fallaron las pruebas
+        if: steps.pruebas.outcome != 'success'
+        run: exit 1

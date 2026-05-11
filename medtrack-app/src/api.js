@@ -1,5 +1,5 @@
 /*
-  Patrón Fachada — centraliza todas las llamadas al backend.
+  Patrón Fachada  centraliza todas las llamadas al backend.
   Adaptado para MongoDB: los IDs son strings (ObjectId), no enteros.
   Importar con: import api from './api';
 */

@@ -4,6 +4,9 @@
 from backend.validaciones import validar_medicamento
 
 
+PACIENTE_ID_VALIDO = "69feaac76a52afc46ed40c52"
+
+
 def medicamento_valido():
     return {
         "nombre_medicamento": "Aspirina",
@@ -13,7 +16,7 @@ def medicamento_valido():
         "dosis_unidad": "tableta",
         "frecuencia": "Cada 8 horas",
         "fecha_inicio": "03/14/2026",
-        "paciente_id": 1,
+        "paciente_id": PACIENTE_ID_VALIDO,
         "horarios": ["08:00", "14:00", "20:00"],
         "observaciones": "Tomar con agua",
     }
@@ -89,11 +92,11 @@ class TestCamposVacios:
         errores = validar_medicamento(data)
         assert "La fecha de inicio es obligatoria" in errores
 
-    def test_paciente_id_cero(self):
+    def test_paciente_id_vacio(self):
         data = medicamento_valido()
-        data["paciente_id"] = 0
+        data["paciente_id"] = ""
         errores = validar_medicamento(data)
-        assert any("paciente_id" in e.lower() or "paciente" in e.lower() for e in errores)
+        assert "El paciente_id es obligatorio" in errores
 
     def test_todos_los_obligatorios_vacios_generan_multiples_errores(self):
         data = {
@@ -104,7 +107,7 @@ class TestCamposVacios:
             "dosis_unidad": "",
             "frecuencia": "",
             "fecha_inicio": "",
-            "paciente_id": 0,
+            "paciente_id": "",
             "horarios": []
         }
         errores = validar_medicamento(data)
@@ -140,14 +143,20 @@ class TestNombreCorto:
 
 
 class TestPacienteId:
-    def test_paciente_id_negativo(self):
+    def test_paciente_id_negativo_es_invalido(self):
         data = medicamento_valido()
         data["paciente_id"] = -1
         errores = validar_medicamento(data)
-        assert any("paciente_id" in e.lower() or "paciente" in e.lower() for e in errores)
+        assert "El paciente_id debe ser un ObjectId válido" in errores
 
-    def test_paciente_id_como_texto(self):
+    def test_paciente_id_como_texto_es_invalido(self):
         data = medicamento_valido()
         data["paciente_id"] = "abc"
         errores = validar_medicamento(data)
-        assert any("paciente_id" in e.lower() or "paciente" in e.lower() for e in errores)
+        assert "El paciente_id debe ser un ObjectId válido" in errores
+
+    def test_paciente_id_con_formato_invalido(self):
+        data = medicamento_valido()
+        data["paciente_id"] = "123456"
+        errores = validar_medicamento(data)
+        assert "El paciente_id debe ser un ObjectId válido" in errores

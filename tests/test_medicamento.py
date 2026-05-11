@@ -1,19 +1,21 @@
 import os
 import sys
-import sqlite3
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
+
+from bson import ObjectId
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from backend.validaciones import (
-    validar_medicamento,
-    verificar_paciente_existe,
-    verificar_medicamento_duplicado
-)
+from backend.validaciones import validar_medicamento
 from backend.main import app
+from backend.routes import medication_route
+
 
 client = TestClient(app)
+
+PACIENTE_ID = "69feaac76a52afc46ed40c52"
+MEDICAMENTO_ID = ObjectId("69feb355322be070cd1c97ce")
 
 
 def medicamento_valido():
@@ -25,7 +27,7 @@ def medicamento_valido():
         "dosis_unidad": "tableta",
         "frecuencia": "Cada 8 horas",
         "fecha_inicio": "03/16/2026",
-        "paciente_id": 1,
+        "paciente_id": PACIENTE_ID,
         "horarios": ["08:00", "16:00", "00:00"],
         "observaciones": "Tomar después de comer"
     }
@@ -36,219 +38,123 @@ def medicamento_valido():
 # =========================
 
 def test_validar_medicamento_exitoso():
-    data = medicamento_valido()
-    errores = validar_medicamento(data)
+    errores = validar_medicamento(medicamento_valido())
     assert errores == []
 
 
 def test_nombre_medicamento_vacio():
     data = medicamento_valido()
     data["nombre_medicamento"] = ""
+
     errores = validar_medicamento(data)
+
     assert "El nombre del medicamento es obligatorio" in errores
 
 
 def test_dosis_vacia():
     data = medicamento_valido()
     data["dosis_cantidad"] = ""
+
     errores = validar_medicamento(data)
+
     assert "La dosis es obligatoria" in errores
 
 
 def test_frecuencia_vacia():
     data = medicamento_valido()
     data["frecuencia"] = ""
+
     errores = validar_medicamento(data)
+
     assert "La frecuencia es obligatoria" in errores
 
 
 def test_horario_vacio():
     data = medicamento_valido()
     data["horarios"] = []
+
     errores = validar_medicamento(data)
+
     assert "Debe ingresar al menos un horario" in errores
 
 
 def test_fecha_inicio_vacia():
     data = medicamento_valido()
     data["fecha_inicio"] = ""
+
     errores = validar_medicamento(data)
+
     assert "La fecha de inicio es obligatoria" in errores
 
 
 def test_paciente_id_faltante():
     data = medicamento_valido()
     del data["paciente_id"]
+
     errores = validar_medicamento(data)
+
     assert "El paciente_id es obligatorio" in errores
 
 
 def test_paciente_id_invalido_texto():
     data = medicamento_valido()
     data["paciente_id"] = "abc"
+
     errores = validar_medicamento(data)
-    assert "El paciente_id debe ser un número entero válido" in errores
+
+    assert "El paciente_id debe ser un ObjectId válido" in errores
 
 
-def test_paciente_id_invalido_menor_o_igual_a_cero():
+def test_paciente_id_invalido_numero():
     data = medicamento_valido()
     data["paciente_id"] = 0
+
     errores = validar_medicamento(data)
-    assert "El paciente_id debe ser un número mayor que 0" in errores
+
+    assert "El paciente_id debe ser un ObjectId válido" in errores
 
 
 # =========================
-# PRUEBAS DE BASE DE DATOS
+# PRUEBAS DEL ENDPOINT POST
 # =========================
 
-def test_verificar_paciente_existe_devuelve_true():
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombres TEXT NOT NULL,
-            apellidos TEXT NOT NULL,
-            fecha_nacimiento TEXT NOT NULL,
-            genero TEXT NOT NULL,
-            tipo_documento TEXT NOT NULL,
-            numero_documento TEXT NOT NULL,
-            telefono_contacto TEXT NOT NULL,
-            eps_aseguradora TEXT,
-            diagnostico_principal TEXT,
-            alergias_conocidas TEXT,
-            observaciones_adicionales TEXT
-        )
-    """)
-
-    cursor.execute("""
-        INSERT INTO pacientes (
-            nombres, apellidos, fecha_nacimiento, genero,
-            tipo_documento, numero_documento, telefono_contacto,
-            eps_aseguradora, diagnostico_principal
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Ana", "Lopez", "01/15/1990", "Femenino",
-        "CC", "12345678", "3001234567", "Sura", "Hipertension"
-    ))
-
-    conn.commit()
-
-    resultado = verificar_paciente_existe(1, conn)
-
-    assert resultado is True
-    conn.close()
-
-
-def test_verificar_paciente_existe_devuelve_false():
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombres TEXT NOT NULL,
-            apellidos TEXT NOT NULL,
-            fecha_nacimiento TEXT NOT NULL,
-            genero TEXT NOT NULL,
-            tipo_documento TEXT NOT NULL,
-            numero_documento TEXT NOT NULL,
-            telefono_contacto TEXT NOT NULL,
-            eps_aseguradora TEXT,
-            diagnostico_principal TEXT,
-            alergias_conocidas TEXT,
-            observaciones_adicionales TEXT
-        )
-    """)
-
-    conn.commit()
-
-    resultado = verificar_paciente_existe(99, conn)
-
-    assert resultado is False
-    conn.close()
-
-
-def test_verificar_medicamento_duplicado_devuelve_true():
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE medicamentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            dosis TEXT NOT NULL,
-            frecuencia TEXT NOT NULL,
-            horario TEXT NOT NULL,
-            fecha_inicio TEXT NOT NULL,
-            observaciones TEXT,
-            paciente_id INTEGER NOT NULL
-        )
-    """)
-
-    cursor.execute("""
-        INSERT INTO medicamentos (
-            nombre, dosis, frecuencia, horario,
-            fecha_inicio, observaciones, paciente_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Acetaminofen", "1 tableta", "Cada 8 horas", "08:00, 16:00, 00:00",
-        "03/16/2026", "Concentración: 500 mg | Forma farmacéutica: Tableta", 1
-    ))
-
-    conn.commit()
-
-    resultado = verificar_medicamento_duplicado("Acetaminofen", 1, conn)
-
-    assert resultado is True
-    conn.close()
-
-
-def test_verificar_medicamento_duplicado_devuelve_false():
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE medicamentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            dosis TEXT NOT NULL,
-            frecuencia TEXT NOT NULL,
-            horario TEXT NOT NULL,
-            fecha_inicio TEXT NOT NULL,
-            observaciones TEXT,
-            paciente_id INTEGER NOT NULL
-        )
-    """)
-
-    conn.commit()
-
-    resultado = verificar_medicamento_duplicado("Ibuprofeno", 1, conn)
-
-    assert resultado is False
-    conn.close()
-
-
-# =========================
-# PRUEBAS DEL ENDPOINT
-# =========================
-
-def test_post_medicamento_exitoso():
+def test_post_medicamento_exitoso(monkeypatch):
     data = medicamento_valido()
 
-    conexion_falsa = MagicMock()
-    cursor_falso = MagicMock()
-    conexion_falsa.cursor.return_value = cursor_falso
+    pacientes_col_falsa = MagicMock()
+    pacientes_col_falsa.find_one.return_value = {
+        "_id": ObjectId(PACIENTE_ID),
+        "nombres": "Juan",
+        "apellidos": "Perez"
+    }
 
-    with patch("backend.routes.medication_route.sqlite3.connect", return_value=conexion_falsa), \
-         patch("backend.routes.medication_route.verificar_paciente_existe", return_value=True), \
-         patch("backend.routes.medication_route.verificar_medicamento_duplicado", return_value=False):
+    medicamentos_col_falsa = MagicMock()
+    medicamentos_col_falsa.find_one.return_value = None
 
-        response = client.post("/medicamentos/", json=data)
+    insert_result = MagicMock()
+    insert_result.inserted_id = MEDICAMENTO_ID
+    medicamentos_col_falsa.insert_one.return_value = insert_result
+
+    monkeypatch.setattr(medication_route, "pacientes_col", pacientes_col_falsa)
+    monkeypatch.setattr(medication_route, "medicamentos_col", medicamentos_col_falsa)
+
+    response = client.post("/medicamentos/", json=data)
 
     assert response.status_code == 200
-    assert response.json()["mensaje"] == "Medicamento registrado existosamente"
+    assert response.json()["mensaje"] == "Medicamento registrado exitosamente"
+
+    medicamentos_col_falsa.insert_one.assert_called_once()
+
+    documento = medicamentos_col_falsa.insert_one.call_args.args[0]
+
+    assert documento["nombre"] == "acetaminofen"
+    assert documento["dosis"] == "1 tableta"
+    assert documento["frecuencia"] == "Cada 8 horas"
+    assert documento["horario"] == "08:00, 16:00, 00:00"
+    assert documento["fecha_inicio"] == "03/16/2026"
+    assert documento["paciente_id"] == PACIENTE_ID
+    assert "Concentración: 500 mg" in documento["observaciones"]
+    assert "Forma farmacéutica: Tableta" in documento["observaciones"]
 
 
 def test_post_medicamento_datos_invalidos():
@@ -261,30 +167,102 @@ def test_post_medicamento_datos_invalidos():
     assert "El nombre del medicamento es obligatorio" in response.json()["detail"]
 
 
-def test_post_medicamento_paciente_no_existe():
+def test_post_medicamento_paciente_id_invalido(monkeypatch):
+    data = medicamento_valido()
+    data["paciente_id"] = "id-invalido"
+
+    response = client.post("/medicamentos/", json=data)
+
+    assert response.status_code == 400
+    assert "El paciente_id debe ser un ObjectId válido" in response.json()["detail"]
+
+
+def test_post_medicamento_paciente_no_existe(monkeypatch):
     data = medicamento_valido()
 
-    conexion_falsa = MagicMock()
+    pacientes_col_falsa = MagicMock()
+    pacientes_col_falsa.find_one.return_value = None
 
-    with patch("backend.routes.medication_route.sqlite3.connect", return_value=conexion_falsa), \
-         patch("backend.routes.medication_route.verificar_paciente_existe", return_value=False):
+    monkeypatch.setattr(medication_route, "pacientes_col", pacientes_col_falsa)
 
-        response = client.post("/medicamentos/", json=data)
+    response = client.post("/medicamentos/", json=data)
 
     assert response.status_code == 404
     assert response.json()["detail"] == "El paciente no existe"
 
 
-def test_post_medicamento_duplicado():
+def test_post_medicamento_duplicado(monkeypatch):
     data = medicamento_valido()
 
-    conexion_falsa = MagicMock()
+    pacientes_col_falsa = MagicMock()
+    pacientes_col_falsa.find_one.return_value = {
+        "_id": ObjectId(PACIENTE_ID)
+    }
 
-    with patch("backend.routes.medication_route.sqlite3.connect", return_value=conexion_falsa), \
-         patch("backend.routes.medication_route.verificar_paciente_existe", return_value=True), \
-         patch("backend.routes.medication_route.verificar_medicamento_duplicado", return_value=True):
+    medicamentos_col_falsa = MagicMock()
+    medicamentos_col_falsa.find_one.return_value = {
+        "_id": MEDICAMENTO_ID,
+        "paciente_id": PACIENTE_ID,
+        "nombre": "acetaminofen"
+    }
 
-        response = client.post("/medicamentos/", json=data)
+    monkeypatch.setattr(medication_route, "pacientes_col", pacientes_col_falsa)
+    monkeypatch.setattr(medication_route, "medicamentos_col", medicamentos_col_falsa)
+
+    response = client.post("/medicamentos/", json=data)
 
     assert response.status_code == 400
     assert response.json()["detail"] == "El paciente ya tiene registrado este medicamento"
+
+
+# =========================
+# PRUEBAS DEL ENDPOINT GET
+# =========================
+
+def test_get_medicamentos_paciente_exitoso(monkeypatch):
+    medicamentos_col_falsa = MagicMock()
+
+    cursor_mock = MagicMock()
+    cursor_mock.sort.return_value = [
+        {
+            "_id": MEDICAMENTO_ID,
+            "nombre": "acetaminofen",
+            "dosis": "1 tableta",
+            "frecuencia": "Cada 8 horas",
+            "horario": "08:00, 16:00, 00:00",
+            "fecha_inicio": "03/16/2026",
+            "observaciones": "Concentración: 500 mg | Forma farmacéutica: Tableta",
+            "paciente_id": PACIENTE_ID
+        }
+    ]
+
+    medicamentos_col_falsa.find.return_value = cursor_mock
+
+    monkeypatch.setattr(medication_route, "medicamentos_col", medicamentos_col_falsa)
+
+    response = client.get(f"/medicamentos/paciente/{PACIENTE_ID}")
+
+    assert response.status_code == 200
+
+    cuerpo = response.json()
+
+    assert len(cuerpo) == 1
+    assert cuerpo[0]["id"] == str(MEDICAMENTO_ID)
+    assert cuerpo[0]["nombre"] == "acetaminofen"
+    assert cuerpo[0]["paciente_id"] == PACIENTE_ID
+
+
+def test_get_medicamentos_paciente_vacio(monkeypatch):
+    medicamentos_col_falsa = MagicMock()
+
+    cursor_mock = MagicMock()
+    cursor_mock.sort.return_value = []
+
+    medicamentos_col_falsa.find.return_value = cursor_mock
+
+    monkeypatch.setattr(medication_route, "medicamentos_col", medicamentos_col_falsa)
+
+    response = client.get(f"/medicamentos/paciente/{PACIENTE_ID}")
+
+    assert response.status_code == 200
+    assert response.json() == []

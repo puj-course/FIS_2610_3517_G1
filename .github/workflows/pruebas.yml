@@ -1,4 +1,4 @@
-name: Ejecutar pruebas + Reporte
+﻿name: Ejecutar pruebas + Reporte
 
 on:
   push:
@@ -14,6 +14,10 @@ on:
 jobs:
   pruebas:
     runs-on: ubuntu-latest
+
+    env:
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      SECRET_KEY: test-secret-key-for-pytest-medtrack
 
     steps:
       - name: Clonar repositorio

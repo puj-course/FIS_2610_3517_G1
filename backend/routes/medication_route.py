@@ -1,3 +1,4 @@
+﻿# medication_route.py
 from fastapi import APIRouter, HTTPException
 from backend.validaciones import validar_medicamento
 from backend.database import medicamentos_col, pacientes_col

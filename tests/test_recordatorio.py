@@ -124,6 +124,7 @@ class ColeccionFalsa:
     - find_one()
     - find()
     - insert_one()
+    - update_one()
     """
 
     def __init__(self, documentos=None):
@@ -131,6 +132,8 @@ class ColeccionFalsa:
         self.documento_insertado = None
         self.filtro_find_one = None
         self.filtro_find = None
+        self.filtro_update = None
+        self.update_aplicado = None
 
     def _coincide(self, documento, filtro):
         """
@@ -189,6 +192,33 @@ class ColeccionFalsa:
         self.documentos.append(documento)
 
         return ResultadoInsertOneFalso()
+
+    def update_one(self, filtro, update):
+        """
+        Simula update_one() de MongoDB.
+
+        Se usa para probar el PATCH que marca un recordatorio como tomado.
+        Si encuentra un documento que coincide con el filtro, aplica el "$set".
+        """
+        self.filtro_update = filtro
+        self.update_aplicado = update
+
+        for documento in self.documentos:
+            if self._coincide(documento, filtro):
+                if "$set" in update:
+                    documento.update(update["$set"])
+
+                class Resultado:
+                    matched_count = 1
+                    modified_count = 1
+
+                return Resultado()
+
+        class Resultado:
+            matched_count = 0
+            modified_count = 0
+
+        return Resultado()
 
 
 def medicamento_mongo():
@@ -689,3 +719,102 @@ def test_get_panel_dia_exitoso(monkeypatch):
     assert cuerpo["panel"][0]["medicamentos"][0]["dosis"] == "1 tableta"
     assert cuerpo["panel"][0]["medicamentos"][0]["hora"] == "08:30"
     assert cuerpo["panel"][0]["medicamentos"][0]["tomado"] is False
+
+def test_get_recordatorios_retrasados_exitoso(monkeypatch):
+    """
+    CASO VÁLIDO: consulta de recordatorios retrasados.
+
+    En esta versión se consideran retrasados los recordatorios activos
+    que todavía no han sido marcados como tomados.
+    """
+    recordatorios_col_falsa = ColeccionFalsa([
+        recordatorio_mongo()
+    ])
+
+    medicamentos_col_falsa = ColeccionFalsa([
+        medicamento_mongo()
+    ])
+
+    monkeypatch.setattr(
+        "backend.routes.reminder_route.recordatorios_col",
+        recordatorios_col_falsa
+    )
+
+    monkeypatch.setattr(
+        "backend.routes.reminder_route.medicamentos_col",
+        medicamentos_col_falsa
+    )
+
+    response = client.get(
+        f"/recordatorios/retrasados/{PACIENTE_ID_VALIDO}",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 200
+
+    cuerpo = response.json()
+
+    assert "recordatorios_retrasados" in cuerpo
+    assert len(cuerpo["recordatorios_retrasados"]) == 1
+    assert cuerpo["recordatorios_retrasados"][0]["medicamento_nombre"] == "Aspirina"
+    assert cuerpo["recordatorios_retrasados"][0]["tomado"] is False
+
+
+def test_patch_recordatorio_tomado_exitoso(monkeypatch):
+    """
+    CASO VÁLIDO: marcar un recordatorio como tomado.
+
+    La ruta debe actualizar el campo tomado a True usando update_one().
+    """
+    recordatorios_col_falsa = ColeccionFalsa([
+        recordatorio_mongo()
+    ])
+
+    monkeypatch.setattr(
+        "backend.routes.reminder_route.recordatorios_col",
+        recordatorios_col_falsa
+    )
+
+    response = client.patch(
+        f"/recordatorios/{RECORDATORIO_ID_VALIDO}/tomado",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 200
+    assert response.json()["mensaje"] == "Recordatorio marcado como tomado correctamente"
+    assert response.json()["recordatorio_id"] == RECORDATORIO_ID_VALIDO
+
+    assert recordatorios_col_falsa.documentos[0]["tomado"] is True
+
+
+def test_patch_recordatorio_tomado_id_invalido():
+    """
+    CASO INVÁLIDO: el id del recordatorio no es un ObjectId válido.
+    """
+    response = client.patch(
+        "/recordatorios/id-invalido/tomado",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "ID de recordatorio inválido"
+
+
+def test_patch_recordatorio_tomado_no_encontrado(monkeypatch):
+    """
+    CASO INVÁLIDO: el id tiene formato válido, pero no existe en la colección.
+    """
+    recordatorios_col_falsa = ColeccionFalsa([])
+
+    monkeypatch.setattr(
+        "backend.routes.reminder_route.recordatorios_col",
+        recordatorios_col_falsa
+    )
+
+    response = client.patch(
+        f"/recordatorios/{RECORDATORIO_ID_VALIDO}/tomado",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Recordatorio no encontrado"

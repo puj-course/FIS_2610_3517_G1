@@ -171,3 +171,46 @@ def listar_recordatorios(paciente_id: str):
         resultado.append(serializar_recordatorio(r, medicamento))
 
     return {"recordatorios": resultado}
+
+@router.get("/retrasados/{paciente_id}")
+def listar_recordatorios_retrasados(paciente_id: str):
+    recordatorios = list(recordatorios_col.find({
+        "paciente_id": paciente_id,
+        "activo": 1,
+        "tomado": False
+    }))
+
+    resultado = []
+
+    for r in recordatorios:
+        medicamento = obtener_medicamento_por_id(r.get("medicamento_id"))
+        resultado.append(serializar_recordatorio(r, medicamento))
+
+    return {"recordatorios_retrasados": resultado}
+
+
+@router.patch("/{recordatorio_id}/tomado")
+def marcar_recordatorio_como_tomado(recordatorio_id: str):
+    try:
+        filtro = {"_id": ObjectId(recordatorio_id)}
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="ID de recordatorio inválido"
+        )
+
+    resultado = recordatorios_col.update_one(
+        filtro,
+        {"$set": {"tomado": True}}
+    )
+
+    if resultado.matched_count == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Recordatorio no encontrado"
+        )
+
+    return {
+        "mensaje": "Recordatorio marcado como tomado correctamente",
+        "recordatorio_id": recordatorio_id
+    }

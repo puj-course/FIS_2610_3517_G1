@@ -139,17 +139,16 @@ class ColeccionFalsa:
         """
         Verifica si un documento cumple un filtro simple de igualdad.
 
-        reminder_route.py usa filtros sencillos como:
-        {"_id": ObjectId(...)}
-        {"paciente_id": paciente_id}
-        {"paciente_id": paciente_id, "activo": 1}
+        Se permite comparar valores equivalentes aunque uno sea ObjectId y otro str,
+        porque las rutas convierten algunos IDs con str(ObjectId(...)).
         """
         filtro = filtro or {}
 
         for clave, valor in filtro.items():
-            if documento.get(clave) != valor:
-                return False
+            valor_documento = documento.get(clave)
 
+            if valor_documento != valor and str(valor_documento) != str(valor):
+                return False
         return True
 
     def find_one(self, filtro):

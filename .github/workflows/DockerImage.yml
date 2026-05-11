@@ -1,4 +1,4 @@
-name: CD - Build & Deploy Docker Image
+﻿name: CD - Build & Deploy Docker Image
 
 on:
   push:
@@ -27,6 +27,7 @@ jobs:
             --name test-container \
             -p 8000:8000 \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+            -e SECRET_KEY="test-secret-key-for-docker" \
             medtrack:latest
 
       - name: Verificar que la aplicación responde

@@ -1,3 +1,4 @@
+﻿# main.py
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +20,11 @@ from backend.routes.resumen_route import router as resumen_router
 init_db()
 
 app = FastAPI()
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
 
 # Middleware de Autenticación (Tokens)
 # Se añade primero para que la app sepa quién es el usuario

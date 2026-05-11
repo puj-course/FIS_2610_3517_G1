@@ -669,19 +669,35 @@ def test_get_panel_dia_exitoso(monkeypatch):
     """
     CASO VÁLIDO: panel diario con un paciente y un recordatorio activo.
 
-    Esta prueba cubre la ruta GET /recordatorios/panel-dia,
-    relacionada con la migración del panel diario a MongoDB.
+    Esta prueba cubre la ruta GET /recordatorios/panel-dia.
+
+    Para evitar diferencias entre entornos Linux/Windows al comparar ObjectId
+    contra string, el recordatorio se construye usando explícitamente el mismo
+    paciente_id que genera paciente_mongo().
     """
+    paciente = paciente_mongo()
+    medicamento = medicamento_mongo()
+    recordatorio = recordatorio_mongo()
+
+    paciente_id = str(paciente["_id"])
+    medicamento_id = str(medicamento["_id"])
+
+    # Forzamos relación consistente entre paciente, medicamento y recordatorio.
+    recordatorio["paciente_id"] = paciente_id
+    recordatorio["medicamento_id"] = medicamento_id
+    recordatorio["activo"] = 1
+    recordatorio["tomado"] = False
+
     pacientes_col_falsa = ColeccionFalsa([
-        paciente_mongo()
+        paciente
     ])
 
     recordatorios_col_falsa = ColeccionFalsa([
-        recordatorio_mongo()
+        recordatorio
     ])
 
     medicamentos_col_falsa = ColeccionFalsa([
-        medicamento_mongo()
+        medicamento
     ])
 
     monkeypatch.setattr(
@@ -699,6 +715,13 @@ def test_get_panel_dia_exitoso(monkeypatch):
         medicamentos_col_falsa
     )
 
+    # Verificación previa del fake: antes de llamar la ruta, debe existir
+    # un recordatorio activo asociado al paciente.
+    assert len(recordatorios_col_falsa.find({
+        "paciente_id": paciente_id,
+        "activo": 1
+    })) == 1
+
     response = client.get(
         "/recordatorios/panel-dia",
         headers=headers_auth()
@@ -710,7 +733,7 @@ def test_get_panel_dia_exitoso(monkeypatch):
 
     assert "panel" in cuerpo
     assert len(cuerpo["panel"]) == 1
-    assert cuerpo["panel"][0]["paciente_id"] == PACIENTE_ID_VALIDO
+    assert cuerpo["panel"][0]["paciente_id"] == paciente_id
     assert cuerpo["panel"][0]["nombres"] == "Ana"
     assert cuerpo["panel"][0]["apellidos"] == "Lopez"
     assert len(cuerpo["panel"][0]["medicamentos"]) == 1

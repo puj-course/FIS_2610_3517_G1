@@ -118,6 +118,8 @@ def test_paciente_none(colecciones_mock):
 
 
 def test_paciente_id_invalido(colecciones_mock):
+    colecciones_mock["pacientes_col"].find_one.return_value = None
+
     service = ResumenPacienteService()
 
     paciente = service.obtener_paciente("id-invalido")

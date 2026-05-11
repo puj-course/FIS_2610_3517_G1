@@ -1,10 +1,6 @@
 ﻿from bson import ObjectId
 
-from backend.database import (
-    pacientes_col,
-    medicamentos_col,
-    tomas_col
-)
+from backend.database import pacientes_col, medicamentos_col, tomas_col
 
 from backend.decorators.historial import (
     HistorialTomas,
@@ -20,13 +16,15 @@ class ResumenPacienteService:
                 "_id": ObjectId(paciente_id)
             })
         except Exception:
-            return None
+            paciente = pacientes_col.find_one({
+                "id": paciente_id
+            })
 
         if not paciente:
             return None
 
         return {
-            "id": str(paciente["_id"]),
+            "id": str(paciente.get("_id", paciente.get("id", ""))),
             "nombres": paciente.get("nombres", ""),
             "apellidos": paciente.get("apellidos", ""),
             "fecha_nacimiento": paciente.get("fecha_nacimiento", ""),
@@ -51,7 +49,7 @@ class ResumenPacienteService:
 
         for m in medicamentos:
             resultado.append({
-                "id": str(m["_id"]),
+                "id": str(m.get("_id", m.get("id", ""))),
                 "nombre": m.get("nombre", ""),
                 "dosis": m.get("dosis", ""),
                 "frecuencia": m.get("frecuencia", ""),
@@ -74,37 +72,44 @@ class ResumenPacienteService:
 
         for t in tomas:
             medicamento_id = t.get("medicamento_id")
-            medicamento_nombre = ""
+            medicamento_nombre = t.get("nombre", t.get("medicamento_nombre", ""))
 
-            if medicamento_id:
+            if medicamento_id and not medicamento_nombre:
                 try:
                     medicamento = medicamentos_col.find_one({
                         "_id": ObjectId(medicamento_id)
                     })
+
                     if medicamento:
                         medicamento_nombre = medicamento.get("nombre", "")
+
                 except Exception:
-                    medicamento_nombre = ""
+                    medicamento = medicamentos_col.find_one({
+                        "id": medicamento_id
+                    })
+
+                    if medicamento:
+                        medicamento_nombre = medicamento.get("nombre", "")
 
             fecha_programada = t.get("fecha_programada", "")
             fecha_hora_toma = t.get("fecha_hora_toma")
 
-            fecha = ""
-            hora_programada = ""
-            hora_tomada = None
+            fecha = t.get("fecha", "")
+            hora_programada = t.get("hora_programada", "")
+            hora_tomada = t.get("hora_tomada")
 
             if fecha_programada:
                 partes = str(fecha_programada).split(" ")
-                fecha = partes[0]
-                hora_programada = partes[1] if len(partes) > 1 else ""
+                fecha = fecha or partes[0]
+                hora_programada = hora_programada or (partes[1] if len(partes) > 1 else "")
 
             if fecha_hora_toma:
                 partes_toma = str(fecha_hora_toma).split(" ")
                 hora_tomada = partes_toma[1] if len(partes_toma) > 1 else str(fecha_hora_toma)
 
             historial.append({
-                "id": str(t["_id"]),
-                "paciente_id": t.get("paciente_id"),
+                "id": str(t.get("_id", t.get("id", ""))),
+                "paciente_id": t.get("paciente_id", str(paciente_id)),
                 "medicamento_id": medicamento_id,
                 "recordatorio_id": t.get("recordatorio_id"),
 
@@ -121,8 +126,8 @@ class ResumenPacienteService:
                 "fecha_hora_toma": fecha_hora_toma,
 
                 "diferencia_minutos": t.get("diferencia_minutos"),
-                "estado": t.get("estado"),
-                "observaciones": t.get("observaciones")
+                "estado": t.get("estado", "pendiente"),
+                "observaciones": t.get("observaciones", "")
             })
 
         return historial

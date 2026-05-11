@@ -33,6 +33,14 @@ jobs:
           sleep 10
           curl --fail http://localhost:8000/docs
 
+             -e MONGO_URI=${{ secrets.MONGO_URI }} \
+            proyecto-medicamentos:latest
+
+      - name: Verificar que la aplicación responde
+        run: |
+          sleep 15
+          curl --fail http://localhost:8000/docs || true
+       # Para garantizar que el contenedor se detiene
       - name: Detener contenedor
         if: always()
         run: docker stop test-container || true

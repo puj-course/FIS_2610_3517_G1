@@ -19,6 +19,7 @@ jobs:
     env:
       MONGO_URI: ${{ secrets.MONGO_URI }}
       SECRET_KEY: test-secret-key-for-pytest-medtrack
+      TESTING: "1"
 
     steps:
       - name: Clonar repositorio

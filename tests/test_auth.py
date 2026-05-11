@@ -21,6 +21,12 @@ USUARIO_ID = ObjectId("69ff0c5cb77969e0f2d52a11")
 
 
 class ColeccionUsuariosFalsa:
+    """
+    Colección falsa para simular usuarios_col de MongoDB.
+
+    Permite probar /signin sin conectarse a MongoDB Atlas.
+    """
+
     def __init__(self, usuario=None):
         self.usuario = usuario
 
@@ -34,6 +40,11 @@ class ColeccionUsuariosFalsa:
 
 
 def usuario_mock():
+    """
+    Usuario válido de prueba.
+
+    La contraseña se guarda hasheada porque auth_route compara contra hash.
+    """
     return {
         "_id": USUARIO_ID,
         "nombre": "Admin Test",

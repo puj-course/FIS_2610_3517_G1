@@ -1,11 +1,17 @@
-﻿########################################################################################
+########################################################################################
 # test_toma_service.py
 # Pruebas para TomaService usando MongoDB mockeado
 ########################################################################################
 
+import os
 from unittest.mock import Mock, MagicMock
-from bson import ObjectId
+
 import pytest
+from bson import ObjectId
+
+# Variables mínimas para que backend.database cargue correctamente en pruebas locales.
+os.environ.setdefault("MONGO_URI", "mongodb://localhost:27017/medtrack_test")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-medtrack")
 
 from backend.services import toma_service as toma_service_module
 from backend.services.toma_service import TomaService
@@ -22,10 +28,16 @@ TOMA_ID = ObjectId("69feb500322be070cd1c97d0")
 
 
 # =========================
-# FIXTURES Y DATOS BASE
+# DATOS BASE
 # =========================
 
 def datos_validos():
+    """
+    Datos válidos para registrar una toma.
+
+    Se usan en casi todas las pruebas. Cada test modifica una copia
+    cuando necesita probar un caso inválido.
+    """
     return {
         "paciente_id": PACIENTE_ID,
         "medicamento_id": MEDICAMENTO_ID,
@@ -37,15 +49,31 @@ def datos_validos():
     }
 
 
+# =========================
+# FIXTURE DE COLECCIONES MOCKEADAS
+# =========================
+
 @pytest.fixture
 def colecciones_mock(monkeypatch):
+    """
+    Reemplaza las colecciones reales de MongoDB por MagicMock.
+
+    TomaService usa directamente:
+        pacientes_col
+        medicamentos_col
+        recordatorios_col
+        tomas_col
+
+    Por eso se mockean esas colecciones dentro del módulo toma_service.
+    """
     pacientes_col = MagicMock()
     medicamentos_col = MagicMock()
     recordatorios_col = MagicMock()
     tomas_col = MagicMock()
 
     pacientes_col.find_one.return_value = {
-        "_id": ObjectId(PACIENTE_ID)
+        "_id": ObjectId(PACIENTE_ID),
+        "nombres": "Paciente prueba"
     }
 
     medicamentos_col.find_one.return_value = {
@@ -69,6 +97,7 @@ def colecciones_mock(monkeypatch):
     monkeypatch.setattr(toma_service_module, "medicamentos_col", medicamentos_col)
     monkeypatch.setattr(toma_service_module, "recordatorios_col", recordatorios_col)
     monkeypatch.setattr(toma_service_module, "tomas_col", tomas_col)
+    monkeypatch.setattr(toma_service_module, "publisher", None)
 
     return {
         "pacientes_col": pacientes_col,
@@ -83,6 +112,20 @@ def colecciones_mock(monkeypatch):
 # =========================
 
 def test_registrar_toma_exitoso(colecciones_mock, monkeypatch):
+    """
+    CASO VÁLIDO: registrar una toma correctamente.
+
+    El servicio debe:
+    1. Validar campos obligatorios.
+    2. Verificar que el paciente existe.
+    3. Verificar que el medicamento existe.
+    4. Verificar que el medicamento pertenece al paciente.
+    5. Verificar que el recordatorio existe.
+    6. Verificar que el recordatorio pertenece al medicamento.
+    7. Verificar que no exista una toma duplicada.
+    8. Insertar la toma en tomas_col.
+    9. Notificar con publisher si está disponible.
+    """
     publisher_falso = Mock()
     monkeypatch.setattr(toma_service_module, "publisher", publisher_falso)
 
@@ -208,10 +251,13 @@ def test_recordatorio_no_existe(colecciones_mock):
 
 
 # =========================
-# VALIDACIONES DE RELACION ENTRE ENTIDADES
+# VALIDACIONES DE RELACIÓN ENTRE ENTIDADES
 # =========================
 
 def test_medicamento_no_pertenece_al_paciente(colecciones_mock):
+    """
+    El medicamento existe, pero pertenece a otro paciente.
+    """
     colecciones_mock["medicamentos_col"].find_one.return_value = {
         "_id": ObjectId(MEDICAMENTO_ID),
         "paciente_id": "69feaac76a52afc46ed40c99"
@@ -222,6 +268,9 @@ def test_medicamento_no_pertenece_al_paciente(colecciones_mock):
 
 
 def test_recordatorio_no_pertenece_al_medicamento(colecciones_mock):
+    """
+    El recordatorio existe, pero pertenece a otro medicamento.
+    """
     colecciones_mock["recordatorios_col"].find_one.return_value = {
         "_id": ObjectId(RECORDATORIO_ID),
         "medicamento_id": "69feb355322be070cd1c9999"
@@ -232,7 +281,7 @@ def test_recordatorio_no_pertenece_al_medicamento(colecciones_mock):
 
 
 # =========================
-# VALIDACION DE DUPLICADOS
+# VALIDACIÓN DE DUPLICADOS
 # =========================
 
 def test_toma_duplicada_lanza_error(colecciones_mock, monkeypatch):
@@ -253,6 +302,12 @@ def test_toma_duplicada_lanza_error(colecciones_mock, monkeypatch):
 # =========================
 
 def test_error_insertar_toma_lanza_runtime_error(colecciones_mock):
+    """
+    Simula un error al insertar en tomas_col.
+
+    Como el servicio usa MongoDB, el error se simula directamente en
+    tomas_col.insert_one().
+    """
     colecciones_mock["tomas_col"].find_one.return_value = None
     colecciones_mock["tomas_col"].insert_one.side_effect = Exception("Error simulado MongoDB")
 

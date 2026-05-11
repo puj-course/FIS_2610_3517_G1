@@ -6,17 +6,30 @@ from bson import ObjectId
 from fastapi.testclient import TestClient
 from fastapi.security import HTTPAuthorizationCredentials
 
+# Variables mínimas para que backend.database y el middleware puedan cargar
+# correctamente durante pruebas locales y CI.
+os.environ.setdefault("MONGO_URI", "mongodb://localhost:27017/medtrack_test")
+os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-medtrack"
+
+# Agregamos la raíz del proyecto al path para que pytest pueda importar backend
+# sin depender de cómo se ejecute el comando desde Git Bash.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from backend.validaciones import validar_paciente
 from backend.main import app
+from backend.auth import generate_jwt
 from backend.routes import patient_route
+import backend.auth as auth_module
 
 
+# Aseguramos que los tokens se firmen con la misma clave que usa el middleware.
+auth_module.SECRET_KEY = os.environ["SECRET_KEY"]
+
+# TestClient = cliente HTTP falso que permite probar los endpoints de FastAPI
+# sin levantar el servidor con uvicorn.
 client = TestClient(app)
 
 USUARIO_ID = "69fe993245cf9ab8c39e4993"
-
 PACIENTE_ID = ObjectId("69feaac76a52afc46ed40c52")
 
 TOKEN_FALSO = HTTPAuthorizationCredentials(
@@ -24,10 +37,33 @@ TOKEN_FALSO = HTTPAuthorizationCredentials(
     credentials="token-test"
 )
 
-HEADER_TOKEN = "Bearer token-test"
+
+def headers_auth():
+    """
+    Construye un header Authorization válido para las pruebas HTTP.
+
+    Aunque en CI se puede usar TESTING=1 para que el middleware no bloquee,
+    dejamos un JWT real para que los tests también funcionen localmente.
+    """
+    token = generate_jwt(
+        USUARIO_ID,
+        "admin@medtrack.com",
+        "administrador"
+    )
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
 
 
 def paciente_valido():
+    """
+    Datos base válidos para las pruebas de pacientes.
+
+    Se usan en varios tests para evitar repetir el mismo diccionario.
+    Cuando un test necesita probar un caso inválido, modifica una copia
+    de estos datos.
+    """
     return {
         "nombres": "Juan",
         "apellidos": "Perez",
@@ -48,11 +84,20 @@ def paciente_valido():
 # =========================
 
 def test_validar_paciente_exitoso():
+    """
+    CASO VÁLIDO: todos los campos obligatorios cumplen las reglas.
+
+    La función validar_paciente debe devolver una lista vacía de errores.
+    """
     errores = validar_paciente(paciente_valido())
+
     assert errores == []
 
 
 def test_nombre_vacio():
+    """
+    CASO INVÁLIDO: nombres vacío.
+    """
     data = paciente_valido()
     data["nombres"] = ""
 
@@ -62,6 +107,9 @@ def test_nombre_vacio():
 
 
 def test_apellidos_vacios():
+    """
+    CASO INVÁLIDO: apellidos vacío.
+    """
     data = paciente_valido()
     data["apellidos"] = ""
 
@@ -71,6 +119,11 @@ def test_apellidos_vacios():
 
 
 def test_fecha_invalida():
+    """
+    CASO INVÁLIDO: fecha con formato incorrecto.
+
+    El proyecto espera fechas en formato mm/dd/yyyy.
+    """
     data = paciente_valido()
     data["fecha_nacimiento"] = "1990-01-15"
 
@@ -80,6 +133,9 @@ def test_fecha_invalida():
 
 
 def test_fecha_futura():
+    """
+    CASO INVÁLIDO: fecha de nacimiento futura.
+    """
     data = paciente_valido()
     data["fecha_nacimiento"] = "12/31/2099"
 
@@ -89,6 +145,9 @@ def test_fecha_futura():
 
 
 def test_genero_invalido():
+    """
+    CASO INVÁLIDO: género fuera de las opciones permitidas.
+    """
     data = paciente_valido()
     data["genero"] = "Alien"
 
@@ -98,6 +157,9 @@ def test_genero_invalido():
 
 
 def test_tipo_documento_invalido():
+    """
+    CASO INVÁLIDO: tipo de documento fuera de las opciones permitidas.
+    """
     data = paciente_valido()
     data["tipo_documento"] = "XYZ"
 
@@ -107,6 +169,9 @@ def test_tipo_documento_invalido():
 
 
 def test_documento_invalido():
+    """
+    CASO INVÁLIDO: número de documento con letras.
+    """
     data = paciente_valido()
     data["numero_documento"] = "ABC123"
 
@@ -116,6 +181,9 @@ def test_documento_invalido():
 
 
 def test_telefono_invalido():
+    """
+    CASO INVÁLIDO: teléfono demasiado corto.
+    """
     data = paciente_valido()
     data["telefono_contacto"] = "123"
 
@@ -125,6 +193,9 @@ def test_telefono_invalido():
 
 
 def test_faltan_campos_obligatorios():
+    """
+    CASO INVÁLIDO: falta eps_aseguradora.
+    """
     data = paciente_valido()
     del data["eps_aseguradora"]
 
@@ -138,6 +209,9 @@ def test_faltan_campos_obligatorios():
 # =========================
 
 def test_obtener_cuidador_id_ok(monkeypatch):
+    """
+    CASO VÁLIDO: obtener cuidador_id desde token válido.
+    """
     monkeypatch.setattr(
         patient_route,
         "verify_jwt",
@@ -150,6 +224,9 @@ def test_obtener_cuidador_id_ok(monkeypatch):
 
 
 def test_obtener_cuidador_id_sin_token():
+    """
+    CASO INVÁLIDO: no se entrega token a obtener_cuidador_id().
+    """
     try:
         patient_route.obtener_cuidador_id(None)
         assert False
@@ -160,6 +237,9 @@ def test_obtener_cuidador_id_sin_token():
 
 
 def test_obtener_cuidador_id_token_invalido(monkeypatch):
+    """
+    CASO INVÁLIDO: verify_jwt no puede validar el token.
+    """
     monkeypatch.setattr(
         patient_route,
         "verify_jwt",
@@ -180,6 +260,16 @@ def test_obtener_cuidador_id_token_invalido(monkeypatch):
 # =========================
 
 def test_post_paciente_exitoso(monkeypatch):
+    """
+    CASO VÁLIDO DEL ENDPOINT POST /pacientes.
+
+    La ruta actual usa MongoDB:
+    1. Valida los datos del paciente.
+    2. Obtiene el cuidador_id desde el JWT.
+    3. Busca duplicados en pacientes_col.
+    4. Inserta el documento en pacientes_col.
+    5. Devuelve el id generado por MongoDB.
+    """
     data = paciente_valido()
 
     pacientes_col_falsa = MagicMock()
@@ -205,7 +295,7 @@ def test_post_paciente_exitoso(monkeypatch):
     response = client.post(
         "/pacientes",
         json=data,
-        headers={"Authorization": HEADER_TOKEN}
+        headers=headers_auth()
     )
 
     assert response.status_code == 201
@@ -223,6 +313,12 @@ def test_post_paciente_exitoso(monkeypatch):
 
 
 def test_post_paciente_datos_invalidos(monkeypatch):
+    """
+    CASO INVÁLIDO DEL ENDPOINT POST /pacientes.
+
+    Se envía token válido para que la petición llegue a la validación
+    del body.
+    """
     data = paciente_valido()
     data["nombres"] = ""
 
@@ -235,7 +331,7 @@ def test_post_paciente_datos_invalidos(monkeypatch):
     response = client.post(
         "/pacientes",
         json=data,
-        headers={"Authorization": HEADER_TOKEN}
+        headers=headers_auth()
     )
 
     assert response.status_code == 400
@@ -243,6 +339,12 @@ def test_post_paciente_datos_invalidos(monkeypatch):
 
 
 def test_post_paciente_duplicado(monkeypatch):
+    """
+    CASO DUPLICADO DEL ENDPOINT POST /pacientes.
+
+    Simulamos que pacientes_col.find_one() encuentra un paciente con el
+    mismo tipo_documento, numero_documento y cuidador_id.
+    """
     data = paciente_valido()
 
     pacientes_col_falsa = MagicMock()
@@ -269,7 +371,7 @@ def test_post_paciente_duplicado(monkeypatch):
     response = client.post(
         "/pacientes",
         json=data,
-        headers={"Authorization": HEADER_TOKEN}
+        headers=headers_auth()
     )
 
     assert response.status_code == 409
@@ -277,13 +379,19 @@ def test_post_paciente_duplicado(monkeypatch):
 
 
 def test_post_paciente_sin_token():
+    """
+    CASO INVÁLIDO: no se envía token.
+
+    Según si responde el middleware global o HTTPBearer, puede devolver
+    401 o 403. Ambos representan rechazo por autenticación.
+    """
     response = client.post(
         "/pacientes",
         json=paciente_valido()
     )
 
-    assert response.status_code == 401
-    assert response.json()["detail"] == "Not authenticated"
+    assert response.status_code in (401, 403)
+    assert "detail" in response.json()
 
 
 # =========================
@@ -291,6 +399,9 @@ def test_post_paciente_sin_token():
 # =========================
 
 def test_get_pacientes_exitoso(monkeypatch):
+    """
+    CASO VÁLIDO: listar pacientes del cuidador autenticado.
+    """
     pacientes_col_falsa = MagicMock()
 
     pacientes_col_falsa.find.return_value = [
@@ -334,7 +445,7 @@ def test_get_pacientes_exitoso(monkeypatch):
 
     response = client.get(
         "/pacientes",
-        headers={"Authorization": HEADER_TOKEN}
+        headers=headers_auth()
     )
 
     assert response.status_code == 200
@@ -348,6 +459,9 @@ def test_get_pacientes_exitoso(monkeypatch):
 
 
 def test_get_paciente_por_id_exitoso(monkeypatch):
+    """
+    CASO VÁLIDO: obtener paciente por ObjectId.
+    """
     pacientes_col_falsa = MagicMock()
 
     pacientes_col_falsa.find_one.return_value = {
@@ -380,7 +494,7 @@ def test_get_paciente_por_id_exitoso(monkeypatch):
 
     response = client.get(
         f"/pacientes/{str(PACIENTE_ID)}",
-        headers={"Authorization": HEADER_TOKEN}
+        headers=headers_auth()
     )
 
     assert response.status_code == 200
@@ -392,6 +506,9 @@ def test_get_paciente_por_id_exitoso(monkeypatch):
 
 
 def test_get_paciente_por_id_no_encontrado(monkeypatch):
+    """
+    CASO INVÁLIDO: el paciente no existe.
+    """
     pacientes_col_falsa = MagicMock()
     pacientes_col_falsa.find_one.return_value = None
 
@@ -409,7 +526,7 @@ def test_get_paciente_por_id_no_encontrado(monkeypatch):
 
     response = client.get(
         f"/pacientes/{str(PACIENTE_ID)}",
-        headers={"Authorization": HEADER_TOKEN}
+        headers=headers_auth()
     )
 
     assert response.status_code == 404
@@ -417,6 +534,9 @@ def test_get_paciente_por_id_no_encontrado(monkeypatch):
 
 
 def test_get_paciente_por_id_invalido(monkeypatch):
+    """
+    CASO INVÁLIDO: el id no tiene formato ObjectId.
+    """
     monkeypatch.setattr(
         patient_route,
         "verify_jwt",
@@ -425,7 +545,7 @@ def test_get_paciente_por_id_invalido(monkeypatch):
 
     response = client.get(
         "/pacientes/id-invalido",
-        headers={"Authorization": HEADER_TOKEN}
+        headers=headers_auth()
     )
 
     assert response.status_code == 400

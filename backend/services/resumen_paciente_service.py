@@ -1,4 +1,5 @@
-﻿from bson import ObjectId
+# resumen_paciente_service.py
+from bson import ObjectId
 
 from backend.database import pacientes_col, medicamentos_col, tomas_col
 

@@ -1,3 +1,4 @@
+# auth_middleware.py
 import os
 import jwt
 
@@ -9,16 +10,20 @@ from starlette.authentication import (
     AuthCredentials,
     BaseUser,
     SimpleUser,
-    UnauthenticatedUser
+    UnauthenticatedUser,
 )
 
 
+# Rutas públicas que no requieren token.
+# Se dejan con "/" porque conn.scope["path"] devuelve rutas tipo "/docs".
 unauthenticated_endpoints = [
-    "signup",
-    "signin",
-    "docs",
-    "openapi.json",
-    "redoc"
+    "/signup",
+    "/signin",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/docs/oauth2-redirect",
+    "/health",
 ]
 
 
@@ -45,15 +50,17 @@ def auth_error_handler(conn: Request, exc: AuthenticationError):
 
 class BearerAuthBackend(AuthenticationBackend):
     async def authenticate(self, conn):
-        route = str(conn.url).replace(str(conn.base_url), "").strip("/")
+        route = conn.scope.get("path", "")
+        method = conn.scope.get("method", "")
 
         # Permite que pytest ejecute endpoints sin bloquear por autenticación.
-        # Solo se activa cuando TESTING=1.
+        # Solo se activa cuando TESTING=1 en el workflow o entorno de pruebas.
         if os.getenv("TESTING") == "1":
             return AuthCredentials(["test"]), SimpleUser("test")
 
-        if route in unauthenticated_endpoints:
-            return
+        # Permite rutas públicas y solicitudes preflight de CORS.
+        if route in unauthenticated_endpoints or method == "OPTIONS":
+            return AuthCredentials(["public"]), SimpleUser("public")
 
         auth_header = conn.headers.get("Authorization")
 

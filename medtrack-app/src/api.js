@@ -1,9 +1,9 @@
 /*
-  Patrón Fachada — centraliza todas las llamadas al backend.
+  Patrón Fachada  centraliza todas las llamadas al backend.
   Adaptado para MongoDB: los IDs son strings (ObjectId), no enteros.
   Importar con: import api from './api';
 */
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 // Lee el token guardado en localStorage después del login
 function getToken() {
@@ -198,6 +198,11 @@ const api = {
   //  RESUMEN
   obtenerResumen: (pacienteId) =>
     fetchJson(API_URL + '/resumen/' + pacienteId, {
+      headers: headersAuth(),
+    }),
+
+    obtenerPanelCompleto: () =>
+    fetchJson(API_URL + '/recordatorios/panel-completo', {
       headers: headersAuth(),
     }),
 };

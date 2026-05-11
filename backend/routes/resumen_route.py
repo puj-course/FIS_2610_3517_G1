@@ -13,7 +13,7 @@ service = ResumenPacienteService()
         500: {"description": "Error interno al construir el resumen del paciente"},
     },
 )
-def obtener_resumen(paciente_id: int):
+def obtener_resumen(paciente_id: str):
     try:
         resumen = service.construir_resumen(paciente_id)
 

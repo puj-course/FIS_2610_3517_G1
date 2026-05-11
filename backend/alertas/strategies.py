@@ -1,38 +1,33 @@
-class AlertaStrategy:
-    """
-    Clase base para todas las estrategias de alerta.
-    """
+from backend.database import medicamentos_col
 
+
+class AlertaStrategy:
     def evaluar(self, data: dict, conn=None) -> dict | None:
         raise NotImplementedError("Cada estrategia debe implementar el método evaluar().")
 
 
 class MedicamentoDuplicadoStrategy(AlertaStrategy):
-    """
-    Detecta si un paciente ya tiene registrado un medicamento con el mismo nombre.
-    """
-
     def evaluar(self, data: dict, conn=None) -> dict | None:
-        if conn is None:
+        paciente_id = str(data.get("paciente_id", "")).strip()
+
+        nombre = (
+            data.get("nombre")
+            or data.get("nombre_medicamento")
+            or ""
+        ).strip().lower()
+
+        if not paciente_id or not nombre:
             return None
 
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id
-            FROM medicamentos
-            WHERE paciente_id = ?
-              AND LOWER(TRIM(nombre)) = LOWER(TRIM(?))
-            """,
-            (int(data["paciente_id"]), data["nombre"].strip())
-        )
-
-        resultado = cursor.fetchone()
+        resultado = medicamentos_col.find_one({
+            "paciente_id": paciente_id,
+            "nombre": nombre
+        })
 
         if resultado:
             return {
                 "tipo": "medicamento_duplicado",
-                "mensaje": f"El paciente ya tiene registrado el medicamento {data['nombre']}.",
+                "mensaje": f"El paciente ya tiene registrado el medicamento {nombre}.",
                 "nivel": "alta"
             }
 
@@ -40,31 +35,22 @@ class MedicamentoDuplicadoStrategy(AlertaStrategy):
 
 
 class DosisDuplicadaStrategy(AlertaStrategy):
-    """
-    Detecta si el paciente ya tiene un medicamento con la misma dosis.
-    """
-
     def evaluar(self, data: dict, conn=None) -> dict | None:
-        if conn is None:
+        paciente_id = str(data.get("paciente_id", "")).strip()
+        dosis = str(data.get("dosis", "")).strip().lower()
+
+        if not paciente_id or not dosis:
             return None
 
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id
-            FROM medicamentos
-            WHERE paciente_id = ?
-              AND LOWER(TRIM(dosis)) = LOWER(TRIM(?))
-            """,
-            (int(data["paciente_id"]), data["dosis"].strip())
-        )
-
-        resultado = cursor.fetchone()
+        resultado = medicamentos_col.find_one({
+            "paciente_id": paciente_id,
+            "dosis": dosis
+        })
 
         if resultado:
             return {
                 "tipo": "dosis_duplicada",
-                "mensaje": f"El paciente ya tiene un medicamento con la dosis {data['dosis']}.",
+                "mensaje": f"El paciente ya tiene un medicamento con la dosis {dosis}.",
                 "nivel": "alta"
             }
 
@@ -72,17 +58,13 @@ class DosisDuplicadaStrategy(AlertaStrategy):
 
 
 class RecordatorioSeguimientoStrategy(AlertaStrategy):
-    """
-    Genera una alerta cuando se crea un recordatorio activo.
-    """
-
     def evaluar(self, data: dict, conn=None) -> dict | None:
         activo = int(data.get("activo", 1))
 
         if activo == 1:
             return {
                 "tipo": "seguimiento_recordatorio",
-                "mensaje": f"Se creó un recordatorio activo para el medicamento {data['medicamento_id']}.",
+                "mensaje": f"Se creó un recordatorio activo para el medicamento {data.get('medicamento_id')}.",
                 "nivel": "media"
             }
 
@@ -90,11 +72,7 @@ class RecordatorioSeguimientoStrategy(AlertaStrategy):
 
 
 class AlertaContext:
-    """
-    Contexto que permite ejecutar diferentes estrategias dinámicamente.
-    """
-
-    def __init__(self, strategy: AlertaStrategy):
+    def _init_(self, strategy: AlertaStrategy):
         self.strategy = strategy
 
     def set_strategy(self, strategy: AlertaStrategy):

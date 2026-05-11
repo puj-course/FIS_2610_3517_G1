@@ -1,9 +1,10 @@
 import os
 import sys
-import sqlite3
+from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from backend.alertas import strategies as strategies_module
 from backend.alertas.strategies import (
     AlertaContext,
     MedicamentoDuplicadoStrategy,
@@ -12,106 +13,160 @@ from backend.alertas.strategies import (
 )
 
 
-def crear_tabla_medicamentos(conn):
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE medicamentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            dosis TEXT NOT NULL,
-            frecuencia TEXT NOT NULL,
-            horario TEXT NOT NULL,
-            fecha_inicio TEXT NOT NULL,
-            observaciones TEXT,
-            paciente_id INTEGER NOT NULL
-        )
-    """)
-    conn.commit()
+PACIENTE_ID = "69feaac76a52afc46ed40c52"
+MEDICAMENTO_ID = "69feb355322be070cd1c97ce"
 
 
-def test_medicamento_duplicado_strategy_devuelve_alerta():
-    conn = sqlite3.connect(":memory:")
-    crear_tabla_medicamentos(conn)
+def test_medicamento_duplicado_strategy_devuelve_alerta(monkeypatch):
+    medicamentos_col_falsa = MagicMock()
 
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO medicamentos (
-            nombre, dosis, frecuencia, horario, fecha_inicio, observaciones, paciente_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Acetaminofen", "500 mg", "Cada 8 horas", "08:00 AM", "03/28/2026", "", 1
-    ))
-    conn.commit()
+    medicamentos_col_falsa.find_one.return_value = {
+        "_id": MEDICAMENTO_ID,
+        "nombre": "acetaminofen",
+        "dosis": "500 mg",
+        "paciente_id": PACIENTE_ID
+    }
+
+    monkeypatch.setattr(
+        strategies_module,
+        "medicamentos_col",
+        medicamentos_col_falsa
+    )
 
     data = {
         "nombre": "Acetaminofen",
         "dosis": "500 mg",
-        "paciente_id": 1
+        "paciente_id": PACIENTE_ID
     }
 
-    context = AlertaContext(MedicamentoDuplicadoStrategy())
-    alerta = context.ejecutar(data, conn)
+    context = AlertaContext()
+    context.set_strategy(MedicamentoDuplicadoStrategy())
+
+    alerta = context.ejecutar(data)
 
     assert alerta is not None
     assert alerta["tipo"] == "medicamento_duplicado"
 
-    conn.close()
 
+def test_medicamento_duplicado_strategy_devuelve_none(monkeypatch):
+    medicamentos_col_falsa = MagicMock()
 
-def test_medicamento_duplicado_strategy_devuelve_none():
-    conn = sqlite3.connect(":memory:")
-    crear_tabla_medicamentos(conn)
+    medicamentos_col_falsa.find_one.return_value = None
+
+    monkeypatch.setattr(
+        strategies_module,
+        "medicamentos_col",
+        medicamentos_col_falsa
+    )
 
     data = {
         "nombre": "Ibuprofeno",
         "dosis": "400 mg",
-        "paciente_id": 1
+        "paciente_id": PACIENTE_ID
     }
 
-    context = AlertaContext(MedicamentoDuplicadoStrategy())
-    alerta = context.ejecutar(data, conn)
+    context = AlertaContext()
+    context.set_strategy(MedicamentoDuplicadoStrategy())
+
+    alerta = context.ejecutar(data)
 
     assert alerta is None
 
-    conn.close()
+
+def test_medicamento_duplicado_strategy_acepta_nombre_medicamento(monkeypatch):
+    medicamentos_col_falsa = MagicMock()
+
+    medicamentos_col_falsa.find_one.return_value = {
+        "_id": MEDICAMENTO_ID,
+        "nombre": "acetaminofen",
+        "paciente_id": PACIENTE_ID
+    }
+
+    monkeypatch.setattr(
+        strategies_module,
+        "medicamentos_col",
+        medicamentos_col_falsa
+    )
+
+    data = {
+        "nombre_medicamento": "Acetaminofen",
+        "paciente_id": PACIENTE_ID
+    }
+
+    context = AlertaContext()
+    context.set_strategy(MedicamentoDuplicadoStrategy())
+
+    alerta = context.ejecutar(data)
+
+    assert alerta is not None
+    assert alerta["tipo"] == "medicamento_duplicado"
 
 
-def test_dosis_duplicada_strategy_devuelve_alerta():
-    conn = sqlite3.connect(":memory:")
-    crear_tabla_medicamentos(conn)
+def test_dosis_duplicada_strategy_devuelve_alerta(monkeypatch):
+    medicamentos_col_falsa = MagicMock()
 
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO medicamentos (
-            nombre, dosis, frecuencia, horario, fecha_inicio, observaciones, paciente_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Losartan", "50 mg", "Cada 12 horas", "09:00 AM", "03/28/2026", "", 1
-    ))
-    conn.commit()
+    medicamentos_col_falsa.find_one.return_value = {
+        "_id": MEDICAMENTO_ID,
+        "nombre": "losartan",
+        "dosis": "50 mg",
+        "paciente_id": PACIENTE_ID
+    }
+
+    monkeypatch.setattr(
+        strategies_module,
+        "medicamentos_col",
+        medicamentos_col_falsa
+    )
 
     data = {
         "nombre": "Amlodipino",
         "dosis": "50 mg",
-        "paciente_id": 1
+        "paciente_id": PACIENTE_ID
     }
 
-    context = AlertaContext(DosisDuplicadaStrategy())
-    alerta = context.ejecutar(data, conn)
+    context = AlertaContext()
+    context.set_strategy(DosisDuplicadaStrategy())
+
+    alerta = context.ejecutar(data)
 
     assert alerta is not None
     assert alerta["tipo"] == "dosis_duplicada"
 
-    conn.close()
+
+def test_dosis_duplicada_strategy_devuelve_none(monkeypatch):
+    medicamentos_col_falsa = MagicMock()
+
+    medicamentos_col_falsa.find_one.return_value = None
+
+    monkeypatch.setattr(
+        strategies_module,
+        "medicamentos_col",
+        medicamentos_col_falsa
+    )
+
+    data = {
+        "nombre": "Amlodipino",
+        "dosis": "25 mg",
+        "paciente_id": PACIENTE_ID
+    }
+
+    context = AlertaContext()
+    context.set_strategy(DosisDuplicadaStrategy())
+
+    alerta = context.ejecutar(data)
+
+    assert alerta is None
 
 
 def test_recordatorio_seguimiento_strategy_devuelve_alerta():
     data = {
-        "medicamento_id": 1,
+        "medicamento_id": MEDICAMENTO_ID,
         "activo": 1
     }
 
-    context = AlertaContext(RecordatorioSeguimientoStrategy())
+    context = AlertaContext()
+    context.set_strategy(RecordatorioSeguimientoStrategy())
+
     alerta = context.ejecutar(data)
 
     assert alerta is not None
@@ -120,11 +175,13 @@ def test_recordatorio_seguimiento_strategy_devuelve_alerta():
 
 def test_recordatorio_seguimiento_strategy_devuelve_none():
     data = {
-        "medicamento_id": 1,
+        "medicamento_id": MEDICAMENTO_ID,
         "activo": 0
     }
 
-    context = AlertaContext(RecordatorioSeguimientoStrategy())
+    context = AlertaContext()
+    context.set_strategy(RecordatorioSeguimientoStrategy())
+
     alerta = context.ejecutar(data)
 
     assert alerta is None

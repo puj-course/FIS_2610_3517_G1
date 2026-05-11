@@ -1,10 +1,15 @@
-﻿import os
+import os
 import sys
+from unittest.mock import MagicMock
+
+from bson import ObjectId
+from fastapi.testclient import TestClient
 
 # Clave fija para tests.
 # El middleware usa os.getenv("SECRET_KEY") para validar el token.
 # generate_jwt usa backend.auth.SECRET_KEY.
-# Ambas deben coincidir para que TestClient pase por autenticación.
+# Ambas deben coincidir para que TestClient pase por autenticación cuando
+# TESTING no está activo.
 os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-medtrack"
 
 # Agregamos la raíz del proyecto al path para que pytest pueda importar backend
@@ -14,15 +19,37 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from backend.factories.paciente_factory import PacienteGeneralFactory, PacienteGeneral
 from backend.main import app
 from backend.auth import generate_jwt
+from backend.routes import patient_route
 import backend.auth as auth_module
 
-auth_module.SECRET_KEY = os.environ["SECRET_KEY"]
-from fastapi.testclient import TestClient
 
+# Aseguramos que los tokens se firmen con la misma clave que usa el middleware.
+auth_module.SECRET_KEY = os.environ["SECRET_KEY"]
 
 # TestClient = cliente HTTP falso que llama al endpoint sin levantar un servidor real.
 # Es parecido a usar Postman, pero desde código.
 client = TestClient(app)
+
+USUARIO_ID = "69fe993245cf9ab8c39e4993"
+PACIENTE_ID = ObjectId("69feaac76a52afc46ed40c52")
+
+
+def headers_auth():
+    """
+    Construye el header Authorization para las pruebas del endpoint.
+
+    La ruta POST /pacientes está protegida. Por eso enviamos un Bearer token
+    válido para que la petición pueda pasar por el middleware global.
+    """
+    token = generate_jwt(
+        USUARIO_ID,
+        "admin@medtrack.com",
+        "administrador"
+    )
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
 
 
 def datos_validos():
@@ -44,77 +71,9 @@ def datos_validos():
     }
 
 
-def headers_auth():
-    """
-    Construye el header Authorization para las pruebas del endpoint.
-
-    La ruta POST /pacientes ahora está protegida. Si no mandamos un
-    Bearer token válido, la petición se queda en 403 Forbidden y no llega
-    a probar la lógica de pacientes.
-
-    Por eso usamos generate_jwt(), que es la función real del proyecto.
-    """
-    token = generate_jwt(
-        "cuidador-test-id",
-        "admin@medtrack.com",
-        "administrador"
-    )
-
-    return {
-        "Authorization": f"Bearer {token}"
-    }
-
-
-class ResultadoInsertOneFalso:
-    """
-    Resultado falso de MongoDB.
-
-    insert_one() normalmente devuelve un objeto con inserted_id.
-    Solo necesitamos ese atributo para que la ruta pueda construir
-    la respuesta.
-    """
-    inserted_id = "paciente-test-id"
-
-
-class PacientesColFalsa:
-    """
-    Colección falsa para simular pacientes_col.
-
-    Esta clase evita que los tests dependan de MongoDB Atlas.
-    Además permite inspeccionar el documento que la ruta intentó guardar.
-    """
-
-    def __init__(self, paciente_existente=None):
-        self.paciente_existente = paciente_existente
-        self.documento_insertado = None
-        self.filtro_busqueda = None
-
-    def find_one(self, filtro):
-        """
-        Simula la búsqueda de duplicados.
-
-        Si paciente_existente es None, la ruta entiende que no hay duplicado.
-        Si paciente_existente contiene un dict, la ruta entiende que el paciente
-        ya existe y debe responder 409.
-        """
-        self.filtro_busqueda = filtro
-        return self.paciente_existente
-
-    def insert_one(self, documento):
-        """
-        Simula la inserción de un paciente.
-
-        Guardamos el documento para verificar que la fábrica y la ruta
-        construyen correctamente los datos.
-        """
-        self.documento_insertado = documento
-        return ResultadoInsertOneFalso()
-
-
-# BLOQUE A — PRUEBAS DE LA FÁBRICA SOLA
-# Sin HTTP. Sin base de datos. Solo probamos que la fábrica
-# construye objetos bien.
-
+# =========================
+# PRUEBAS DE LA FÁBRICA
+# =========================
 
 def test_fabrica_devuelve_paciente_general():
     """
@@ -126,7 +85,6 @@ def test_fabrica_devuelve_paciente_general():
     3. Verificamos que el resultado sea una instancia de PacienteGeneral.
     """
     fabrica = PacienteGeneralFactory()
-
     paciente = fabrica.crear(datos_validos())
 
     assert isinstance(paciente, PacienteGeneral)
@@ -138,10 +96,6 @@ def test_fabrica_limpia_espacios_en_blanco():
 
     Esto es normalización:
     "  Laura  " debe quedar "Laura".
-
-    Importancia:
-    El criterio de aceptación indica que la normalización debe ocurrir en la
-    fábrica, no en la ruta ni en la base de datos.
     """
     fabrica = PacienteGeneralFactory()
 
@@ -176,9 +130,7 @@ def test_to_tuple_tiene_11_elementos_en_orden_correcto():
 
     Aunque la ruta actual de pacientes usa MongoDB, este método sigue siendo
     parte de la fábrica y puede ser usado por compatibilidad o por pruebas
-    antiguas. Por eso se conserva esta verificación.
-
-    El orden importa porque originalmente se usaba para INSERT en SQLite.
+    antiguas.
     """
     fabrica = PacienteGeneralFactory()
     paciente = fabrica.crear(datos_validos())
@@ -192,32 +144,42 @@ def test_to_tuple_tiene_11_elementos_en_orden_correcto():
     assert tupla[5] == "1020304050"
 
 
-# BLOQUE B — PRUEBAS DEL ENDPOINT CON HTTP
-# Aquí simulamos peticiones reales al endpoint POST /pacientes.
-# No usamos MongoDB real: reemplazamos pacientes_col por una colección falsa.
+def test_como_dict_tiene_campos_correctos():
+    """
+    El método como_dict() debe construir el documento esperado para MongoDB.
+    """
+    fabrica = PacienteGeneralFactory()
+    paciente = fabrica.crear(datos_validos())
 
+    doc = paciente.como_dict()
+
+    assert doc["nombres"] == "Laura"
+    assert doc["apellidos"] == "Gomez"
+    assert doc["tipo_documento"] == "CC"
+    assert doc["numero_documento"] == "1020304050"
+    assert doc["eps_aseguradora"] == "Sura"
+
+
+# =========================
+# PRUEBAS DEL ENDPOINT POST /pacientes
+# =========================
 
 def test_caso_valido_endpoint_responde_201(monkeypatch):
     """
     CASO VÁLIDO: enviar todos los campos correctos.
 
-    El endpoint debe:
-    1. Recibir un token válido.
-    2. Pasar la validación del body.
-    3. Obtener el cuidador_id desde el JWT.
-    4. Verificar que no hay duplicado en pacientes_col.
-    5. Construir el paciente con la fábrica.
-    6. Guardar el documento en pacientes_col.
-    7. Responder 201 con mensaje de éxito y paciente_id.
-
-    201 = Created. Significa que se creó el recurso.
+    Se simula pacientes_col con MagicMock para no conectarse a MongoDB real.
+    También se parchea verify_jwt para controlar el cuidador_id.
     """
-    pacientes_col_falsa = PacientesColFalsa(paciente_existente=None)
+    pacientes_col_falsa = MagicMock()
+    pacientes_col_falsa.find_one.return_value = None
 
-    monkeypatch.setattr(
-        "backend.routes.patient_route.pacientes_col",
-        pacientes_col_falsa
-    )
+    insert_result = MagicMock()
+    insert_result.inserted_id = PACIENTE_ID
+    pacientes_col_falsa.insert_one.return_value = insert_result
+
+    monkeypatch.setattr(patient_route, "pacientes_col", pacientes_col_falsa)
+    monkeypatch.setattr(patient_route, "verify_jwt", lambda token: {"id": USUARIO_ID})
 
     response = client.post(
         "/pacientes",
@@ -228,28 +190,28 @@ def test_caso_valido_endpoint_responde_201(monkeypatch):
     assert response.status_code == 201
 
     body = response.json()
+
     assert body["message"] == "Paciente registrado exitosamente"
-    assert body["paciente_id"] == "paciente-test-id"
+    assert body["paciente_id"] == str(PACIENTE_ID)
 
-    documento = pacientes_col_falsa.documento_insertado
+    pacientes_col_falsa.insert_one.assert_called_once()
 
-    assert documento is not None
+    documento = pacientes_col_falsa.insert_one.call_args.args[0]
+
     assert documento["nombres"] == "Laura"
     assert documento["apellidos"] == "Gomez"
-    assert documento["numero_documento"] == "1020304050"
-    assert documento["cuidador_id"] == "cuidador-test-id"
+    assert documento["cuidador_id"] == USUARIO_ID
 
 
-def test_campo_nombres_vacio_responde_400():
+def test_campo_nombres_vacio_responde_400(monkeypatch):
     """
     CASO INVÁLIDO: nombres vacío.
 
-    Como la ruta está protegida, enviamos un token válido.
-    Así la petición no se bloquea por autenticación y alcanza la validación
-    del body.
-
-    Debe responder 400 Bad Request.
+    Como la ruta está protegida, se envía un token válido y se parchea
+    verify_jwt para llegar a la validación del body.
     """
+    monkeypatch.setattr(patient_route, "verify_jwt", lambda token: {"id": USUARIO_ID})
+
     data = datos_validos()
     data["nombres"] = ""
 
@@ -263,13 +225,12 @@ def test_campo_nombres_vacio_responde_400():
     assert "El nombre es obligatorio" in response.json()["detail"]
 
 
-def test_falta_campo_obligatorio_responde_400():
+def test_falta_campo_obligatorio_responde_400(monkeypatch):
     """
     CASO INVÁLIDO: falta un campo obligatorio.
-
-    Si el body llega sin eps_aseguradora, la validación debe fallar
-    con 400.
     """
+    monkeypatch.setattr(patient_route, "verify_jwt", lambda token: {"id": USUARIO_ID})
+
     data = datos_validos()
     del data["eps_aseguradora"]
 
@@ -283,13 +244,15 @@ def test_falta_campo_obligatorio_responde_400():
     assert "La EPS/aseguradora es obligatoria" in response.json()["detail"]
 
 
-def test_body_casi_vacio_responde_400_con_multiples_errores():
+def test_body_casi_vacio_responde_400_con_multiples_errores(monkeypatch):
     """
     CASO INVÁLIDO EXTREMO: body con un solo campo.
 
     Si alguien manda solo {"nombres": "Laura"} sin el resto de campos,
     deben aparecer múltiples errores de validación.
     """
+    monkeypatch.setattr(patient_route, "verify_jwt", lambda token: {"id": USUARIO_ID})
+
     response = client.post(
         "/pacientes",
         json={"nombres": "Laura"},
@@ -310,30 +273,40 @@ def test_caso_duplicado_responde_409(monkeypatch):
     - tipo_documento
     - numero_documento
     - cuidador_id
-
-    En ese caso, el endpoint debe responder 409 Conflict.
     """
-    data = datos_validos()
+    pacientes_col_falsa = MagicMock()
 
-    pacientes_col_falsa = PacientesColFalsa(
-        paciente_existente={
-            "_id": "paciente-existente-id",
-            "tipo_documento": data["tipo_documento"],
-            "numero_documento": data["numero_documento"],
-            "cuidador_id": "cuidador-test-id"
-        }
-    )
+    pacientes_col_falsa.find_one.return_value = {
+        "_id": PACIENTE_ID,
+        "tipo_documento": "CC",
+        "numero_documento": "1020304050",
+        "cuidador_id": USUARIO_ID
+    }
 
-    monkeypatch.setattr(
-        "backend.routes.patient_route.pacientes_col",
-        pacientes_col_falsa
-    )
+    monkeypatch.setattr(patient_route, "pacientes_col", pacientes_col_falsa)
+    monkeypatch.setattr(patient_route, "verify_jwt", lambda token: {"id": USUARIO_ID})
 
     response = client.post(
         "/pacientes",
-        json=data,
+        json=datos_validos(),
         headers=headers_auth()
     )
 
     assert response.status_code == 409
     assert "Ya existe un paciente con ese documento" in response.json()["detail"]
+
+
+def test_endpoint_sin_token_responde_error_autenticacion():
+    """
+    CASO INVÁLIDO: no se envía token.
+
+    Dependiendo de si responde el middleware global o HTTPBearer, FastAPI puede
+    responder 401 o 403. En ambos casos representa rechazo por autenticación.
+    """
+    response = client.post(
+        "/pacientes",
+        json=datos_validos()
+    )
+
+    assert response.status_code in (401, 403)
+    assert "detail" in response.json()

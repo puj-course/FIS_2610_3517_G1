@@ -1,30 +1,59 @@
-﻿import os
+import os
 import sys
-import sqlite3
+from unittest.mock import MagicMock
 
-# Clave fija para tests.
-# El middleware de autenticación valida los JWT con os.getenv("SECRET_KEY"),
-# mientras que generate_jwt usa backend.auth.SECRET_KEY.
-# Por eso en pruebas dejamos ambas apuntando a la misma clave.
-os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-medtrack"
-
+from bson import ObjectId
 from fastapi.testclient import TestClient
+from fastapi.security import HTTPAuthorizationCredentials
+
+# Variables mínimas para que backend.database y el middleware puedan cargar
+# correctamente durante pruebas locales y CI.
+os.environ.setdefault("MONGO_URI", "mongodb://localhost:27017/medtrack_test")
+os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-medtrack"
 
 # Agregamos la raíz del proyecto al path para que pytest pueda importar backend
 # sin depender de cómo se ejecute el comando desde Git Bash.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from backend.validaciones import validar_paciente, verificar_duplicado
+from backend.validaciones import validar_paciente
 from backend.main import app
 from backend.auth import generate_jwt
+from backend.routes import patient_route
 import backend.auth as auth_module
 
-auth_module.SECRET_KEY = os.environ["SECRET_KEY"]
 
+# Aseguramos que los tokens se firmen con la misma clave que usa el middleware.
+auth_module.SECRET_KEY = os.environ["SECRET_KEY"]
 
 # TestClient = cliente HTTP falso que permite probar los endpoints de FastAPI
 # sin levantar el servidor con uvicorn.
 client = TestClient(app)
+
+USUARIO_ID = "69fe993245cf9ab8c39e4993"
+PACIENTE_ID = ObjectId("69feaac76a52afc46ed40c52")
+
+TOKEN_FALSO = HTTPAuthorizationCredentials(
+    scheme="Bearer",
+    credentials="token-test"
+)
+
+
+def headers_auth():
+    """
+    Construye un header Authorization válido para las pruebas HTTP.
+
+    Aunque en CI se puede usar TESTING=1 para que el middleware no bloquee,
+    dejamos un JWT real para que los tests también funcionen localmente.
+    """
+    token = generate_jwt(
+        USUARIO_ID,
+        "admin@medtrack.com",
+        "administrador"
+    )
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
 
 
 def paciente_valido():
@@ -44,82 +73,15 @@ def paciente_valido():
         "numero_documento": "12345678",
         "telefono_contacto": "3001234567",
         "eps_aseguradora": "Sura",
-        "diagnostico_principal": "Hipertension"
+        "diagnostico_principal": "Hipertension",
+        "alergias_conocidas": "Ninguna",
+        "observaciones_adicionales": "Paciente de prueba"
     }
 
 
-def headers_auth():
-    """
-    Construye un header Authorization válido para las pruebas HTTP.
-
-    Antes los tests llamaban POST /pacientes sin token, pero ahora la ruta
-    está protegida con autenticación. Si no se envía un Bearer token válido,
-    FastAPI responde 403 antes de llegar a la validación del paciente.
-
-    Por eso generamos un JWT real con la misma función del proyecto.
-    Así se prueba el endpoint de forma más cercana al uso real:
-    - pasa por AuthenticationMiddleware
-    - pasa por HTTPBearer
-    - llega a registrar_paciente()
-    """
-    token = generate_jwt(
-        "cuidador-test-id",
-        "admin@medtrack.com",
-        "administrador"
-    )
-
-    return {
-        "Authorization": f"Bearer {token}"
-    }
-
-
-class ResultadoInsertOneFalso:
-    """
-    Resultado falso de insert_one().
-
-    En MongoDB real, insert_one() devuelve un objeto con inserted_id.
-    Para no depender de una base real en los tests, simulamos solo ese
-    comportamiento mínimo.
-    """
-    inserted_id = "paciente-test-id"
-
-
-class PacientesColFalsa:
-    """
-    Colección falsa para reemplazar pacientes_col durante las pruebas.
-
-    Esta clase simula los métodos de MongoDB que usa patient_route.py:
-    - find_one(): para verificar duplicados
-    - insert_one(): para guardar el paciente
-
-    Así probamos la lógica de la ruta sin conectarnos a MongoDB Atlas.
-    """
-
-    def __init__(self, paciente_existente=None):
-        self.paciente_existente = paciente_existente
-        self.documento_insertado = None
-        self.filtro_busqueda = None
-
-    def find_one(self, filtro):
-        """
-        Simula la búsqueda de un paciente existente.
-
-        Si paciente_existente es None, significa que no hay duplicado.
-        Si paciente_existente tiene un dict, significa que el paciente ya existe.
-        """
-        self.filtro_busqueda = filtro
-        return self.paciente_existente
-
-    def insert_one(self, documento):
-        """
-        Simula la inserción de un paciente en MongoDB.
-
-        Guardamos el documento en self.documento_insertado para poder
-        verificar después qué datos intentó guardar la ruta.
-        """
-        self.documento_insertado = documento
-        return ResultadoInsertOneFalso()
-
+# =========================
+# VALIDACIONES
+# =========================
 
 def test_validar_paciente_exitoso():
     """
@@ -127,8 +89,7 @@ def test_validar_paciente_exitoso():
 
     La función validar_paciente debe devolver una lista vacía de errores.
     """
-    data = paciente_valido()
-    errores = validar_paciente(data)
+    errores = validar_paciente(paciente_valido())
 
     assert errores == []
 
@@ -136,9 +97,6 @@ def test_validar_paciente_exitoso():
 def test_nombre_vacio():
     """
     CASO INVÁLIDO: nombres vacío.
-
-    El campo nombres es obligatorio, por eso debe aparecer el mensaje
-    correspondiente en la lista de errores.
     """
     data = paciente_valido()
     data["nombres"] = ""
@@ -151,8 +109,6 @@ def test_nombre_vacio():
 def test_apellidos_vacios():
     """
     CASO INVÁLIDO: apellidos vacío.
-
-    El campo apellidos es obligatorio.
     """
     data = paciente_valido()
     data["apellidos"] = ""
@@ -179,9 +135,6 @@ def test_fecha_invalida():
 def test_fecha_futura():
     """
     CASO INVÁLIDO: fecha de nacimiento futura.
-
-    No debería permitirse registrar un paciente con fecha de nacimiento
-    posterior a la fecha actual.
     """
     data = paciente_valido()
     data["fecha_nacimiento"] = "12/31/2099"
@@ -218,8 +171,6 @@ def test_tipo_documento_invalido():
 def test_documento_invalido():
     """
     CASO INVÁLIDO: número de documento con letras.
-
-    La validación espera que el número de documento contenga solo números.
     """
     data = paciente_valido()
     data["numero_documento"] = "ABC123"
@@ -232,8 +183,6 @@ def test_documento_invalido():
 def test_telefono_invalido():
     """
     CASO INVÁLIDO: teléfono demasiado corto.
-
-    El teléfono debe contener solo números y tener entre 7 y 10 dígitos.
     """
     data = paciente_valido()
     data["telefono_contacto"] = "123"
@@ -246,9 +195,6 @@ def test_telefono_invalido():
 def test_faltan_campos_obligatorios():
     """
     CASO INVÁLIDO: falta eps_aseguradora.
-
-    Se elimina un campo obligatorio para comprobar que la validación
-    lo detecta correctamente.
     """
     data = paciente_valido()
     del data["eps_aseguradora"]
@@ -258,111 +204,92 @@ def test_faltan_campos_obligatorios():
     assert "La EPS/aseguradora es obligatoria" in errores
 
 
-def test_verificar_duplicado_devuelve_true_si_existe():
+# =========================
+# JWT
+# =========================
+
+def test_obtener_cuidador_id_ok(monkeypatch):
     """
-    Prueba unitaria de verificar_duplicado con SQLite en memoria.
-
-    Aunque la ruta actual de pacientes ya fue migrada a MongoDB,
-    esta función sigue existiendo en validaciones.py y estos tests validan
-    su comportamiento aislado.
-
-    SQLite en memoria permite probar sin tocar database.db real.
+    CASO VÁLIDO: obtener cuidador_id desde token válido.
     """
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
+    monkeypatch.setattr(
+        patient_route,
+        "verify_jwt",
+        lambda token: {"id": USUARIO_ID}
+    )
 
-    cursor.execute("""
-        CREATE TABLE pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombres TEXT NOT NULL,
-            apellidos TEXT NOT NULL,
-            fecha_nacimiento TEXT NOT NULL,
-            genero TEXT NOT NULL,
-            tipo_documento TEXT NOT NULL,
-            numero_documento TEXT NOT NULL,
-            telefono_contacto TEXT NOT NULL,
-            eps_aseguradora TEXT,
-            diagnostico_principal TEXT,
-            alergias_conocidas TEXT,
-            observaciones_adicionales TEXT
-        )
-    """)
+    cuidador_id = patient_route.obtener_cuidador_id(TOKEN_FALSO)
 
-    cursor.execute("""
-        INSERT INTO pacientes (
-            nombres, apellidos, fecha_nacimiento, genero,
-            tipo_documento, numero_documento, telefono_contacto,
-            eps_aseguradora, diagnostico_principal
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Juan", "Perez", "01/15/1990", "Masculino",
-        "CC", "12345678", "3001234567", "Sura", "Hipertension"
-    ))
-
-    conn.commit()
-
-    resultado = verificar_duplicado("12345678", "CC", conn)
-
-    assert resultado is True
-    conn.close()
+    assert cuidador_id == USUARIO_ID
 
 
-def test_verificar_duplicado_devuelve_false_si_no_existe():
+def test_obtener_cuidador_id_sin_token():
     """
-    Prueba unitaria de verificar_duplicado cuando no hay coincidencias.
-
-    La tabla existe, pero no insertamos ningún paciente con el documento
-    consultado. Por eso debe devolver False.
+    CASO INVÁLIDO: no se entrega token a obtener_cuidador_id().
     """
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
+    try:
+        patient_route.obtener_cuidador_id(None)
+        assert False
 
-    cursor.execute("""
-        CREATE TABLE pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombres TEXT NOT NULL,
-            apellidos TEXT NOT NULL,
-            fecha_nacimiento TEXT NOT NULL,
-            genero TEXT NOT NULL,
-            tipo_documento TEXT NOT NULL,
-            numero_documento TEXT NOT NULL,
-            telefono_contacto TEXT NOT NULL,
-            eps_aseguradora TEXT,
-            diagnostico_principal TEXT,
-            alergias_conocidas TEXT,
-            observaciones_adicionales TEXT
-        )
-    """)
+    except Exception as e:
+        assert e.status_code == 401
+        assert e.detail == "Token no proporcionado"
 
-    conn.commit()
 
-    resultado = verificar_duplicado("99999999", "CC", conn)
+def test_obtener_cuidador_id_token_invalido(monkeypatch):
+    """
+    CASO INVÁLIDO: verify_jwt no puede validar el token.
+    """
+    monkeypatch.setattr(
+        patient_route,
+        "verify_jwt",
+        lambda token: None
+    )
 
-    assert resultado is False
-    conn.close()
+    try:
+        patient_route.obtener_cuidador_id(TOKEN_FALSO)
+        assert False
 
+    except Exception as e:
+        assert e.status_code == 401
+        assert e.detail == "Token inválido o expirado"
+
+
+# =========================
+# POST /pacientes
+# =========================
 
 def test_post_paciente_exitoso(monkeypatch):
     """
     CASO VÁLIDO DEL ENDPOINT POST /pacientes.
 
-    La ruta actual ya no usa SQLite ni get_connection.
-    Ahora:
+    La ruta actual usa MongoDB:
     1. Valida los datos del paciente.
     2. Obtiene el cuidador_id desde el JWT.
     3. Busca duplicados en pacientes_col.
     4. Inserta el documento en pacientes_col.
     5. Devuelve el id generado por MongoDB.
-
-    Por eso aquí se reemplaza pacientes_col por una colección falsa,
-    pero se conserva TestClient para probar la llamada HTTP real.
     """
     data = paciente_valido()
-    pacientes_col_falsa = PacientesColFalsa(paciente_existente=None)
+
+    pacientes_col_falsa = MagicMock()
+    pacientes_col_falsa.find_one.return_value = None
+
+    insert_result = MagicMock()
+    insert_result.inserted_id = PACIENTE_ID
+
+    pacientes_col_falsa.insert_one.return_value = insert_result
 
     monkeypatch.setattr(
-        "backend.routes.patient_route.pacientes_col",
+        patient_route,
+        "pacientes_col",
         pacientes_col_falsa
+    )
+
+    monkeypatch.setattr(
+        patient_route,
+        "verify_jwt",
+        lambda token: {"id": USUARIO_ID}
     )
 
     response = client.post(
@@ -372,28 +299,34 @@ def test_post_paciente_exitoso(monkeypatch):
     )
 
     assert response.status_code == 201
-    assert response.json()["message"] == "Paciente registrado exitosamente"
-    assert response.json()["paciente_id"] == "paciente-test-id"
 
-    documento = pacientes_col_falsa.documento_insertado
+    cuerpo = response.json()
 
-    assert documento is not None
-    assert documento["nombres"] == data["nombres"]
-    assert documento["apellidos"] == data["apellidos"]
-    assert documento["numero_documento"] == data["numero_documento"]
-    assert documento["cuidador_id"] == "cuidador-test-id"
+    assert cuerpo["message"] == "Paciente registrado exitosamente"
+    assert cuerpo["paciente_id"] == str(PACIENTE_ID)
+
+    documento = pacientes_col_falsa.insert_one.call_args.args[0]
+
+    assert documento["nombres"] == "Juan"
+    assert documento["apellidos"] == "Perez"
+    assert documento["cuidador_id"] == USUARIO_ID
 
 
-def test_post_paciente_datos_invalidos():
+def test_post_paciente_datos_invalidos(monkeypatch):
     """
     CASO INVÁLIDO DEL ENDPOINT POST /pacientes.
 
-    Se envía un token válido para que la petición no sea rechazada por
-    autenticación. Así la prueba alcanza la validación del body y debe
-    devolver 400 por nombres vacío.
+    Se envía token válido para que la petición llegue a la validación
+    del body.
     """
     data = paciente_valido()
     data["nombres"] = ""
+
+    monkeypatch.setattr(
+        patient_route,
+        "verify_jwt",
+        lambda token: {"id": USUARIO_ID}
+    )
 
     response = client.post(
         "/pacientes",
@@ -411,23 +344,28 @@ def test_post_paciente_duplicado(monkeypatch):
 
     Simulamos que pacientes_col.find_one() encuentra un paciente con el
     mismo tipo_documento, numero_documento y cuidador_id.
-
-    La ruta debe responder 409 Conflict.
     """
     data = paciente_valido()
 
-    pacientes_col_falsa = PacientesColFalsa(
-        paciente_existente={
-            "_id": "paciente-existente-id",
-            "tipo_documento": data["tipo_documento"],
-            "numero_documento": data["numero_documento"],
-            "cuidador_id": "cuidador-test-id"
-        }
+    pacientes_col_falsa = MagicMock()
+
+    pacientes_col_falsa.find_one.return_value = {
+        "_id": PACIENTE_ID,
+        "tipo_documento": "CC",
+        "numero_documento": "12345678",
+        "cuidador_id": USUARIO_ID
+    }
+
+    monkeypatch.setattr(
+        patient_route,
+        "pacientes_col",
+        pacientes_col_falsa
     )
 
     monkeypatch.setattr(
-        "backend.routes.patient_route.pacientes_col",
-        pacientes_col_falsa
+        patient_route,
+        "verify_jwt",
+        lambda token: {"id": USUARIO_ID}
     )
 
     response = client.post(
@@ -438,3 +376,177 @@ def test_post_paciente_duplicado(monkeypatch):
 
     assert response.status_code == 409
     assert response.json()["detail"] == "Ya existe un paciente con ese documento"
+
+
+def test_post_paciente_sin_token():
+    """
+    CASO INVÁLIDO: no se envía token.
+
+    Según si responde el middleware global o HTTPBearer, puede devolver
+    401 o 403. Ambos representan rechazo por autenticación.
+    """
+    response = client.post(
+        "/pacientes",
+        json=paciente_valido()
+    )
+
+    assert response.status_code in (401, 403)
+    assert "detail" in response.json()
+
+
+# =========================
+# GET /pacientes
+# =========================
+
+def test_get_pacientes_exitoso(monkeypatch):
+    """
+    CASO VÁLIDO: listar pacientes del cuidador autenticado.
+    """
+    pacientes_col_falsa = MagicMock()
+
+    pacientes_col_falsa.find.return_value = [
+        {
+            "_id": PACIENTE_ID,
+            "nombres": "Juan",
+            "apellidos": "Perez",
+            "fecha_nacimiento": "01/15/1990",
+            "genero": "Masculino",
+            "tipo_documento": "CC",
+            "numero_documento": "12345678",
+            "telefono_contacto": "3001234567",
+            "eps_aseguradora": "Sura",
+            "diagnostico_principal": "Hipertension",
+            "alergias_conocidas": "Ninguna",
+            "observaciones_adicionales": "Paciente de prueba",
+            "cuidador_id": USUARIO_ID
+        }
+    ]
+
+    tomas_col_falsa = MagicMock()
+    tomas_col_falsa.count_documents.return_value = 0
+
+    monkeypatch.setattr(
+        patient_route,
+        "pacientes_col",
+        pacientes_col_falsa
+    )
+
+    monkeypatch.setattr(
+        patient_route,
+        "tomas_col",
+        tomas_col_falsa
+    )
+
+    monkeypatch.setattr(
+        patient_route,
+        "verify_jwt",
+        lambda token: {"id": USUARIO_ID}
+    )
+
+    response = client.get(
+        "/pacientes",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 200
+
+    cuerpo = response.json()
+
+    assert len(cuerpo) == 1
+    assert cuerpo[0]["id"] == str(PACIENTE_ID)
+    assert cuerpo[0]["nombres"] == "Juan"
+    assert cuerpo[0]["alerta"]["tiene_alerta"] is False
+
+
+def test_get_paciente_por_id_exitoso(monkeypatch):
+    """
+    CASO VÁLIDO: obtener paciente por ObjectId.
+    """
+    pacientes_col_falsa = MagicMock()
+
+    pacientes_col_falsa.find_one.return_value = {
+        "_id": PACIENTE_ID,
+        "nombres": "Juan",
+        "apellidos": "Perez",
+        "fecha_nacimiento": "01/15/1990",
+        "genero": "Masculino",
+        "tipo_documento": "CC",
+        "numero_documento": "12345678",
+        "telefono_contacto": "3001234567",
+        "eps_aseguradora": "Sura",
+        "diagnostico_principal": "Hipertension",
+        "alergias_conocidas": "Ninguna",
+        "observaciones_adicionales": "Paciente de prueba",
+        "cuidador_id": USUARIO_ID
+    }
+
+    monkeypatch.setattr(
+        patient_route,
+        "pacientes_col",
+        pacientes_col_falsa
+    )
+
+    monkeypatch.setattr(
+        patient_route,
+        "verify_jwt",
+        lambda token: {"id": USUARIO_ID}
+    )
+
+    response = client.get(
+        f"/pacientes/{str(PACIENTE_ID)}",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 200
+
+    cuerpo = response.json()
+
+    assert cuerpo["id"] == str(PACIENTE_ID)
+    assert cuerpo["nombres"] == "Juan"
+
+
+def test_get_paciente_por_id_no_encontrado(monkeypatch):
+    """
+    CASO INVÁLIDO: el paciente no existe.
+    """
+    pacientes_col_falsa = MagicMock()
+    pacientes_col_falsa.find_one.return_value = None
+
+    monkeypatch.setattr(
+        patient_route,
+        "pacientes_col",
+        pacientes_col_falsa
+    )
+
+    monkeypatch.setattr(
+        patient_route,
+        "verify_jwt",
+        lambda token: {"id": USUARIO_ID}
+    )
+
+    response = client.get(
+        f"/pacientes/{str(PACIENTE_ID)}",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Paciente no encontrado"
+
+
+def test_get_paciente_por_id_invalido(monkeypatch):
+    """
+    CASO INVÁLIDO: el id no tiene formato ObjectId.
+    """
+    monkeypatch.setattr(
+        patient_route,
+        "verify_jwt",
+        lambda token: {"id": USUARIO_ID}
+    )
+
+    response = client.get(
+        "/pacientes/id-invalido",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "ID de paciente inválido"

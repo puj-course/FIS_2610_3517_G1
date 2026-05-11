@@ -1,5 +1,5 @@
-﻿########################################################################################
-#   test_resumen_service.py
+########################################################################################
+# test_resumen_service.py
 ########################################################################################
 
 import pytest
@@ -13,11 +13,11 @@ from backend.services.resumen_paciente_service import ResumenPacienteService
 # IDS DE PRUEBA TIPO MONGODB
 # =========================
 
-PACIENTE_ID_VALIDO = "507f1f77bcf86cd799439011"
+PACIENTE_ID = "507f1f77bcf86cd799439011"
 PACIENTE_ID_SIN_DATOS = "507f1f77bcf86cd799439012"
 PACIENTE_ID_INEXISTENTE = "507f1f77bcf86cd799439099"
 
-MEDICAMENTO_ID_VALIDO = "507f1f77bcf86cd799439021"
+MEDICAMENTO_ID = "507f1f77bcf86cd799439021"
 TOMA_ID_1 = "507f1f77bcf86cd799439031"
 TOMA_ID_2 = "507f1f77bcf86cd799439032"
 
@@ -26,18 +26,31 @@ TOMA_ID_2 = "507f1f77bcf86cd799439032"
 # COLECCIÓN FALSA PARA MONGODB
 # =========================
 
+class CursorFalso(list):
+    """
+    Cursor falso para simular el cursor de PyMongo.
+
+    El servicio usa consultas como:
+        coleccion.find(...).sort(...)
+
+    Por eso esta clase hereda de list y agrega sort() compatible.
+    """
+
+    def sort(self, *args, **kwargs):
+        return self
+
+
 class ColeccionFalsa:
     """
     Colección falsa para simular una colección de MongoDB.
 
-    El servicio ResumenPacienteService ya no usa SQLite ni get_connection.
-    Ahora consulta directamente:
+    El servicio ResumenPacienteService no usa SQLite ni get_connection.
+    Consulta directamente:
+        - pacientes_col
+        - medicamentos_col
+        - tomas_col
 
-        pacientes_col
-        medicamentos_col
-        tomas_col
-
-    Por eso esta clase implementa los métodos mínimos que usa el servicio:
+    Por eso esta clase implementa:
         - find_one()
         - find()
     """
@@ -51,14 +64,15 @@ class ColeccionFalsa:
         """
         Verifica si un documento cumple un filtro simple de igualdad.
 
-        Ejemplos de filtros usados por el servicio:
-            {"_id": ObjectId(paciente_id)}
-            {"paciente_id": paciente_id}
+        Se permite comparar ObjectId contra string cuando representan
+        el mismo valor.
         """
         filtro = filtro or {}
 
         for clave, valor in filtro.items():
-            if documento.get(clave) != valor:
+            valor_documento = documento.get(clave)
+
+            if valor_documento != valor and str(valor_documento) != str(valor):
                 return False
 
         return True
@@ -82,15 +96,15 @@ class ColeccionFalsa:
         """
         Simula find() de MongoDB.
 
-        Retorna una lista de documentos que cumplen el filtro.
+        Retorna un cursor falso con los documentos que cumplen el filtro.
         """
         self.filtro_find = filtro or {}
 
-        return [
+        return CursorFalso([
             documento
             for documento in self.documentos
             if self._coincide(documento, self.filtro_find)
-        ]
+        ])
 
 
 # =========================
@@ -102,32 +116,38 @@ def paciente_mongo():
     Paciente principal usado en las pruebas.
     """
     return {
-        "_id": ObjectId(PACIENTE_ID_VALIDO),
+        "_id": ObjectId(PACIENTE_ID),
         "nombres": "Ana",
         "apellidos": "Lopez",
+        "fecha_nacimiento": "01/15/2000",
+        "genero": "Femenino",
         "tipo_documento": "CC",
         "numero_documento": "12345678",
         "telefono_contacto": "3001234567",
         "eps_aseguradora": "Sura",
         "diagnostico_principal": "Hipertension",
+        "alergias_conocidas": "",
+        "observaciones_adicionales": ""
     }
 
 
 def paciente_sin_datos_mongo():
     """
     Paciente válido, pero sin medicamentos ni historial de tomas.
-
-    Sirve para probar el resumen vacío.
     """
     return {
         "_id": ObjectId(PACIENTE_ID_SIN_DATOS),
         "nombres": "Carlos",
         "apellidos": "Perez",
+        "fecha_nacimiento": "02/20/2000",
+        "genero": "Masculino",
         "tipo_documento": "CC",
         "numero_documento": "87654321",
         "telefono_contacto": "3111234567",
         "eps_aseguradora": "Nueva EPS",
         "diagnostico_principal": "Diabetes",
+        "alergias_conocidas": "",
+        "observaciones_adicionales": ""
     }
 
 
@@ -136,14 +156,14 @@ def medicamento_mongo():
     Medicamento activo asociado al paciente principal.
     """
     return {
-        "_id": ObjectId(MEDICAMENTO_ID_VALIDO),
+        "_id": ObjectId(MEDICAMENTO_ID),
         "nombre": "Aspirina",
         "dosis": "500 mg",
         "frecuencia": "Cada 8 horas",
         "horario": "08:00",
         "fecha_inicio": "2026-04-01",
         "observaciones": "Con comida",
-        "paciente_id": PACIENTE_ID_VALIDO,
+        "paciente_id": PACIENTE_ID,
     }
 
 
@@ -159,23 +179,23 @@ def tomas_mongo():
     return [
         {
             "_id": ObjectId(TOMA_ID_1),
-            "paciente_id": PACIENTE_ID_VALIDO,
-            "medicamento_id": MEDICAMENTO_ID_VALIDO,
-            "nombre": "Aspirina",
-            "fecha": "2026-04-12",
-            "hora_programada": "08:00",
-            "hora_tomada": "08:05",
+            "paciente_id": PACIENTE_ID,
+            "medicamento_id": MEDICAMENTO_ID,
+            "recordatorio_id": "recordatorio-1",
+            "fecha_programada": "2026-04-12 08:00:00",
+            "fecha_hora_toma": "2026-04-12 08:05:00",
+            "diferencia_minutos": 5.0,
             "estado": "tomado",
             "observaciones": "Tomada correctamente",
         },
         {
             "_id": ObjectId(TOMA_ID_2),
-            "paciente_id": PACIENTE_ID_VALIDO,
-            "medicamento_id": MEDICAMENTO_ID_VALIDO,
-            "nombre": "Aspirina",
-            "fecha": "2026-04-13",
-            "hora_programada": "08:00",
-            "hora_tomada": None,
+            "paciente_id": PACIENTE_ID,
+            "medicamento_id": MEDICAMENTO_ID,
+            "recordatorio_id": "recordatorio-2",
+            "fecha_programada": "2026-04-13 08:00:00",
+            "fecha_hora_toma": None,
+            "diferencia_minutos": None,
             "estado": "pendiente",
             "observaciones": "Pendiente",
         },
@@ -225,9 +245,9 @@ def colecciones_mongo(monkeypatch):
     )
 
     return {
-        "pacientes": pacientes_col_falsa,
-        "medicamentos": medicamentos_col_falsa,
-        "tomas": tomas_col_falsa,
+        "pacientes_col": pacientes_col_falsa,
+        "medicamentos_col": medicamentos_col_falsa,
+        "tomas_col": tomas_col_falsa,
     }
 
 
@@ -241,9 +261,9 @@ def test_paciente_ok(colecciones_mongo):
     """
     service = ResumenPacienteService()
 
-    paciente = service.obtener_paciente(PACIENTE_ID_VALIDO)
+    paciente = service.obtener_paciente(PACIENTE_ID)
 
-    assert str(paciente["_id"]) == PACIENTE_ID_VALIDO
+    assert paciente["id"] == PACIENTE_ID
     assert paciente["nombres"] == "Ana"
     assert paciente["apellidos"] == "Lopez"
 
@@ -259,6 +279,17 @@ def test_paciente_none(colecciones_mongo):
     assert paciente is None
 
 
+def test_paciente_id_invalido(colecciones_mongo):
+    """
+    CASO INVÁLIDO: el ID no tiene formato ObjectId.
+    """
+    service = ResumenPacienteService()
+
+    paciente = service.obtener_paciente("id-invalido")
+
+    assert paciente is None
+
+
 # =========================
 # MEDICAMENTOS
 # =========================
@@ -269,11 +300,12 @@ def test_medicamentos_ok(colecciones_mongo):
     """
     service = ResumenPacienteService()
 
-    medicamentos = service.obtener_medicamentos_activos(PACIENTE_ID_VALIDO)
+    medicamentos = service.obtener_medicamentos_activos(PACIENTE_ID)
 
     assert len(medicamentos) == 1
+    assert medicamentos[0]["id"] == MEDICAMENTO_ID
     assert medicamentos[0]["nombre"] == "Aspirina"
-    assert medicamentos[0]["paciente_id"] == PACIENTE_ID_VALIDO
+    assert medicamentos[0]["paciente_id"] == PACIENTE_ID
 
 
 def test_medicamentos_vacio(colecciones_mongo):
@@ -300,11 +332,15 @@ def test_historial_ok(colecciones_mongo):
     """
     service = ResumenPacienteService()
 
-    historial = service.obtener_historial_formateado(PACIENTE_ID_VALIDO)
+    historial = service.obtener_historial_formateado(PACIENTE_ID)
 
     assert len(historial) == 2
+    assert historial[0]["id"] == TOMA_ID_1
     assert historial[0]["medicamento"] == "Aspirina"
     assert historial[0]["medicamento_nombre"] == "Aspirina"
+    assert historial[0]["fecha"] == "2026-04-12"
+    assert historial[0]["hora_programada"] == "08:00:00"
+    assert historial[0]["hora_tomada"] == "08:05:00"
     assert historial[0]["estado"] == "tomado"
     assert historial[1]["estado"] == "pendiente"
 
@@ -326,9 +362,9 @@ def test_resumen_ok(colecciones_mongo):
     """
     service = ResumenPacienteService()
 
-    resumen = service.construir_resumen(PACIENTE_ID_VALIDO)
+    resumen = service.construir_resumen(PACIENTE_ID)
 
-    assert resumen["paciente"]["id"] == PACIENTE_ID_VALIDO
+    assert resumen["paciente"]["id"] == PACIENTE_ID
     assert resumen["paciente"]["nombres"] == "Ana"
     assert resumen["paciente"]["apellidos"] == "Lopez"
 
@@ -340,8 +376,8 @@ def test_resumen_ok(colecciones_mongo):
     assert resumen["cumplimiento"]["tomas_realizadas"] == 1
     assert resumen["cumplimiento"]["porcentaje"] == 50.0
 
-    # El servicio actual retorna alertas como lista vacía.
-    assert resumen["alertas"] == []
+    assert "alertas" in resumen
+    assert isinstance(resumen["alertas"], list)
 
 
 def test_resumen_404(colecciones_mongo):
@@ -372,5 +408,6 @@ def test_resumen_vacio(colecciones_mongo):
     assert resumen["historial"] == []
     assert resumen["cumplimiento"]["total_tomas"] == 0
     assert resumen["cumplimiento"]["porcentaje"] == 0
-    assert resumen["alertas"] == []
+    assert "alertas" in resumen
+    assert isinstance(resumen["alertas"], list)
 

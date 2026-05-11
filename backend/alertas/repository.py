@@ -1,26 +1,25 @@
-from pathlib import Path
-import sqlite3
+from datetime import datetime, timezone
+from backend.database import alertas_col
 
-DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
 
-def guardar_alerta(tipo, mensaje, severidad, paciente_id, medicamento_id=None, recordatorio_id=None):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+def guardar_alerta(
+    tipo,
+    mensaje,
+    severidad,
+    paciente_id,
+    medicamento_id=None,
+    recordatorio_id=None
+):
+    alerta = {
+        "tipo": tipo,
+        "mensaje": mensaje,
+        "severidad": severidad,
+        "paciente_id": str(paciente_id),
+        "medicamento_id": str(medicamento_id) if medicamento_id else None,
+        "recordatorio_id": str(recordatorio_id) if recordatorio_id else None,
+        "fecha_creacion": datetime.now(timezone.utc)
+    }
 
-    cursor.execute(
-        """
-        INSERT INTO alertas (
-            tipo,
-            mensaje,
-            severidad,
-            paciente_id,
-            medicamento_id,
-            recordatorio_id
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (tipo, mensaje, severidad, paciente_id, medicamento_id, recordatorio_id)
-    )
+    resultado = alertas_col.insert_one(alerta)
 
-    conn.commit()
-    conn.close()
+    return str(resultado.inserted_id)

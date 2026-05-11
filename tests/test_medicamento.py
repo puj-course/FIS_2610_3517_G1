@@ -1,27 +1,24 @@
-﻿# test_medicamento.py
+# test_medicamento.py
 import os
 import sys
-import sqlite3
+from unittest.mock import MagicMock
 
-# Clave fija para tests.
-# El middleware de autenticación valida los JWT con os.getenv("SECRET_KEY").
-# generate_jwt usa backend.auth.SECRET_KEY.
-# Por eso dejamos ambas claves iguales en pruebas.
-os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-medtrack"
-
+from bson import ObjectId
 from fastapi.testclient import TestClient
+
+# Variables mínimas para que backend.database y el middleware puedan cargar
+# correctamente durante pruebas locales y CI.
+os.environ.setdefault("MONGO_URI", "mongodb://localhost:27017/medtrack_test")
+os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-medtrack"
 
 # Agregamos la raíz del proyecto al path para que pytest pueda importar backend
 # correctamente cuando se ejecuta desde Git Bash.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from backend.validaciones import (
-    validar_medicamento,
-    verificar_paciente_existe,
-    verificar_medicamento_duplicado
-)
+from backend.validaciones import validar_medicamento
 from backend.main import app
 from backend.auth import generate_jwt
+from backend.routes import medication_route
 import backend.auth as auth_module
 
 
@@ -33,38 +30,16 @@ auth_module.SECRET_KEY = os.environ["SECRET_KEY"]
 client = TestClient(app)
 
 
-PACIENTE_ID_VALIDO = "507f1f77bcf86cd799439011"
-
-
-def medicamento_valido():
-    """
-    Datos base válidos para registrar un medicamento.
-
-    Importante:
-    paciente_id ahora debe ser un ObjectId válido porque medication_route.py
-    consulta pacientes_col usando ObjectId(paciente_id).
-    """
-    return {
-        "nombre_medicamento": "Acetaminofen",
-        "concentracion": "500 mg",
-        "forma_farmaceutica": "Tableta",
-        "dosis_cantidad": 1,
-        "dosis_unidad": "tableta",
-        "frecuencia": "Cada 8 horas",
-        "fecha_inicio": "03/16/2026",
-        "paciente_id": PACIENTE_ID_VALIDO,
-        "horarios": ["08:00", "16:00", "00:00"],
-        "observaciones": "Tomar después de comer"
-    }
+PACIENTE_ID = "69feaac76a52afc46ed40c52"
+MEDICAMENTO_ID = ObjectId("69feb355322be070cd1c97ce")
 
 
 def headers_auth():
     """
     Construye el header Authorization para las pruebas del endpoint.
 
-    Aunque medication_route.py no tiene Depends(security), main.py tiene un
-    AuthenticationMiddleware global. Si no mandamos un token válido, la petición
-    se bloquea antes de llegar al endpoint.
+    Aunque algunos entornos de prueba usan TESTING=1, dejamos un token válido
+    para que estos tests también funcionen localmente sin depender de esa variable.
     """
     token = generate_jwt(
         "cuidador-test-id",
@@ -77,68 +52,26 @@ def headers_auth():
     }
 
 
-class ResultadoInsertOneFalso:
+def medicamento_valido():
     """
-    Resultado falso de MongoDB.
+    Datos base válidos para registrar un medicamento.
 
-    insert_one() normalmente devuelve un objeto con inserted_id.
-    Solo necesitamos ese atributo para verificar la respuesta del endpoint.
+    Importante:
+    paciente_id debe ser un ObjectId válido porque medication_route.py
+    consulta pacientes_col usando ObjectId(paciente_id).
     """
-    inserted_id = "medicamento-test-id"
-
-
-class PacientesColFalsa:
-    """
-    Colección falsa para simular pacientes_col.
-
-    Esta clase reemplaza la colección real de MongoDB durante los tests.
-    """
-
-    def __init__(self, paciente_existente=None):
-        self.paciente_existente = paciente_existente
-        self.filtro_busqueda = None
-
-    def find_one(self, filtro):
-        """
-        Simula la búsqueda del paciente asociado al medicamento.
-
-        Si paciente_existente es None, la ruta entiende que el paciente no existe.
-        Si paciente_existente tiene un dict, la ruta entiende que el paciente existe.
-        """
-        self.filtro_busqueda = filtro
-        return self.paciente_existente
-
-
-class MedicamentosColFalsa:
-    """
-    Colección falsa para simular medicamentos_col.
-
-    Esta clase simula:
-    - find_one(): búsqueda de medicamento duplicado
-    - insert_one(): creación del medicamento
-    """
-
-    def __init__(self, medicamento_existente=None):
-        self.medicamento_existente = medicamento_existente
-        self.documento_insertado = None
-        self.filtro_busqueda = None
-
-    def find_one(self, filtro):
-        """
-        Simula la búsqueda de un medicamento duplicado.
-        """
-        self.filtro_busqueda = filtro
-        return self.medicamento_existente
-
-    def insert_one(self, documento):
-        """
-        Simula la inserción de un medicamento en MongoDB.
-
-        Guardamos el documento insertado para verificar después qué intentó
-        guardar el endpoint.
-        """
-        self.documento_insertado = documento
-        return ResultadoInsertOneFalso()
+    return {
+        "nombre_medicamento": "Acetaminofen",
+        "concentracion": "500 mg",
+        "forma_farmaceutica": "Tableta",
+        "dosis_cantidad": 1,
+        "dosis_unidad": "tableta",
+        "frecuencia": "Cada 8 horas",
+        "fecha_inicio": "03/16/2026",
+        "paciente_id": PACIENTE_ID,
+        "horarios": ["08:00", "16:00", "00:00"],
+        "observaciones": "Tomar después de comer"
+    }
 
 
 # =========================
@@ -151,9 +84,7 @@ def test_validar_medicamento_exitoso():
 
     validar_medicamento debe devolver una lista vacía.
     """
-    data = medicamento_valido()
-
-    errores = validar_medicamento(data)
+    errores = validar_medicamento(medicamento_valido())
 
     assert errores == []
 
@@ -221,9 +152,6 @@ def test_fecha_inicio_vacia():
 def test_paciente_id_faltante():
     """
     CASO INVÁLIDO: falta paciente_id.
-
-    paciente_id es obligatorio porque el medicamento debe quedar asociado
-    a un paciente.
     """
     data = medicamento_valido()
     del data["paciente_id"]
@@ -236,9 +164,6 @@ def test_paciente_id_faltante():
 def test_paciente_id_invalido_texto():
     """
     CASO INVÁLIDO: paciente_id no es ObjectId.
-
-    Antes se validaba como entero. Después de la migración a MongoDB,
-    debe ser un ObjectId válido.
     """
     data = medicamento_valido()
     data["paciente_id"] = "abc"
@@ -248,12 +173,11 @@ def test_paciente_id_invalido_texto():
     assert "El paciente_id debe ser un ObjectId válido" in errores
 
 
-def test_paciente_id_invalido_menor_o_igual_a_cero():
+def test_paciente_id_invalido_numero():
     """
     CASO INVÁLIDO: paciente_id numérico viejo.
 
-    Esta prueba confirma que los IDs enteros ya no son válidos para esta ruta,
-    porque ahora se trabaja con ObjectId de MongoDB.
+    Después de la migración a MongoDB, los IDs enteros ya no son válidos.
     """
     data = medicamento_valido()
     data["paciente_id"] = 0
@@ -264,196 +188,37 @@ def test_paciente_id_invalido_menor_o_igual_a_cero():
 
 
 # =========================
-# PRUEBAS DE BASE DE DATOS LEGADAS
-# =========================
-
-def test_verificar_paciente_existe_devuelve_true():
-    """
-    Prueba unitaria de verificar_paciente_existe con SQLite en memoria.
-
-    Aunque medication_route.py ya fue migrado a MongoDB, esta función sigue
-    existiendo en validaciones.py. Se conserva esta prueba porque valida
-    su comportamiento aislado.
-    """
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombres TEXT NOT NULL,
-            apellidos TEXT NOT NULL,
-            fecha_nacimiento TEXT NOT NULL,
-            genero TEXT NOT NULL,
-            tipo_documento TEXT NOT NULL,
-            numero_documento TEXT NOT NULL,
-            telefono_contacto TEXT NOT NULL,
-            eps_aseguradora TEXT,
-            diagnostico_principal TEXT,
-            alergias_conocidas TEXT,
-            observaciones_adicionales TEXT
-        )
-    """)
-
-    cursor.execute("""
-        INSERT INTO pacientes (
-            nombres, apellidos, fecha_nacimiento, genero,
-            tipo_documento, numero_documento, telefono_contacto,
-            eps_aseguradora, diagnostico_principal
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Ana", "Lopez", "01/15/1990", "Femenino",
-        "CC", "12345678", "3001234567", "Sura", "Hipertension"
-    ))
-
-    conn.commit()
-
-    resultado = verificar_paciente_existe(1, conn)
-
-    assert resultado is True
-    conn.close()
-
-
-def test_verificar_paciente_existe_devuelve_false():
-    """
-    Prueba unitaria de verificar_paciente_existe cuando no hay paciente.
-    """
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombres TEXT NOT NULL,
-            apellidos TEXT NOT NULL,
-            fecha_nacimiento TEXT NOT NULL,
-            genero TEXT NOT NULL,
-            tipo_documento TEXT NOT NULL,
-            numero_documento TEXT NOT NULL,
-            telefono_contacto TEXT NOT NULL,
-            eps_aseguradora TEXT,
-            diagnostico_principal TEXT,
-            alergias_conocidas TEXT,
-            observaciones_adicionales TEXT
-        )
-    """)
-
-    conn.commit()
-
-    resultado = verificar_paciente_existe(99, conn)
-
-    assert resultado is False
-    conn.close()
-
-
-def test_verificar_medicamento_duplicado_devuelve_true():
-    """
-    Prueba unitaria de verificar_medicamento_duplicado con SQLite en memoria.
-
-    Se conserva porque la función sigue existiendo en validaciones.py.
-    """
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE medicamentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            dosis TEXT NOT NULL,
-            frecuencia TEXT NOT NULL,
-            horario TEXT NOT NULL,
-            fecha_inicio TEXT NOT NULL,
-            observaciones TEXT,
-            paciente_id INTEGER NOT NULL
-        )
-    """)
-
-    cursor.execute("""
-        INSERT INTO medicamentos (
-            nombre, dosis, frecuencia, horario,
-            fecha_inicio, observaciones, paciente_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "Acetaminofen", "1 tableta", "Cada 8 horas", "08:00, 16:00, 00:00",
-        "03/16/2026", "Concentración: 500 mg | Forma farmacéutica: Tableta", 1
-    ))
-
-    conn.commit()
-
-    resultado = verificar_medicamento_duplicado("Acetaminofen", 1, conn)
-
-    assert resultado is True
-    conn.close()
-
-
-def test_verificar_medicamento_duplicado_devuelve_false():
-    """
-    Prueba unitaria de verificar_medicamento_duplicado cuando no existe
-    medicamento duplicado.
-    """
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE medicamentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            dosis TEXT NOT NULL,
-            frecuencia TEXT NOT NULL,
-            horario TEXT NOT NULL,
-            fecha_inicio TEXT NOT NULL,
-            observaciones TEXT,
-            paciente_id INTEGER NOT NULL
-        )
-    """)
-
-    conn.commit()
-
-    resultado = verificar_medicamento_duplicado("Ibuprofeno", 1, conn)
-
-    assert resultado is False
-    conn.close()
-
-
-# =========================
-# PRUEBAS DEL ENDPOINT
+# PRUEBAS DEL ENDPOINT POST
 # =========================
 
 def test_post_medicamento_exitoso(monkeypatch):
     """
     CASO VÁLIDO DEL ENDPOINT POST /medicamentos/.
 
-    La ruta actual ya no usa SQLite. Ahora:
+    La ruta actual usa MongoDB:
     1. Valida el body.
     2. Busca el paciente en pacientes_col usando ObjectId.
     3. Verifica duplicado en medicamentos_col.
     4. Inserta el medicamento en medicamentos_col.
-    5. Retorna el id creado.
-
-    Por eso se mockean pacientes_col y medicamentos_col, no sqlite3.
     """
     data = medicamento_valido()
 
-    pacientes_col_falsa = PacientesColFalsa(
-        paciente_existente={
-            "_id": PACIENTE_ID_VALIDO,
-            "nombres": "Juan"
-        }
-    )
+    pacientes_col_falsa = MagicMock()
+    pacientes_col_falsa.find_one.return_value = {
+        "_id": ObjectId(PACIENTE_ID),
+        "nombres": "Juan",
+        "apellidos": "Perez"
+    }
 
-    medicamentos_col_falsa = MedicamentosColFalsa(
-        medicamento_existente=None
-    )
+    medicamentos_col_falsa = MagicMock()
+    medicamentos_col_falsa.find_one.return_value = None
 
-    monkeypatch.setattr(
-        "backend.routes.medication_route.pacientes_col",
-        pacientes_col_falsa
-    )
+    insert_result = MagicMock()
+    insert_result.inserted_id = MEDICAMENTO_ID
+    medicamentos_col_falsa.insert_one.return_value = insert_result
 
-    monkeypatch.setattr(
-        "backend.routes.medication_route.medicamentos_col",
-        medicamentos_col_falsa
-    )
+    monkeypatch.setattr(medication_route, "pacientes_col", pacientes_col_falsa)
+    monkeypatch.setattr(medication_route, "medicamentos_col", medicamentos_col_falsa)
 
     response = client.post(
         "/medicamentos/",
@@ -463,25 +228,27 @@ def test_post_medicamento_exitoso(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["mensaje"] == "Medicamento registrado exitosamente"
-    assert response.json()["medicamento_id"] == "medicamento-test-id"
+    assert response.json()["medicamento_id"] == str(MEDICAMENTO_ID)
 
-    documento = medicamentos_col_falsa.documento_insertado
+    medicamentos_col_falsa.insert_one.assert_called_once()
 
-    assert documento is not None
+    documento = medicamentos_col_falsa.insert_one.call_args.args[0]
+
     assert documento["nombre"] == "acetaminofen"
     assert documento["dosis"] == "1 tableta"
     assert documento["frecuencia"] == "Cada 8 horas"
     assert documento["horario"] == "08:00, 16:00, 00:00"
     assert documento["fecha_inicio"] == "03/16/2026"
-    assert documento["paciente_id"] == PACIENTE_ID_VALIDO
+    assert documento["paciente_id"] == PACIENTE_ID
+    assert "Concentración: 500 mg" in documento["observaciones"]
+    assert "Forma farmacéutica: Tableta" in documento["observaciones"]
 
 
 def test_post_medicamento_datos_invalidos():
     """
     CASO INVÁLIDO DEL ENDPOINT POST /medicamentos/.
 
-    Enviamos token válido para que el middleware permita llegar al endpoint.
-    Luego la validación debe fallar porque nombre_medicamento está vacío.
+    La validación debe fallar porque nombre_medicamento está vacío.
     """
     data = medicamento_valido()
     data["nombre_medicamento"] = ""
@@ -496,23 +263,33 @@ def test_post_medicamento_datos_invalidos():
     assert "El nombre del medicamento es obligatorio" in response.json()["detail"]
 
 
+def test_post_medicamento_paciente_id_invalido():
+    """
+    CASO INVÁLIDO: paciente_id no tiene formato ObjectId.
+    """
+    data = medicamento_valido()
+    data["paciente_id"] = "id-invalido"
+
+    response = client.post(
+        "/medicamentos/",
+        json=data,
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 400
+    assert "El paciente_id debe ser un ObjectId válido" in response.json()["detail"]
+
+
 def test_post_medicamento_paciente_no_existe(monkeypatch):
     """
     CASO INVÁLIDO: el paciente asociado no existe.
-
-    Simulamos que pacientes_col.find_one() devuelve None.
-    La ruta debe responder 404.
     """
     data = medicamento_valido()
 
-    pacientes_col_falsa = PacientesColFalsa(
-        paciente_existente=None
-    )
+    pacientes_col_falsa = MagicMock()
+    pacientes_col_falsa.find_one.return_value = None
 
-    monkeypatch.setattr(
-        "backend.routes.medication_route.pacientes_col",
-        pacientes_col_falsa
-    )
+    monkeypatch.setattr(medication_route, "pacientes_col", pacientes_col_falsa)
 
     response = client.post(
         "/medicamentos/",
@@ -527,37 +304,23 @@ def test_post_medicamento_paciente_no_existe(monkeypatch):
 def test_post_medicamento_duplicado(monkeypatch):
     """
     CASO INVÁLIDO: el paciente ya tiene registrado este medicamento.
-
-    Simulamos que:
-    - el paciente sí existe
-    - medicamentos_col.find_one() encuentra un medicamento duplicado
     """
     data = medicamento_valido()
 
-    pacientes_col_falsa = PacientesColFalsa(
-        paciente_existente={
-            "_id": PACIENTE_ID_VALIDO,
-            "nombres": "Juan"
-        }
-    )
+    pacientes_col_falsa = MagicMock()
+    pacientes_col_falsa.find_one.return_value = {
+        "_id": ObjectId(PACIENTE_ID)
+    }
 
-    medicamentos_col_falsa = MedicamentosColFalsa(
-        medicamento_existente={
-            "_id": "medicamento-existente-id",
-            "paciente_id": PACIENTE_ID_VALIDO,
-            "nombre": "acetaminofen"
-        }
-    )
+    medicamentos_col_falsa = MagicMock()
+    medicamentos_col_falsa.find_one.return_value = {
+        "_id": MEDICAMENTO_ID,
+        "paciente_id": PACIENTE_ID,
+        "nombre": "acetaminofen"
+    }
 
-    monkeypatch.setattr(
-        "backend.routes.medication_route.pacientes_col",
-        pacientes_col_falsa
-    )
-
-    monkeypatch.setattr(
-        "backend.routes.medication_route.medicamentos_col",
-        medicamentos_col_falsa
-    )
+    monkeypatch.setattr(medication_route, "pacientes_col", pacientes_col_falsa)
+    monkeypatch.setattr(medication_route, "medicamentos_col", medicamentos_col_falsa)
 
     response = client.post(
         "/medicamentos/",
@@ -567,3 +330,68 @@ def test_post_medicamento_duplicado(monkeypatch):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "El paciente ya tiene registrado este medicamento"
+
+
+# =========================
+# PRUEBAS DEL ENDPOINT GET
+# =========================
+
+def test_get_medicamentos_paciente_exitoso(monkeypatch):
+    """
+    CASO VÁLIDO: consultar medicamentos de un paciente.
+    """
+    medicamentos_col_falsa = MagicMock()
+
+    cursor_mock = MagicMock()
+    cursor_mock.sort.return_value = [
+        {
+            "_id": MEDICAMENTO_ID,
+            "nombre": "acetaminofen",
+            "dosis": "1 tableta",
+            "frecuencia": "Cada 8 horas",
+            "horario": "08:00, 16:00, 00:00",
+            "fecha_inicio": "03/16/2026",
+            "observaciones": "Concentración: 500 mg | Forma farmacéutica: Tableta",
+            "paciente_id": PACIENTE_ID
+        }
+    ]
+
+    medicamentos_col_falsa.find.return_value = cursor_mock
+
+    monkeypatch.setattr(medication_route, "medicamentos_col", medicamentos_col_falsa)
+
+    response = client.get(
+        f"/medicamentos/paciente/{PACIENTE_ID}",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 200
+
+    cuerpo = response.json()
+
+    assert len(cuerpo) == 1
+    assert cuerpo[0]["id"] == str(MEDICAMENTO_ID)
+    assert cuerpo[0]["nombre"] == "acetaminofen"
+    assert cuerpo[0]["paciente_id"] == PACIENTE_ID
+
+
+def test_get_medicamentos_paciente_vacio(monkeypatch):
+    """
+    CASO SIN MEDICAMENTOS: la consulta retorna lista vacía.
+    """
+    medicamentos_col_falsa = MagicMock()
+
+    cursor_mock = MagicMock()
+    cursor_mock.sort.return_value = []
+
+    medicamentos_col_falsa.find.return_value = cursor_mock
+
+    monkeypatch.setattr(medication_route, "medicamentos_col", medicamentos_col_falsa)
+
+    response = client.get(
+        f"/medicamentos/paciente/{PACIENTE_ID}",
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []

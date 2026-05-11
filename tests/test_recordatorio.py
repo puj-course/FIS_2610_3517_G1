@@ -1,17 +1,16 @@
-﻿# test_recordatorio.py
+# test_recordatorio.py
 import os
 import sys
 import sqlite3
 import pytest
 
-# Clave fija para tests.
-# El middleware de autenticación valida los JWT usando os.getenv("SECRET_KEY").
-# generate_jwt usa backend.auth.SECRET_KEY.
-# Por eso ambas claves deben coincidir durante las pruebas.
-os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-medtrack"
-
 from bson import ObjectId
 from fastapi.testclient import TestClient
+
+# Variables mínimas para que backend.database y el middleware puedan cargar
+# correctamente durante pruebas locales y CI.
+os.environ.setdefault("MONGO_URI", "mongodb://localhost:27017/medtrack_test")
+os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-medtrack"
 
 # Agregamos la raíz del proyecto al path para que pytest pueda importar backend
 # correctamente cuando se ejecuta desde Git Bash.
@@ -115,6 +114,19 @@ class ResultadoInsertOneFalso:
     inserted_id = RECORDATORIO_ID_VALIDO
 
 
+class CursorFalso(list):
+    """
+    Cursor falso para simular el cursor de PyMongo.
+
+    Algunas rutas hacen list(coleccion.find(...)).
+    Otras versiones pueden hacer coleccion.find(...).sort(...).
+    Por eso implementamos sort() para que el fake sea estable.
+    """
+
+    def sort(self, *args, **kwargs):
+        return self
+
+
 class ColeccionFalsa:
     """
     Colección falsa para simular una colección de MongoDB.
@@ -149,6 +161,7 @@ class ColeccionFalsa:
 
             if valor_documento != valor and str(valor_documento) != str(valor):
                 return False
+
         return True
 
     def find_one(self, filtro):
@@ -170,15 +183,15 @@ class ColeccionFalsa:
         """
         Simula find() de MongoDB.
 
-        Retorna una lista de documentos que cumplen el filtro.
+        Retorna un cursor falso con documentos que cumplen el filtro.
         """
         self.filtro_find = filtro or {}
 
-        return [
+        return CursorFalso([
             documento
             for documento in self.documentos
             if self._coincide(documento, self.filtro_find)
-        ]
+        ])
 
     def insert_one(self, documento):
         """
@@ -319,9 +332,6 @@ def test_fecha_inicio_vacia():
 def test_medicamento_id_invalido_texto():
     """
     CASO INVÁLIDO: medicamento_id no es ObjectId.
-
-    Antes se esperaba un entero. Después de la migración a MongoDB,
-    se espera un ObjectId válido.
     """
     data = recordatorio_valido()
     data["medicamento_id"] = "abc"
@@ -331,7 +341,7 @@ def test_medicamento_id_invalido_texto():
     assert "El medicamento_id debe ser un ObjectId válido" in errores
 
 
-def test_medicamento_id_invalido_menor_o_igual_a_cero():
+def test_medicamento_id_invalido_numero():
     """
     CASO INVÁLIDO: medicamento_id numérico viejo.
 
@@ -360,8 +370,6 @@ def test_hora_formato_invalido():
 def test_fecha_inicio_formato_invalido():
     """
     CASO INVÁLIDO: fecha_inicio con formato incorrecto.
-
-    El proyecto espera fechas en formato mm/dd/yyyy.
     """
     data = recordatorio_valido()
     data["fecha_inicio"] = "2026-03-25"
@@ -374,8 +382,6 @@ def test_fecha_inicio_formato_invalido():
 def test_activo_invalido():
     """
     CASO INVÁLIDO: activo fuera de los valores permitidos.
-
-    activo solo puede ser 0 o 1.
     """
     data = recordatorio_valido()
     data["activo"] = 5
@@ -412,8 +418,6 @@ def test_hora_limite_superior():
 def test_recordatorio_inactivo():
     """
     CASO VÁLIDO: recordatorio con activo = 0.
-
-    Esto representa un recordatorio inactivo.
     """
     data = recordatorio_valido()
     data["activo"] = 0
@@ -494,8 +498,6 @@ def test_post_recordatorio_exitoso(monkeypatch):
     3. Obtiene el paciente_id desde el medicamento.
     4. Inserta el recordatorio en recordatorios_col.
     5. Retorna el id creado.
-
-    Por eso se mockean medicamentos_col y recordatorios_col.
     """
     data = recordatorio_valido()
 
@@ -588,6 +590,37 @@ def test_post_recordatorio_medicamento_no_existe(monkeypatch):
     assert response.json()["detail"] == "El medicamento no existe"
 
 
+def test_post_recordatorio_medicamento_sin_paciente(monkeypatch):
+    """
+    CASO INVÁLIDO: el medicamento existe, pero no tiene paciente_id.
+
+    La ruta debe responder 400 porque no puede asociar el recordatorio
+    a ningún paciente.
+    """
+    data = recordatorio_valido()
+
+    medicamento_sin_paciente = medicamento_mongo()
+    medicamento_sin_paciente.pop("paciente_id", None)
+
+    medicamentos_col_falsa = ColeccionFalsa([
+        medicamento_sin_paciente
+    ])
+
+    monkeypatch.setattr(
+        "backend.routes.reminder_route.medicamentos_col",
+        medicamentos_col_falsa
+    )
+
+    response = client.post(
+        "/recordatorios/",
+        json=data,
+        headers=headers_auth()
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "El medicamento no tiene paciente asociado"
+
+
 # =========================
 # ENDPOINT GET /recordatorios/{paciente_id}
 # =========================
@@ -595,10 +628,6 @@ def test_post_recordatorio_medicamento_no_existe(monkeypatch):
 def test_get_recordatorios_lista_vacia(monkeypatch):
     """
     CASO SIN REGISTROS: el paciente no tiene recordatorios.
-
-    La ruta actual no consulta SQLite ni valida si el paciente existe.
-    Solo busca recordatorios_col.find({"paciente_id": paciente_id}).
-    Si no hay resultados, retorna una lista vacía.
     """
     recordatorios_col_falsa = ColeccionFalsa([])
 
@@ -619,12 +648,6 @@ def test_get_recordatorios_lista_vacia(monkeypatch):
 def test_get_recordatorios_exitoso(monkeypatch):
     """
     CASO VÁLIDO: el paciente tiene un recordatorio.
-
-    Se simulan:
-    - recordatorios_col con un recordatorio activo.
-    - medicamentos_col con el medicamento asociado.
-
-    La ruta debe serializar el recordatorio incluyendo datos del medicamento.
     """
     recordatorios_col_falsa = ColeccionFalsa([
         recordatorio_mongo()
@@ -668,8 +691,6 @@ def test_get_recordatorios_exitoso(monkeypatch):
 def test_get_panel_dia_exitoso(monkeypatch):
     """
     CASO VÁLIDO: panel diario con un paciente y un recordatorio activo.
-
-    Esta prueba cubre la ruta GET /recordatorios/panel-dia.
 
     Para evitar diferencias entre entornos Linux/Windows al comparar ObjectId
     contra string, el recordatorio se construye usando explícitamente el mismo
@@ -741,6 +762,7 @@ def test_get_panel_dia_exitoso(monkeypatch):
     assert cuerpo["panel"][0]["medicamentos"][0]["dosis"] == "1 tableta"
     assert cuerpo["panel"][0]["medicamentos"][0]["hora"] == "08:30"
     assert cuerpo["panel"][0]["medicamentos"][0]["tomado"] is False
+
 
 def test_get_recordatorios_retrasados_exitoso(monkeypatch):
     """

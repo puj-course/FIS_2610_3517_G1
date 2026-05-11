@@ -1,4 +1,4 @@
-﻿# tests/test_validar_medicamento.py
+# tests/test_validar_medicamento.py
 # Pruebas funcionales para validar_medicamento()
 
 from backend.validaciones import validar_medicamento
@@ -248,6 +248,14 @@ class TestPacienteId:
     def test_paciente_id_como_texto_no_objectid_es_invalido(self):
         data = medicamento_valido()
         data["paciente_id"] = "abc"
+
+        errores = validar_medicamento(data)
+
+        assert "El paciente_id debe ser un ObjectId válido" in errores
+
+    def test_paciente_id_con_formato_invalido(self):
+        data = medicamento_valido()
+        data["paciente_id"] = "123456"
 
         errores = validar_medicamento(data)
 

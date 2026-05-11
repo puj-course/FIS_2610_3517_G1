@@ -1,10 +1,10 @@
-from backend.models import get_connection
+from backend.database import tomas_col
+
 
 class TomaRepository:
     """
-    Patrón Repository para el acceso a la tabla de tomas.
-    Centraliza todas las operaciones de la base de datos relacionadas con las tomas,
-    desacoplando la lógica de negocio del acceso directo a la BD.
+    Patrón Repository para el acceso a la colección de tomas en MongoDB.
+    Centraliza las operaciones de base de datos relacionadas con las tomas.
     """
 
     def registrar_toma(
@@ -14,49 +14,43 @@ class TomaRepository:
         fecha,
         hora_programada,
         hora_tomada=None,
-        estado='pendiente',
+        estado="pendiente",
         observaciones=None
     ):
-        """
-        Registra una nueva toma en la base de datos.
-        """
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO tomas (
-                medicamento_id,
-                paciente_id,
-                fecha,
-                hora_programada,
-                hora_tomada,
-                estado,
-                observaciones
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            medicamento_id,
-            paciente_id,
-            fecha,
-            hora_programada,
-            hora_tomada,
-            estado,
-            observaciones
-        ))
-        conn.commit()
-        toma_id = cursor.lastrowid
-        conn.close()
-        return toma_id
+        documento = {
+            "medicamento_id": str(medicamento_id),
+            "paciente_id": str(paciente_id),
+            "fecha": fecha,
+            "hora_programada": hora_programada,
+            "hora_tomada": hora_tomada,
+            "estado": estado,
+            "observaciones": observaciones
+        }
+
+        resultado = tomas_col.insert_one(documento)
+
+        return str(resultado.inserted_id)
 
     def obtener_tomas_del_dia(self, paciente_id, fecha):
-        """
-        Retorna todas las tomas del día de un paciente específico.
-        """
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT * FROM tomas
-            WHERE paciente_id = ? AND fecha = ?
-        """, (paciente_id, fecha))
-        tomas = cursor.fetchall()
-        conn.close()
-        return tomas
+        tomas = list(
+            tomas_col.find({
+                "paciente_id": str(paciente_id),
+                "fecha": fecha
+            }).sort("hora_programada", 1)
+        )
+
+        resultado = []
+
+        for t in tomas:
+            resultado.append({
+                "id": str(t.get("_id")),
+                "medicamento_id": t.get("medicamento_id"),
+                "paciente_id": t.get("paciente_id"),
+                "fecha": t.get("fecha"),
+                "hora_programada": t.get("hora_programada"),
+                "hora_tomada": t.get("hora_tomada"),
+                "estado": t.get("estado"),
+                "observaciones": t.get("observaciones")
+            })
+
+        return resultado

@@ -1,19 +1,93 @@
 ﻿from datetime import datetime
+from typing import Optional
+
 from bson import ObjectId
+from bson.errors import InvalidId
 
 from backend.database import pacientes_col, medicamentos_col, tomas_col
 
 
+FORMATO_FECHA = "%m/%d/%Y"
+ESTADOS_TOMA_REALIZADA = {"tomado", "tomada", "a_tiempo", "tarde"}
+ESTADOS_MEDICAMENTO_INACTIVO = {"inactivo", "suspendido", "finalizado"}
+
+
 class ResumenPacienteService:
     def obtener_paciente(self, paciente_id: str):
-        try:
-            paciente = pacientes_col.find_one({"_id": ObjectId(paciente_id)})
-        except Exception:
-            paciente = pacientes_col.find_one({"id": paciente_id})
+        paciente = self._buscar_paciente(paciente_id)
 
         if not paciente:
             return None
 
+        return self._serializar_paciente_completo(paciente)
+
+    def obtener_medicamentos_activos(self, paciente_id: str):
+        medicamentos = list(
+            medicamentos_col.find({"paciente_id": str(paciente_id)})
+        )
+
+        resultado = [
+            self._serializar_medicamento(medicamento)
+            for medicamento in medicamentos
+            if self._medicamento_esta_activo(medicamento)
+        ]
+
+        resultado.sort(key=lambda item: item.get("nombre", ""))
+        return resultado
+
+    def obtener_historial_formateado(self, paciente_id: str):
+        tomas = list(tomas_col.find({"paciente_id": str(paciente_id)}))
+
+        historial = [
+            self._serializar_toma(toma, paciente_id)
+            for toma in tomas
+        ]
+
+        historial.sort(key=lambda item: item.get("fecha_programada", ""))
+        return historial
+
+    def construir_resumen(self, paciente_id: str):
+        paciente = self.obtener_paciente(paciente_id)
+
+        if not paciente:
+            raise LookupError("Paciente no encontrado")
+
+        medicamentos = self.obtener_medicamentos_activos(paciente_id)
+        historial = self.obtener_historial_formateado(paciente_id)
+        cumplimiento = self._construir_cumplimiento(medicamentos, historial)
+
+        return {
+            "paciente": self._serializar_paciente_resumen(paciente),
+            "medicamentos_activos": medicamentos,
+            "historial": historial,
+            "cumplimiento": cumplimiento,
+            "alertas": [],
+        }
+
+    def _buscar_paciente(self, paciente_id: str):
+        try:
+            paciente = pacientes_col.find_one({"_id": ObjectId(paciente_id)})
+            if paciente:
+                return paciente
+        except (InvalidId, TypeError):
+            pass
+
+        return pacientes_col.find_one({"id": paciente_id})
+
+    def _buscar_medicamento(self, medicamento_id: str):
+        if not medicamento_id:
+            return None
+
+        try:
+            medicamento = medicamentos_col.find_one({"_id": ObjectId(medicamento_id)})
+            if medicamento:
+                return medicamento
+        except (InvalidId, TypeError):
+            pass
+
+        return medicamentos_col.find_one({"id": medicamento_id})
+
+    def _serializar_paciente_completo(self, paciente: dict) -> dict:
         return {
             "id": str(paciente.get("_id", paciente.get("id", ""))),
             "nombres": paciente.get("nombres", ""),
@@ -29,192 +103,192 @@ class ResumenPacienteService:
             "observaciones_adicionales": paciente.get("observaciones_adicionales", ""),
         }
 
-    def obtener_medicamentos_activos(self, paciente_id: str):
-        medicamentos = list(
-            medicamentos_col.find({"paciente_id": str(paciente_id)})
-        )
+    def _serializar_paciente_resumen(self, paciente: dict) -> dict:
+        return {
+            "id": paciente["id"],
+            "nombres": paciente["nombres"],
+            "apellidos": paciente["apellidos"],
+            "tipo_documento": paciente["tipo_documento"],
+            "numero_documento": paciente["numero_documento"],
+            "telefono_contacto": paciente["telefono_contacto"],
+            "eps_aseguradora": paciente["eps_aseguradora"],
+            "diagnostico_principal": paciente["diagnostico_principal"],
+        }
 
-        resultado = []
+    def _medicamento_esta_activo(self, medicamento: dict) -> bool:
+        activo = medicamento.get("activo", True)
+        estado = str(medicamento.get("estado", "activo")).lower()
 
-        for medicamento in medicamentos:
-            activo = medicamento.get("activo", True)
-            estado = str(medicamento.get("estado", "activo")).lower()
+        if activo is False or activo == 0:
+            return False
 
-            if activo is False or activo == 0 or estado in {"inactivo", "suspendido", "finalizado"}:
-                continue
+        return estado not in ESTADOS_MEDICAMENTO_INACTIVO
 
-            resultado.append({
-                "id": str(medicamento.get("_id", medicamento.get("id", ""))),
-                "nombre": medicamento.get("nombre", ""),
-                "dosis": medicamento.get("dosis", ""),
-                "frecuencia": medicamento.get("frecuencia", ""),
-                "horario": medicamento.get("horario", ""),
-                "fecha_inicio": medicamento.get("fecha_inicio", ""),
-                "fecha_fin": medicamento.get("fecha_fin", ""),
-                "observaciones": medicamento.get("observaciones", ""),
-                "paciente_id": medicamento.get("paciente_id", ""),
-            })
+    def _serializar_medicamento(self, medicamento: dict) -> dict:
+        return {
+            "id": str(medicamento.get("_id", medicamento.get("id", ""))),
+            "nombre": medicamento.get("nombre", ""),
+            "dosis": medicamento.get("dosis", ""),
+            "frecuencia": medicamento.get("frecuencia", ""),
+            "horario": medicamento.get("horario", ""),
+            "fecha_inicio": medicamento.get("fecha_inicio", ""),
+            "fecha_fin": medicamento.get("fecha_fin", ""),
+            "observaciones": medicamento.get("observaciones", ""),
+            "paciente_id": medicamento.get("paciente_id", ""),
+        }
 
-        resultado.sort(key=lambda item: item.get("nombre", ""))
-        return resultado
+    def _obtener_nombre_medicamento(self, toma: dict) -> str:
+        nombre_guardado = toma.get("nombre", toma.get("medicamento_nombre", ""))
 
-    def obtener_historial_formateado(self, paciente_id: str):
-        tomas = list(
-            tomas_col.find({"paciente_id": str(paciente_id)})
-        )
+        if nombre_guardado:
+            return nombre_guardado
 
-        historial = []
+        medicamento = self._buscar_medicamento(toma.get("medicamento_id"))
 
-        for toma in tomas:
-            medicamento_id = toma.get("medicamento_id")
-            medicamento_nombre = toma.get("nombre", toma.get("medicamento_nombre", ""))
+        if not medicamento:
+            return ""
 
-            if medicamento_id and not medicamento_nombre:
-                try:
-                    medicamento = medicamentos_col.find_one({"_id": ObjectId(medicamento_id)})
-                except Exception:
-                    medicamento = medicamentos_col.find_one({"id": medicamento_id})
+        return medicamento.get("nombre", "")
 
-                if medicamento:
-                    medicamento_nombre = medicamento.get("nombre", "")
+    def _extraer_fecha_hora_programada(self, toma: dict) -> tuple[str, str]:
+        fecha = toma.get("fecha", "")
+        hora_programada = toma.get("hora_programada", "")
+        fecha_programada = str(toma.get("fecha_programada", ""))
 
-            fecha_programada = toma.get("fecha_programada", "")
-            fecha_hora_toma = toma.get("fecha_hora_toma")
+        if not fecha_programada:
+            return fecha, hora_programada
 
-            fecha = toma.get("fecha", "")
-            hora_programada = toma.get("hora_programada", "")
-            hora_tomada = toma.get("hora_tomada")
+        partes = fecha_programada.split(" ")
+        fecha = fecha or partes[0]
+        hora_programada = hora_programada or self._obtener_segunda_parte(partes)
 
-            if fecha_programada:
-                partes = str(fecha_programada).split(" ")
-                fecha = fecha or partes[0]
-                hora_programada = hora_programada or (
-                    partes[1] if len(partes) > 1 else ""
-                )
+        return fecha, hora_programada
 
-            if fecha_hora_toma:
-                partes_toma = str(fecha_hora_toma).split(" ")
-                hora_tomada = (
-                    partes_toma[1]
-                    if len(partes_toma) > 1
-                    else str(fecha_hora_toma)
-                )
+    def _extraer_hora_tomada(self, toma: dict):
+        hora_tomada = toma.get("hora_tomada")
+        fecha_hora_toma = toma.get("fecha_hora_toma")
 
-            historial.append({
-                "id": str(toma.get("_id", toma.get("id", ""))),
-                "paciente_id": toma.get("paciente_id", str(paciente_id)),
-                "medicamento_id": medicamento_id,
-                "recordatorio_id": toma.get("recordatorio_id"),
-                "medicamento": medicamento_nombre,
-                "medicamento_nombre": medicamento_nombre,
-                "fecha": fecha,
-                "hora_programada": hora_programada,
-                "hora_tomada": hora_tomada,
-                "hora_tomado": hora_tomada,
-                "fecha_programada": fecha_programada,
-                "fecha_hora_toma": fecha_hora_toma,
-                "diferencia_minutos": toma.get("diferencia_minutos"),
-                "estado": toma.get("estado", "pendiente"),
-                "observaciones": toma.get("observaciones", ""),
-            })
+        if not fecha_hora_toma:
+            return hora_tomada
 
-        historial.sort(key=lambda item: item.get("fecha_programada", ""))
-        return historial
+        partes = str(fecha_hora_toma).split(" ")
+        return self._obtener_segunda_parte(partes) or str(fecha_hora_toma)
 
-    def _calcular_tomas_esperadas(self, medicamentos):
-        try:
-            formato_fecha = "%m/%d/%Y"
-            total = 0
-            hoy = datetime.today().date()
+    def _obtener_segunda_parte(self, partes: list[str]) -> str:
+        return partes[1] if len(partes) > 1 else ""
 
-            for medicamento in medicamentos:
-                fecha_inicio_str = medicamento.get("fecha_inicio", "")
-                fecha_fin_str = medicamento.get("fecha_fin", "")
+    def _serializar_toma(self, toma: dict, paciente_id: str) -> dict:
+        fecha, hora_programada = self._extraer_fecha_hora_programada(toma)
+        hora_tomada = self._extraer_hora_tomada(toma)
+        medicamento_nombre = self._obtener_nombre_medicamento(toma)
 
-                if not fecha_inicio_str:
-                    continue
+        return {
+            "id": str(toma.get("_id", toma.get("id", ""))),
+            "paciente_id": toma.get("paciente_id", str(paciente_id)),
+            "medicamento_id": toma.get("medicamento_id"),
+            "recordatorio_id": toma.get("recordatorio_id"),
+            "medicamento": medicamento_nombre,
+            "medicamento_nombre": medicamento_nombre,
+            "fecha": fecha,
+            "hora_programada": hora_programada,
+            "hora_tomada": hora_tomada,
+            "hora_tomado": hora_tomada,
+            "fecha_programada": toma.get("fecha_programada", ""),
+            "fecha_hora_toma": toma.get("fecha_hora_toma"),
+            "diferencia_minutos": toma.get("diferencia_minutos"),
+            "estado": toma.get("estado", "pendiente"),
+            "observaciones": toma.get("observaciones", ""),
+        }
 
-                inicio = datetime.strptime(fecha_inicio_str, formato_fecha).date()
-                fin = (
-                    datetime.strptime(fecha_fin_str, formato_fecha).date()
-                    if fecha_fin_str
-                    else hoy
-                )
-
-                dias = (min(fin, hoy) - inicio).days + 1
-
-                if dias < 1:
-                    continue
-
-                horarios = [
-                    horario.strip()
-                    for horario in medicamento.get("horario", "").split(",")
-                    if horario.strip()
-                ]
-
-                tomas_por_dia = len(horarios) if horarios else 1
-                total += dias * tomas_por_dia
-
-            return total if total > 0 else None
-        except Exception:
+    def _parsear_fecha(self, fecha: str):
+        if not fecha:
             return None
 
-    def construir_resumen(self, paciente_id: str):
-        paciente = self.obtener_paciente(paciente_id)
+        try:
+            return datetime.strptime(fecha, FORMATO_FECHA).date()
+        except ValueError:
+            return None
 
-        if not paciente:
-            raise LookupError("Paciente no encontrado")
+    def _obtener_horarios(self, medicamento: dict) -> list[str]:
+        return [
+            horario.strip()
+            for horario in medicamento.get("horario", "").split(",")
+            if horario.strip()
+        ]
 
-        medicamentos = self.obtener_medicamentos_activos(paciente_id)
-        historial = self.obtener_historial_formateado(paciente_id)
+    def _calcular_dias_tratamiento(self, medicamento: dict):
+        inicio = self._parsear_fecha(medicamento.get("fecha_inicio", ""))
 
-        tomas_realizadas = sum(
-            1 for toma in historial
-            if toma.get("estado") in ["tomado", "tomada", "a_tiempo", "tarde"]
+        if not inicio:
+            return 0
+
+        hoy = datetime.today().date()
+        fin = self._parsear_fecha(medicamento.get("fecha_fin", "")) or hoy
+        dias = (min(fin, hoy) - inicio).days + 1
+
+        return max(dias, 0)
+
+    def _calcular_tomas_medicamento(self, medicamento: dict) -> int:
+        dias = self._calcular_dias_tratamiento(medicamento)
+
+        if dias < 1:
+            return 0
+
+        horarios = self._obtener_horarios(medicamento)
+        tomas_por_dia = len(horarios) if horarios else 1
+
+        return dias * tomas_por_dia
+
+    def _calcular_tomas_esperadas(self, medicamentos):
+        total = sum(
+            self._calcular_tomas_medicamento(medicamento)
+            for medicamento in medicamentos
         )
 
-        tomas_omitidas = sum(
+        return total if total > 0 else None
+
+    def _contar_tomas_por_estado(self, historial: list[dict], estados: set[str]) -> int:
+        return sum(
             1 for toma in historial
-            if toma.get("estado") == "omitida"
+            if toma.get("estado") in estados
         )
 
-        tomas_pendientes = sum(
-            1 for toma in historial
-            if toma.get("estado") == "pendiente"
+    def _calcular_porcentaje_cumplimiento(
+        self,
+        tomas_realizadas: int,
+        total_para_porcentaje: int,
+    ) -> float:
+        if total_para_porcentaje <= 0:
+            return 0
+
+        return round((tomas_realizadas / total_para_porcentaje) * 100, 1)
+
+    def _construir_cumplimiento(
+        self,
+        medicamentos: list[dict],
+        historial: list[dict],
+    ) -> dict:
+        tomas_realizadas = self._contar_tomas_por_estado(
+            historial,
+            ESTADOS_TOMA_REALIZADA,
         )
+        tomas_omitidas = self._contar_tomas_por_estado(historial, {"omitida"})
+        tomas_pendientes = self._contar_tomas_por_estado(historial, {"pendiente"})
 
         total_esperado = self._calcular_tomas_esperadas(medicamentos)
-        total_para_porcentaje = total_esperado if total_esperado else len(historial)
-
-        porcentaje = (
-            round((tomas_realizadas / total_para_porcentaje) * 100, 1)
-            if total_para_porcentaje > 0
-            else 0
+        total_tomas = len(historial)
+        total_para_porcentaje = total_esperado or total_tomas
+        porcentaje = self._calcular_porcentaje_cumplimiento(
+            tomas_realizadas,
+            total_para_porcentaje,
         )
 
-        cumplimiento = {
-            "total_tomas": len(historial),
-            "total_esperado": total_esperado if total_esperado else len(historial),
+        return {
+            "total_tomas": total_tomas,
+            "total_esperado": total_esperado or total_tomas,
             "tomas_realizadas": tomas_realizadas,
             "tomas_omitidas": tomas_omitidas,
             "tomas_pendientes": tomas_pendientes,
             "porcentaje": porcentaje,
             "porcentaje_cumplimiento": porcentaje,
-        }
-
-        return {
-            "paciente": {
-                "id": paciente["id"],
-                "nombres": paciente["nombres"],
-                "apellidos": paciente["apellidos"],
-                "tipo_documento": paciente["tipo_documento"],
-                "numero_documento": paciente["numero_documento"],
-                "telefono_contacto": paciente["telefono_contacto"],
-                "eps_aseguradora": paciente["eps_aseguradora"],
-                "diagnostico_principal": paciente["diagnostico_principal"],
-            },
-            "medicamentos_activos": medicamentos,
-            "historial": historial,
-            "cumplimiento": cumplimiento,
-            "alertas": [],
         }

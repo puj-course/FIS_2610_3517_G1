@@ -47,7 +47,6 @@ def registrar_toma(datos: dict):
         return toma_service.registrar_toma(
             paciente_id=datos.get("paciente_id"),
             medicamento_id=datos.get("medicamento_id"),
-            recordatorio_id=datos.get("recordatorio_id"),
             fecha_programada=fecha_programada,
             fecha_hora_toma=fecha_hora_toma,
             estado=datos.get("estado", "tomada"),

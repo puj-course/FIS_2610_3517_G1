@@ -7,13 +7,9 @@ from backend.database import pacientes_col, medicamentos_col, tomas_col
 class ResumenPacienteService:
     def obtener_paciente(self, paciente_id: str):
         try:
-            paciente = pacientes_col.find_one({
-                "_id": ObjectId(paciente_id)
-            })
+            paciente = pacientes_col.find_one({"_id": ObjectId(paciente_id)})
         except Exception:
-            paciente = pacientes_col.find_one({
-                "id": paciente_id
-            })
+            paciente = pacientes_col.find_one({"id": paciente_id})
 
         if not paciente:
             return None
@@ -35,11 +31,8 @@ class ResumenPacienteService:
 
     def obtener_medicamentos_activos(self, paciente_id: str):
         medicamentos = list(
-            medicamentos_col.find({
-                "paciente_id": str(paciente_id)
-            }).sort("nombre", 1)
+            medicamentos_col.find({"paciente_id": str(paciente_id)}).sort("nombre", 1)
         )
-
         resultado = []
 
         for medicamento in medicamentos:
@@ -53,17 +46,24 @@ class ResumenPacienteService:
                 "fecha_fin": medicamento.get("fecha_fin", ""),
                 "observaciones": medicamento.get("observaciones", ""),
                 "paciente_id": medicamento.get("paciente_id", "")
+        for m in medicamentos:
+            resultado.append({
+                "id": str(m.get("_id", m.get("id", ""))),
+                "nombre": m.get("nombre", ""),
+                "dosis": m.get("dosis", ""),
+                "frecuencia": m.get("frecuencia", ""),
+                "horario": m.get("horario", ""),
+                "fecha_inicio": m.get("fecha_inicio", ""),
+                "fecha_fin": m.get("fecha_fin", ""),
+                "observaciones": m.get("observaciones", ""),
+                "paciente_id": m.get("paciente_id", "")
             })
-
         return resultado
 
     def obtener_historial_formateado(self, paciente_id: str):
         tomas = list(
-            tomas_col.find({
-                "paciente_id": str(paciente_id)
-            }).sort("fecha_programada", -1)
+            tomas_col.find({"paciente_id": str(paciente_id)}).sort("fecha_programada", -1)
         )
-
         historial = []
 
         for toma in tomas:
@@ -89,6 +89,25 @@ class ResumenPacienteService:
             fecha = toma.get("fecha", "")
             hora_programada = toma.get("hora_programada", "")
             hora_tomada = toma.get("hora_tomada")
+        for t in tomas:
+            medicamento_id = t.get("medicamento_id")
+            medicamento_nombre = t.get("nombre", t.get("medicamento_nombre", ""))
+
+            if medicamento_id and not medicamento_nombre:
+                try:
+                    med = medicamentos_col.find_one({"_id": ObjectId(medicamento_id)})
+                    if med:
+                        medicamento_nombre = med.get("nombre", "")
+                except Exception:
+                    med = medicamentos_col.find_one({"id": medicamento_id})
+                    if med:
+                        medicamento_nombre = med.get("nombre", "")
+
+            fecha_programada = t.get("fecha_programada", "")
+            fecha_hora_toma = t.get("fecha_hora_toma")
+            fecha = t.get("fecha", "")
+            hora_programada = t.get("hora_programada", "")
+            hora_tomada = t.get("hora_tomada")
 
             if fecha_programada:
                 partes = str(fecha_programada).split(" ")
@@ -110,6 +129,7 @@ class ResumenPacienteService:
                 "paciente_id": toma.get("paciente_id", str(paciente_id)),
                 "medicamento_id": medicamento_id,
                 "recordatorio_id": toma.get("recordatorio_id"),
+                "recordatorio_id": t.get("recordatorio_id"),
                 "medicamento": medicamento_nombre,
                 "medicamento_nombre": medicamento_nombre,
                 "fecha": fecha,
@@ -121,8 +141,10 @@ class ResumenPacienteService:
                 "diferencia_minutos": toma.get("diferencia_minutos"),
                 "estado": toma.get("estado", "pendiente"),
                 "observaciones": toma.get("observaciones", "")
+                "diferencia_minutos": t.get("diferencia_minutos"),
+                "estado": t.get("estado", "pendiente"),
+                "observaciones": t.get("observaciones", "")
             })
-
         return historial
 
     def _calcular_tomas_esperadas(self, medicamentos):
@@ -165,7 +187,6 @@ class ResumenPacienteService:
 
     def construir_resumen(self, paciente_id: str):
         paciente = self.obtener_paciente(paciente_id)
-
         if not paciente:
             raise LookupError("Paciente no encontrado")
 
@@ -186,7 +207,12 @@ class ResumenPacienteService:
             1 for toma in historial
             if toma.get("estado") == "pendiente"
         )
+        historial = HistorialTomas(historial_base)
+        historial = CumplimientoDecorator(historial)
+        historial = AlertasDecorator(historial)
+        historial_enriquecido = historial.obtener_datos()
 
+        cumplimiento = historial_enriquecido.get("cumplimiento", {})
         total_esperado = self._calcular_tomas_esperadas(medicamentos)
         total_para_porcentaje = total_esperado if total_esperado else len(historial)
 
@@ -205,6 +231,10 @@ class ResumenPacienteService:
             "porcentaje": porcentaje,
             "porcentaje_cumplimiento": porcentaje
         }
+        if total_esperado:
+            tomas_realizadas = cumplimiento.get("tomas_realizadas", 0)
+            cumplimiento["total_tomas"] = total_esperado
+            cumplimiento["porcentaje"] = round((tomas_realizadas / total_esperado * 100), 1) if total_esperado > 0 else 0
 
         return {
             "paciente": {
@@ -221,4 +251,7 @@ class ResumenPacienteService:
             "historial": historial,
             "cumplimiento": cumplimiento,
             "alertas": []
+            "historial": historial_enriquecido.get("historial", []),
+            "cumplimiento": cumplimiento,
+            "alertas": historial_enriquecido.get("alertas", [])
         }

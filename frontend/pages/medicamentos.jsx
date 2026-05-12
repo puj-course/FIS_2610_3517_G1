@@ -28,7 +28,7 @@ const estilos = `
   .med-boton-volver { background: none; border: 1.5px solid var(--color-borde); color: var(--color-texto-suave); border-radius: 10px; padding: .5rem 1rem; font-size: .85rem; font-family: 'DM Sans', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: .4rem; transition: border-color .2s, color .2s; margin-bottom: 1.5rem; }
   .med-boton-volver:hover { border-color: var(--color-menta); color: var(--color-menta); }
   .med-paciente-header { background: var(--color-tarjeta); border: 1px solid var(--color-borde); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; }
-  .med-card { background: var(--color-tarjeta); border: 1px solid var(--color-borde); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; animation: med-aparecer .3s ease both; transition: border-color .2s; }
+  .med-paciente-card { background: var(--color-tarjeta); border: 1px solid var(--color-borde); border-radius: 14px; padding: 1.1rem 1.4rem; margin-bottom: .85rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: border-color .2s, box-shadow .2s; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif; color: var(--color-texto); }
   .med-card:hover { border-color: rgba(45,212,191,.3); }
   .med-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .85rem; }
   .med-icono { width: 38px; height: 38px; background: rgba(45,212,191,.12); border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -143,9 +143,9 @@ export default function Medicamentos() {
             <p className="med-paciente-nombre">{p.nombres} {p.apellidos}</p>
             <p className="med-paciente-datos">{p.diagnostico_principal || "Sin diagnóstico registrado"}</p>
           </div>
-          
           <div className="med-paciente-flecha"><IconChevronRight /></div>
         </button>
+      ))}
       ))}
     </div>
   );

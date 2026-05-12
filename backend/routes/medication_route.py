@@ -1,11 +1,14 @@
 ﻿# medication_route.py
-from fastapi import APIRouter, HTTPException
-from backend.validaciones import validar_medicamento
-from backend.database import medicamentos_col, pacientes_col
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Depends
 from bson import ObjectId
 
-router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
+from backend.validaciones import validar_medicamento
+from backend.database import medicamentos_col, pacientes_col
+from backend.routes.reminder_route import obtener_usuario_actual
 
+router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
 
 @router.post("/")
 def registrar_medicamento(data: dict):

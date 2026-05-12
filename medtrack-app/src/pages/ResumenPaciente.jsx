@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import api from "../api";
 
@@ -56,14 +56,11 @@ const css = `
   .rp-metrica-valor.verde { color: var(--color-exito); }
   .rp-metrica-valor.menta { color: var(--color-menta); }
   .rp-metrica-valor.amarillo { color: var(--color-advertencia); }
-  .rp-metrica-valor.rojo { color: var(--color-error); }
   .rp-metrica-etiqueta { font-size: .78rem; color: var(--color-texto-suave); text-transform: uppercase; letter-spacing: .05em; }
-  .rp-barra-contenedor { margin-top: 1.2rem; }
-  .rp-barra-label { display: flex; justify-content: space-between; font-size: .82rem; color: var(--color-texto-suave); margin-bottom: .4rem; }
-  .rp-barra-progreso { height: 8px; background: var(--color-campo); border-radius: 99px; overflow: hidden; }
-  .rp-barra-relleno { height: 100%; border-radius: 99px; background: var(--color-menta); transition: width .6s ease; }
   .rp-lista-alertas { list-style: none; padding: 0; margin: 0; }
   .rp-alerta-item { display: flex; align-items: flex-start; gap: .75rem; padding: .9rem 1rem; border-radius: 12px; border: 1px solid var(--color-borde); margin-bottom: .6rem; background: var(--color-campo); }
+  .rp-alerta-item.alta { border-color: rgba(244,114,106,.4); background: rgba(244,114,106,.07); }
+  .rp-alerta-item.media { border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.07); }
   .rp-alerta-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: .35rem; }
   .rp-alerta-dot.alta { background: var(--color-error); }
   .rp-alerta-dot.media { background: var(--color-advertencia); }
@@ -91,18 +88,16 @@ function formatearPorcentaje(valor) {
 }
 
 export default function ResumenPaciente() {
-  // ✅ CORREGIDO: usar useSearchParams en vez de window.location.search
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  // MongoDB: el id es un string ObjectId
   const pacienteId = searchParams.get('id');
 
-  const [estado,     setEstado]     = useState('cargando');
-  const [errorMsg,   setErrorMsg]   = useState('');
-  const [paciente,   setPaciente]   = useState(null);
-  const [resumen,    setResumen]    = useState(null);
-  const [pct,        setPct]        = useState(0);
-  const [pctVisible, setPctVisible] = useState(0);
+  const [estado,    setEstado]    = useState('cargando');
+  const [errorMsg,  setErrorMsg]  = useState('');
+  const [paciente,  setPaciente]  = useState(null);
+  const [resumen,   setResumen]   = useState(null);
+  const [alertasRT, setAlertasRT] = useState([]);
+  const disparadas = useRef(new Set());
 
   useEffect(() => {
     if (!pacienteId) {
@@ -112,10 +107,6 @@ export default function ResumenPaciente() {
     }
     cargar();
   }, [pacienteId]);
-
-  useEffect(() => {
-    if (pct > 0) setTimeout(() => setPctVisible(pct), 50);
-  }, [pct]);
 
   async function cargar() {
     try {
@@ -135,13 +126,10 @@ export default function ResumenPaciente() {
         setEstado('error');
         return;
       }
-      // Normalizar _id de MongoDB
       const p = resPaciente.body;
       if (p._id && !p.id) p.id = p._id;
       setPaciente(p);
       setResumen(resResumen.body);
-      const pctBase = resResumen.body.porcentaje_cumplimiento ?? 0;
-      setPct(Math.max(0, Math.min(100, Number(pctBase) || 0)));
       setEstado('listo');
     } catch (error) {
       console.error(error);
@@ -150,10 +138,54 @@ export default function ResumenPaciente() {
     }
   }
 
+  useEffect(() => {
+    if (!pacienteId || estado !== 'listo') return;
+    let t;
+    function revisar(panelData) {
+      const ahora = new Date().getHours() * 60 + new Date().getMinutes();
+      const nuevas = [];
+      const pacientePanel = panelData.find(p =>
+        String(p.id) === String(pacienteId) ||
+        String(p.paciente_id) === String(pacienteId)
+      );
+      if (!pacientePanel) return;
+      (pacientePanel.medicamentos || []).forEach(med => {
+        if (med.tomado) return;
+        const [h, m] = med.hora.split(':').map(Number);
+        const horaMin = h * 60 + m;
+        const diff = horaMin - ahora;
+        const k15 = `rec_${med.medicamento}_${med.hora}`;
+        const k5  = `per_${med.medicamento}_${med.hora}`;
+        if (diff >= 13 && diff <= 16 && !disparadas.current.has(k15)) {
+          disparadas.current.add(k15);
+          nuevas.push({ id: k15, tipo: 'recordatorio', medicamento: med.medicamento, hora: med.hora, minutos: diff });
+        }
+        if (diff <= -5 && !disparadas.current.has(k5)) {
+          disparadas.current.add(k5);
+          nuevas.push({ id: k5, tipo: 'perdida', medicamento: med.medicamento, hora: med.hora });
+        }
+      });
+      if (nuevas.length) {
+        setAlertasRT(prev => [...prev, ...nuevas]);
+        nuevas.forEach(a => {
+          if (a.tipo === 'recordatorio')
+            setTimeout(() => setAlertasRT(prev => prev.filter(x => x.id !== a.id)), 15 * 60 * 1000);
+        });
+      }
+    }
+    api.obtenerPanelCompleto().then(res => {
+      if (!res.ok) return;
+      const panelData = res.body.panel || [];
+      revisar(panelData);
+      t = setInterval(() => revisar(panelData), 30000);
+    });
+    return () => clearInterval(t);
+  }, [pacienteId, estado]);
+
   const renderPerfil = () => {
     if (!paciente) return null;
     const nombreCompleto = ((paciente.nombres || '') + ' ' + (paciente.apellidos || '')).trim() || 'Paciente sin nombre';
-    const meta = [paciente.tipo_documento, paciente.numero_documento, paciente.diagnostico_principal].filter(Boolean).join(' · ') || 'Sin información adicional';
+    const meta = [paciente.tipo_documento, paciente.numero_documento, paciente.diagnostico_principal].filter(Boolean).join(' - ') || 'Sin información adicional';
     const campos = [
       { label: 'Fecha de nacimiento', valor: paciente.fecha_nacimiento },
       { label: 'Género',              valor: paciente.genero },
@@ -194,9 +226,7 @@ export default function ResumenPaciente() {
     const medicamentosActivos = resumen.total_medicamentos_activos ?? 0;
     const tomasRealizadas     = resumen.tomas_realizadas ?? resumen.tomas_registradas_hoy ?? 0;
     const tomasPendientes     = resumen.tomas_atrasadas ?? ((resumen.tomas_pendientes ?? 0) + (resumen.tomas_omitidas ?? 0));
-    const pctTexto  = formatearPorcentaje(pct) + '%';
-    const colorPct  = pct >= 80 ? 'verde' : pct >= 50 ? 'amarillo' : 'rojo';
-    const alertas   = resumen.alertas_activas || [];
+    const alertas = [...alertasRT, ...(resumen.alertas_activas || resumen.alertas || [])];
 
     return (
       <>
@@ -215,31 +245,38 @@ export default function ResumenPaciente() {
               <div className="rp-metrica-valor amarillo">{tomasPendientes}</div>
               <div className="rp-metrica-etiqueta">Pendientes u omitidas</div>
             </div>
-            <div className="rp-metrica">
-              <div className={`rp-metrica-valor ${colorPct}`}>{pctTexto}</div>
-              <div className="rp-metrica-etiqueta">Cumplimiento</div>
-            </div>
-          </div>
-          <div className="rp-barra-contenedor">
-            <div className="rp-barra-label"><span>Cumplimiento del tratamiento</span><span>{pctTexto}</span></div>
-            <div className="rp-barra-progreso">
-              <div className="rp-barra-relleno" style={{ width: `${pctVisible}%` }} />
-            </div>
           </div>
         </div>
+
         <div className="rp-tarjeta">
           <h2 className="rp-titulo-seccion">Alertas activas</h2>
           <ul className="rp-lista-alertas">
             {alertas.length === 0 ? (
-              <li className="rp-sin-alertas">✓ Sin alertas activas</li>
+              <li className="rp-sin-alertas">Sin alertas activas</li>
             ) : alertas.map((alerta, i) => {
-              const severidad = (alerta.severidad || 'baja').toLowerCase();
+              const esRT = alerta.tipo === 'recordatorio' || alerta.tipo === 'perdida';
+              const severidad = esRT
+                ? (alerta.tipo === 'perdida' ? 'alta' : 'media')
+                : (alerta.severidad || 'baja').toLowerCase();
+              const mensaje = esRT
+                ? alerta.tipo === 'recordatorio'
+                  ? `🔔 En ${alerta.minutos} min: ${alerta.medicamento} a las ${alerta.hora}`
+                  : `⚠️ Toma no registrada: ${alerta.medicamento} debía tomarse a las ${alerta.hora}`
+                : (alerta.mensaje || 'Alerta sin descripción');
               return (
-                <li key={i} className="rp-alerta-item">
+                <li key={i} className={`rp-alerta-item ${severidad}`}>
                   <span className={`rp-alerta-dot ${severidad}`} />
                   <div>
-                    <div className="rp-alerta-mensaje">{alerta.mensaje || 'Alerta sin descripción'}</div>
+                    <div className="rp-alerta-mensaje">{mensaje}</div>
                     {alerta.fecha_creacion && <div className="rp-alerta-fecha">{alerta.fecha_creacion}</div>}
+                    {esRT && (
+                      <button
+                        onClick={() => setAlertasRT(prev => prev.filter(x => x.id !== alerta.id))}
+                        style={{ background: 'none', border: 'none', color: 'var(--color-texto-suave)', cursor: 'pointer', fontSize: '.75rem', marginTop: '.25rem' }}
+                      >
+                        cerrar
+                      </button>
+                    )}
                   </div>
                 </li>
               );
@@ -265,9 +302,8 @@ export default function ResumenPaciente() {
           </div>
           <span className="rp-marca-nombre">MedTrack</span>
         </div>
-        {}
         <button className="rp-boton-volver" onClick={() => navigate('/pacientes')}>
-          ← Volver a pacientes
+          Volver a pacientes
         </button>
       </div>
 

@@ -14,8 +14,6 @@ from starlette.authentication import (
 )
 
 
-# Rutas públicas que no requieren token.
-# Se dejan con "/" porque conn.scope["path"] devuelve rutas tipo "/docs".
 unauthenticated_endpoints = [
     "/signup",
     "/signin",
@@ -53,12 +51,9 @@ class BearerAuthBackend(AuthenticationBackend):
         route = conn.scope.get("path", "")
         method = conn.scope.get("method", "")
 
-        # Permite que pytest ejecute endpoints sin bloquear por autenticación.
-        # Solo se activa cuando TESTING=1 en el workflow o entorno de pruebas.
         if os.getenv("TESTING") == "1":
             return AuthCredentials(["test"]), SimpleUser("test")
 
-        # Permite rutas públicas y solicitudes preflight de CORS.
         if route in unauthenticated_endpoints or method == "OPTIONS":
             return AuthCredentials(["public"]), SimpleUser("public")
 
@@ -81,9 +76,12 @@ class BearerAuthBackend(AuthenticationBackend):
 
     def validate_token(self, token):
         try:
+            secret = os.getenv("SECRET_KEY")
+            if not secret:
+                raise AuthenticationError("SECRET_KEY no configurada en el servidor")
             decoded = jwt.decode(
                 token,
-                os.getenv("SECRET_KEY"),
+                secret,
                 algorithms=["HS256"]
             )
             return decoded

@@ -233,7 +233,7 @@ def listar_recordatorios(paciente_id: str):
         resultado.append(serializar_recordatorio(r, medicamento))
     return {"recordatorios": resultado}
 
-    @router.get("/retrasados/{paciente_id}")
+@router.get("/retrasados/{paciente_id}")
 def listar_recordatorios_retrasados(paciente_id: str):
     recordatorios = list(recordatorios_col.find({
         "paciente_id": paciente_id,

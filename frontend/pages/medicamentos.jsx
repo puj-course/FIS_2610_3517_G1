@@ -18,7 +18,7 @@ const estilos = `
   .med-titulo    { font-family: 'DM Serif Display', serif; font-size: 1.75rem; margin: 0 0 .25rem; }
   .med-subtitulo { font-size: .88rem; color: var(--color-texto-suave); margin: 0 0 1.75rem; }
   .med-vista { animation: med-aparecer .35s ease both; }
-  .med-paciente-card { background: var(--color-tarjeta); border: 1px solid var(--color-borde); border-radius: 14px; padding: 1.1rem 1.4rem; margin-bottom: .85rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: border-color .2s, box-shadow .2s; }
+  .med-paciente-card { background: var(--color-tarjeta); border: 1px solid var(--color-borde); border-radius: 14px; padding: 1.1rem 1.4rem; margin-bottom: .85rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: border-color .2s, box-shadow .2s; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif; color: var(--color-texto); }
   .med-paciente-card:hover { border-color: rgba(45,212,191,.5); box-shadow: 0 4px 20px rgba(45,212,191,.08); }
   .med-paciente-avatar { width: 44px; height: 44px; background: rgba(45,212,191,.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--color-menta); }
   .med-paciente-info { flex: 1; min-width: 0; }
@@ -131,14 +131,21 @@ export default function Medicamentos() {
       {cargandoPac && <div className="med-estado">Cargando pacientes...</div>}
       {!cargandoPac && !errorPac && pacientes.length === 0 && <div className="med-estado">No hay pacientes registrados aún.</div>}
       {pacientes.map((p) => (
-        <div key={p.id} className="med-paciente-card" onClick={() => verMedicamentos(p)}>
+        <button
+          key={p.id}
+          type="button"
+          className="med-paciente-card"
+          onClick={() => verMedicamentos(p)}
+          aria-label={`Ver medicamentos de ${p.nombres || "paciente"} ${p.apellidos || ""}`}
+        >
           <div className="med-paciente-avatar">{(p.nombres || '?').charAt(0).toUpperCase()}</div>
           <div className="med-paciente-info">
             <p className="med-paciente-nombre">{p.nombres} {p.apellidos}</p>
             <p className="med-paciente-datos">{p.diagnostico_principal || "Sin diagnóstico registrado"}</p>
           </div>
+          
           <div className="med-paciente-flecha"><IconChevronRight /></div>
-        </div>
+        </button>
       ))}
     </div>
   );

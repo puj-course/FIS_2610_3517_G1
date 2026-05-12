@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - features-vanesa
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    name: Build validation
+    runs-on: ubuntu-latest
+
+    env:
+      MONGO_URI: mongodb://localhost:27017/medtrack_test
+      SECRET_KEY: test-secret-key-for-pytest-medtrack
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx pymongo python-dotenv
+
+      - name: Run backend tests
+        run: |
+          PYTHONPATH=. python -m pytest -v tests

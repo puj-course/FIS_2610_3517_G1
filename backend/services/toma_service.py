@@ -1,5 +1,5 @@
 ﻿from typing import Any, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from bson import ObjectId
 
@@ -7,7 +7,7 @@ from backend.database import (
     pacientes_col,
     medicamentos_col,
     recordatorios_col,
-    tomas_col
+    tomas_col,
 )
 from backend.historial_toma import HistorialTomaBuilder
 
@@ -18,19 +18,16 @@ except Exception:
 
 
 class TomaService:
-    """
-    Servicio encargado de registrar tomas de medicamentos usando MongoDB.
-    """
 
     def registrar_toma(
         self,
-        paciente_id,
-        medicamento_id,
-        recordatorio_id,
+        paciente_id: str,
+        medicamento_id: str,
+        recordatorio_id: str,
         fecha_programada: str,
         fecha_hora_toma: str,
         estado: str = "tomada",
-        observaciones: Optional[str] = None
+        observaciones: Optional[str] = None,
     ) -> Dict[str, Any]:
 
         self._validar_campos_obligatorios(
@@ -39,7 +36,7 @@ class TomaService:
             recordatorio_id=recordatorio_id,
             fecha_programada=fecha_programada,
             fecha_hora_toma=fecha_hora_toma,
-            estado=estado
+            estado=estado,
         )
 
         paciente_id = str(paciente_id)
@@ -54,29 +51,28 @@ class TomaService:
         if not medicamento:
             raise LookupError("El medicamento no existe")
 
-        paciente_medicamento_id = str(medicamento.get("paciente_id", ""))
-
-        if paciente_medicamento_id and paciente_medicamento_id != paciente_id:
-            raise ValueError("El medicamento no pertenece al paciente")
-
         recordatorio = self._obtener_recordatorio(recordatorio_id)
         if not recordatorio:
             raise LookupError("El recordatorio no existe")
 
-        medicamento_recordatorio_id = str(recordatorio.get("medicamento_id", ""))
+        paciente_medicamento_id = str(medicamento.get("paciente_id", ""))
+        if paciente_medicamento_id and paciente_medicamento_id != paciente_id:
+            raise ValueError("El medicamento no pertenece al paciente")
 
-        if medicamento_recordatorio_id and medicamento_recordatorio_id != medicamento_id:
+        recordatorio_medicamento_id = str(recordatorio.get("medicamento_id", ""))
+        if (
+            recordatorio_medicamento_id
+            and recordatorio_medicamento_id != medicamento_id
+        ):
             raise ValueError("El recordatorio no pertenece al medicamento")
 
-        duplicado = tomas_col.find_one({
+        toma_existente = tomas_col.find_one({
             "recordatorio_id": recordatorio_id,
-            "fecha_programada": fecha_programada
+            "fecha_programada": fecha_programada,
         })
 
-        if duplicado:
-            raise FileExistsError(
-                "Ya existe una toma registrada para ese recordatorio y fecha programada"
-            )
+        if toma_existente:
+            raise FileExistsError("Ya existe una toma registrada para este recordatorio y fecha")
 
         toma = (
             HistorialTomaBuilder()
@@ -92,13 +88,13 @@ class TomaService:
         documento = {
             "paciente_id": toma.paciente_id,
             "medicamento_id": toma.medicamento_id,
-            "recordatorio_id": toma.recordatorio_id,
+            "recordatorio_id": recordatorio_id,
             "fecha_programada": toma.fecha_programada,
             "fecha_hora_toma": toma.fecha_hora_toma,
             "diferencia_minutos": toma.diferencia_minutos,
             "estado": toma.estado,
             "observaciones": toma.observaciones,
-            "created_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc),
         }
 
         resultado = tomas_col.insert_one(documento)
@@ -108,7 +104,7 @@ class TomaService:
             publisher.notify({
                 "type": "medication_taken",
                 "toma_id": toma_id,
-                **documento
+                **documento,
             })
 
         return {
@@ -117,56 +113,51 @@ class TomaService:
             "toma_id": toma_id,
             "data": self._serializar_toma({
                 "_id": resultado.inserted_id,
-                **documento
-            })
+                **documento,
+            }),
         }
 
     def obtener_tomas_del_dia(self, paciente_id, fecha: str):
         paciente_id = str(paciente_id)
 
-        consulta = {
+        tomas = tomas_col.find({
             "paciente_id": paciente_id,
-            "fecha_programada": {
-                "$regex": f"^{fecha}"
-            }
-        }
+            "fecha_programada": {"$regex": f"^{fecha}"},
+        }).sort("fecha_programada", -1)
 
-        tomas = tomas_col.find(consulta).sort("fecha_programada", -1)
-
-        return [self._serializar_toma(t) for t in tomas]
+        return [self._serializar_toma(toma) for toma in tomas]
 
     def obtener_historial(self, paciente_id):
         paciente_id = str(paciente_id)
 
         tomas = tomas_col.find({
-            "paciente_id": paciente_id
+            "paciente_id": paciente_id,
         }).sort("fecha_programada", -1)
 
         historial = []
 
-        for t in tomas:
-            medicamento = self._obtener_medicamento(str(t.get("medicamento_id")))
-
-            estado_historial = self._normalizar_estado_historial(t.get("estado"))
-
-            fecha_programada = t.get("fecha_programada", "")
-            fecha_hora_toma = t.get("fecha_hora_toma", "")
+        for toma in tomas:
+            medicamento = self._obtener_medicamento(str(toma.get("medicamento_id")))
+            estado_historial = self._normalizar_estado_historial(toma.get("estado"))
+            fecha_programada = toma.get("fecha_programada", "")
+            fecha_hora_toma = toma.get("fecha_hora_toma", "")
 
             historial.append({
-                "id": str(t.get("_id")),
-                "paciente_id": t.get("paciente_id"),
-                "medicamento_id": t.get("medicamento_id"),
+                "id": str(toma.get("_id")),
+                "paciente_id": toma.get("paciente_id"),
+                "medicamento_id": toma.get("medicamento_id"),
                 "medicamento_nombre": medicamento.get("nombre", "") if medicamento else "",
                 "medicamento": medicamento.get("nombre", "") if medicamento else "",
-                "recordatorio_id": t.get("recordatorio_id"),
+                "recordatorio_id": toma.get("recordatorio_id"),
                 "fecha": fecha_programada[:10] if fecha_programada else "",
                 "hora_programada": fecha_programada[11:16] if len(fecha_programada) >= 16 else "",
                 "hora_tomada": fecha_hora_toma[11:16] if len(fecha_hora_toma) >= 16 else "",
+                "hora_tomado": fecha_hora_toma[11:16] if len(fecha_hora_toma) >= 16 else "",
                 "fecha_programada": fecha_programada,
                 "fecha_hora_toma": fecha_hora_toma,
-                "diferencia_minutos": t.get("diferencia_minutos"),
+                "diferencia_minutos": toma.get("diferencia_minutos"),
                 "estado": estado_historial,
-                "observaciones": t.get("observaciones")
+                "observaciones": toma.get("observaciones"),
             })
 
         return historial
@@ -178,9 +169,8 @@ class TomaService:
         recordatorio_id,
         fecha_programada: str,
         fecha_hora_toma: str,
-        estado: str
+        estado: str,
     ) -> None:
-
         if not paciente_id:
             raise ValueError("El paciente_id es obligatorio")
 

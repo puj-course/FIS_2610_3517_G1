@@ -1,22 +1,14 @@
-#############################################################################
-# medication_route.py
-# APIRouter: Para crear rutas en FastAPI
-# HTTPException: Para devolver errores HTTP
-# Se importa la función validar_medicamento de validaciones.py
-#############################################################################
+﻿# medication_route.py
+from typing import Annotated
 
-from pathlib import Path
-import sqlite3
-from fastapi import APIRouter, HTTPException
-from backend.validaciones import (
-    validar_medicamento,
-    verificar_paciente_existe,
-    verificar_medicamento_duplicado
-)
+from fastapi import APIRouter, HTTPException, Depends
+from bson import ObjectId
+
+from backend.validaciones import validar_medicamento
+from backend.database import medicamentos_col, pacientes_col
+from backend.routes.reminder_route import obtener_usuario_actual
 
 router = APIRouter(prefix="/medicamentos", tags=["Medicamentos"])
-DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
-
 
 @router.post("/")
 def registrar_medicamento(data: dict):
@@ -25,20 +17,35 @@ def registrar_medicamento(data: dict):
     if errores:
         raise HTTPException(status_code=400, detail=errores)
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
     try:
-        if not verificar_paciente_existe(int(data["paciente_id"]), conn):
-            raise HTTPException(status_code=404, detail="El paciente no existe")
+        paciente_id = data["paciente_id"]
 
-        nombre_medicamento = data["nombre_medicamento"].strip()
+        # Verificar paciente existe
+        try:
+            paciente = pacientes_col.find_one({
+                "_id": ObjectId(paciente_id)
+            })
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail="ID de paciente inválido"
+            )
 
-        if verificar_medicamento_duplicado(
-            nombre_medicamento,
-            int(data["paciente_id"]),
-            conn
-        ):
+        if not paciente:
+            raise HTTPException(
+                status_code=404,
+                detail="El paciente no existe"
+            )
+
+        nombre_medicamento = data["nombre_medicamento"].strip().lower()
+
+        # Verificar duplicado
+        duplicado = medicamentos_col.find_one({
+            "paciente_id": paciente_id,
+            "nombre": nombre_medicamento
+        })
+
+        if duplicado:
             raise HTTPException(
                 status_code=400,
                 detail="El paciente ya tiene registrado este medicamento"
@@ -61,59 +68,121 @@ def registrar_medicamento(data: dict):
         else:
             observaciones = observaciones_extra
 
-        cursor.execute(
-            """
-            INSERT INTO medicamentos (
-                nombre, dosis, frecuencia, horario,
-                fecha_inicio, observaciones, paciente_id
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                nombre_medicamento,
-                dosis,
-                frecuencia,
-                horario,
-                fecha_inicio,
-                observaciones,
-                int(data["paciente_id"])
-            )
-        )
+        nuevo_medicamento = {
+            "nombre": nombre_medicamento,
+            "dosis": dosis,
+            "frecuencia": frecuencia,
+            "horario": horario,
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": data.get("fecha_fin", "").strip(),
+            "observaciones": observaciones,
+            "paciente_id": paciente_id
+}
 
-        conn.commit()
-        return {"mensaje": "Medicamento registrado existosamente"}
+        resultado = medicamentos_col.insert_one(nuevo_medicamento)
+
+        return {
+            "mensaje": "Medicamento registrado exitosamente",
+            "medicamento_id": str(resultado.inserted_id)
+        }
 
     except HTTPException:
         raise
 
-    except sqlite3.Error as e:
+    except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Error al registrar el medicamento: {str(e)}"
         )
 
-    finally:
-        conn.close()
-
 
 @router.get("/paciente/{paciente_id}")
-def obtener_medicamentos_paciente(paciente_id: int):
-    """
-    Devuelve todos los medicamentos de un paciente específico.
-    URL: GET /medicamentos/paciente/{paciente_id}
-    """
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+def obtener_medicamentos_paciente(paciente_id: str):
+    try:
+        medicamentos = list(
+            medicamentos_col.find(
+                {"paciente_id": paciente_id}
+            ).sort("nombre", 1)
+        )
 
-    cursor.execute(
-        "SELECT * FROM medicamentos WHERE paciente_id = ? ORDER BY nombre",
-        (paciente_id,)
-    )
-    meds = [dict(r) for r in cursor.fetchall()]
-    conn.close()
+        resultado = []
 
-    if not meds:
-        return []
+        for m in medicamentos:
+            resultado.append({
+                "id": str(m["_id"]),
+                "nombre": m.get("nombre", ""),
+                "dosis": m.get("dosis", ""),
+                "frecuencia": m.get("frecuencia", ""),
+                "horario": m.get("horario", ""),
+                "fecha_inicio": m.get("fecha_inicio", ""),
+                "observaciones": m.get("observaciones", ""),
+                "paciente_id": m.get("paciente_id", "")
+            })
 
-    return meds
+        return resultado
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener medicamentos: {str(e)}"
+        )
+
+from datetime import date as date_type
+
+@router.get("/panel-completo")
+def obtener_panel_completo(usuario: Annotated[dict, Depends(obtener_usuario_actual)]):
+    from backend.database import tomas_col
+    hoy = date_type.today().strftime("%m/%d/%Y")
+    hoy_iso = date_type.today().isoformat()
+    cuidador_id = usuario.get("id")
+
+    pacientes = list(pacientes_col.find({"cuidador_id": cuidador_id}))
+    panel = []
+
+    for p in pacientes:
+        paciente_id = str(p["_id"])
+        
+        # Medicamentos activos hoy
+        medicamentos = list(medicamentos_col.find({
+            "paciente_id": paciente_id,
+            "fecha_inicio": {"$lte": hoy}
+        }))
+        
+        items = []
+        for m in medicamentos:
+            fecha_fin = m.get("fecha_fin", "")
+            if fecha_fin:
+                try:
+                    from datetime import datetime
+                    fin = datetime.strptime(fecha_fin, "%m/%d/%Y").date()
+                    if fin < date_type.today():
+                        continue
+                except:
+                    pass
+            
+            horarios = [h.strip() for h in m.get("horario", "").split(",") if h.strip()]
+            med_id = str(m["_id"])
+            
+            for hora in horarios:
+                # Buscar si ya fue tomada
+                toma = tomas_col.find_one({
+                    "medicamento_id": med_id,
+                    "fecha_programada": {"$regex": f"^{hoy_iso}.*{hora}"}
+                })
+                items.append({
+                    "medicamento_id": med_id,
+                    "medicamento": m.get("nombre", ""),
+                    "dosis": m.get("dosis", ""),
+                    "hora": hora,
+                    "tomado": toma is not None and toma.get("estado") in ["tomada", "a_tiempo", "tarde"]
+                })
+        
+        if items:
+            panel.append({
+                "paciente_id": paciente_id,
+                "nombres": p.get("nombres", ""),
+                "apellidos": p.get("apellidos", ""),
+                "medicamentos": items
+            })
+
+    return {"panel": panel}

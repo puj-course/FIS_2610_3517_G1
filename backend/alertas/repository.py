@@ -1,40 +1,24 @@
-from backend.models import get_connection
+from datetime import datetime, timezone
+
+from backend.database import alertas_col
 
 
-class AlertRepository:
-    def save_alert(
-        self,
-        tipo: str,
-        mensaje: str,
-        severidad: str,
-        paciente_id: int,
-        medicamento_id: int | None = None,
-        recordatorio_id: int | None = None
-    ) -> None:
-        conn = get_connection()
-        cursor = conn.cursor()
+def guardar_alerta(
+    tipo,
+    mensaje,
+    severidad,
+    paciente_id,
+    medicamento_id=None,
+    recordatorio_id=None,
+):
+    alerta = {
+        "tipo": tipo,
+        "mensaje": mensaje,
+        "severidad": severidad,
+        "paciente_id": str(paciente_id) if paciente_id else None,
+        "medicamento_id": str(medicamento_id) if medicamento_id else None,
+        "recordatorio_id": str(recordatorio_id) if recordatorio_id else None,
+        "fecha_creacion": datetime.now(timezone.utc).isoformat(),
+    }
 
-        try:
-            cursor.execute("""
-                INSERT INTO alertas (
-                    tipo,
-                    mensaje,
-                    severidad,
-                    paciente_id,
-                    medicamento_id,
-                    recordatorio_id,
-                    fecha_creacion,
-                    atendida
-                )
-                VALUES (?, ?, ?, ?, ?, ?, datetime('now'), 0)
-            """, (
-                tipo,
-                mensaje,
-                severidad,
-                paciente_id,
-                medicamento_id,
-                recordatorio_id
-            ))
-            conn.commit()
-        finally:
-            conn.close()
+    alertas_col.insert_one(alerta)

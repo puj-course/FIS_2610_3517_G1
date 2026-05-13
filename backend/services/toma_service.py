@@ -23,7 +23,6 @@ class TomaService:
         self,
         paciente_id: str,
         medicamento_id: str,
-        recordatorio_id: str,
         fecha_programada: str,
         fecha_hora_toma: str,
         estado: str = "tomada",
@@ -33,7 +32,6 @@ class TomaService:
         self._validar_campos_obligatorios(
             paciente_id=paciente_id,
             medicamento_id=medicamento_id,
-            recordatorio_id=recordatorio_id,
             fecha_programada=fecha_programada,
             fecha_hora_toma=fecha_hora_toma,
             estado=estado,
@@ -41,7 +39,6 @@ class TomaService:
 
         paciente_id = str(paciente_id)
         medicamento_id = str(medicamento_id)
-        recordatorio_id = str(recordatorio_id)
 
         paciente = self._obtener_paciente(paciente_id)
         if not paciente:
@@ -51,34 +48,15 @@ class TomaService:
         if not medicamento:
             raise LookupError("El medicamento no existe")
 
-        recordatorio = self._obtener_recordatorio(recordatorio_id)
-        if not recordatorio:
-            raise LookupError("El recordatorio no existe")
-
         paciente_medicamento_id = str(medicamento.get("paciente_id", ""))
         if paciente_medicamento_id and paciente_medicamento_id != paciente_id:
             raise ValueError("El medicamento no pertenece al paciente")
-
-        recordatorio_medicamento_id = str(recordatorio.get("medicamento_id", ""))
-        if (
-            recordatorio_medicamento_id
-            and recordatorio_medicamento_id != medicamento_id
-        ):
-            raise ValueError("El recordatorio no pertenece al medicamento")
-
-        toma_existente = tomas_col.find_one({
-            "recordatorio_id": recordatorio_id,
-            "fecha_programada": fecha_programada,
-        })
-
-        if toma_existente:
-            raise FileExistsError("Ya existe una toma registrada para este recordatorio y fecha")
 
         toma = (
             HistorialTomaBuilder()
             .set_paciente(paciente_id)
             .set_medicamento(medicamento_id)
-            .set_recordatorio(recordatorio_id)
+            .set_recordatorio(None)
             .set_fecha_programada(fecha_programada)
             .set_fecha_hora_toma(fecha_hora_toma)
             .set_observaciones(observaciones)
@@ -88,7 +66,7 @@ class TomaService:
         documento = {
             "paciente_id": toma.paciente_id,
             "medicamento_id": toma.medicamento_id,
-            "recordatorio_id": recordatorio_id,
+            "recordatorio_id": None,
             "fecha_programada": toma.fecha_programada,
             "fecha_hora_toma": toma.fecha_hora_toma,
             "diferencia_minutos": toma.diferencia_minutos,
@@ -119,23 +97,19 @@ class TomaService:
 
     def obtener_tomas_del_dia(self, paciente_id, fecha: str):
         paciente_id = str(paciente_id)
-
         tomas = tomas_col.find({
             "paciente_id": paciente_id,
             "fecha_programada": {"$regex": f"^{fecha}"},
         }).sort("fecha_programada", -1)
-
         return [self._serializar_toma(toma) for toma in tomas]
 
     def obtener_historial(self, paciente_id):
         paciente_id = str(paciente_id)
-
         tomas = tomas_col.find({
             "paciente_id": paciente_id,
         }).sort("fecha_programada", -1)
 
         historial = []
-
         for toma in tomas:
             medicamento = self._obtener_medicamento(str(toma.get("medicamento_id")))
             estado_historial = self._normalizar_estado_historial(toma.get("estado"))
@@ -148,7 +122,7 @@ class TomaService:
                 "medicamento_id": toma.get("medicamento_id"),
                 "medicamento_nombre": medicamento.get("nombre", "") if medicamento else "",
                 "medicamento": medicamento.get("nombre", "") if medicamento else "",
-                "recordatorio_id": toma.get("recordatorio_id"),
+                "recordatorio_id": None,
                 "fecha": fecha_programada[:10] if fecha_programada else "",
                 "hora_programada": fecha_programada[11:16] if len(fecha_programada) >= 16 else "",
                 "hora_tomada": fecha_hora_toma[11:16] if len(fecha_hora_toma) >= 16 else "",
@@ -166,26 +140,18 @@ class TomaService:
         self,
         paciente_id,
         medicamento_id,
-        recordatorio_id,
         fecha_programada: str,
         fecha_hora_toma: str,
         estado: str,
     ) -> None:
         if not paciente_id:
             raise ValueError("El paciente_id es obligatorio")
-
         if not medicamento_id:
             raise ValueError("El medicamento_id es obligatorio")
-
-        if not recordatorio_id:
-            raise ValueError("El recordatorio_id es obligatorio")
-
         if not fecha_programada or not str(fecha_programada).strip():
             raise ValueError("La fecha_programada es obligatoria")
-
         if not fecha_hora_toma or not str(fecha_hora_toma).strip():
             raise ValueError("La fecha_hora_toma es obligatoria")
-
         if not estado or not str(estado).strip():
             raise ValueError("El estado es obligatorio")
 
@@ -196,7 +162,6 @@ class TomaService:
                 return paciente
         except Exception:
             pass
-
         return pacientes_col.find_one({"id": paciente_id})
 
     def _obtener_medicamento(self, medicamento_id: str):
@@ -206,33 +171,18 @@ class TomaService:
                 return medicamento
         except Exception:
             pass
-
         return medicamentos_col.find_one({"id": medicamento_id})
-
-    def _obtener_recordatorio(self, recordatorio_id: str):
-        try:
-            recordatorio = recordatorios_col.find_one({"_id": ObjectId(recordatorio_id)})
-            if recordatorio:
-                return recordatorio
-        except Exception:
-            pass
-
-        return recordatorios_col.find_one({"id": recordatorio_id})
 
     def _serializar_toma(self, toma: dict) -> dict:
         toma["id"] = str(toma.get("_id"))
         toma.pop("_id", None)
-
         if "created_at" in toma and toma["created_at"]:
             toma["created_at"] = str(toma["created_at"])
-
         return toma
 
     def _normalizar_estado_historial(self, estado: str) -> str:
         if estado == "a_tiempo":
             return "tomado"
-
         if estado in ["tarde", "atrasada", "atrasado", "omitida"]:
             return "atrasado"
-
         return estado or "pendiente"

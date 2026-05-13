@@ -121,21 +121,14 @@ const pad = n => String(n).padStart(2, '0');
 export default function Tomas() {
   const [pacientes, setPacientes] = useState([]);
   const [pacienteId, setPacienteId] = useState('');
-  const [recordatorios, setRecordatorios] = useState(null); // null = sin consultar
+  const [recordatorios, setRecordatorios] = useState(null);
   const [cargandoPanel, setCargandoPanel] = useState(false);
   const [errorPanel, setErrorPanel] = useState('');
-  const [tomasLocales, setTomasLocales] = useState({}); // recordatorio_id -> true
+  const [tomasLocales, setTomasLocales] = useState({});
   const [tomasGuardando, setTomasGuardando] = useState({});
   const [notifs, setNotifs] = useState([]);
 
   const fechaHoy = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = css;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
 
   useEffect(() => {
     cargarPacientes();
@@ -159,54 +152,51 @@ export default function Tomas() {
   }
 
   async function cargarPanelPaciente() {
-  setErrorPanel('');
-  if (!pacienteId) { setErrorPanel('Selecciona un paciente primero.'); return; }
-  setCargandoPanel(true);
-  setRecordatorios(null);
-  setTomasLocales({});
-  try {
-    const res = await api.obtenerMedicamentos(pacienteId);
-    if (!res.ok) throw new Error('Error al cargar medicamentos.');
-    
-    const meds = Array.isArray(res.body) ? res.body : [];
-    const hoy = new Date().toISOString().split('T')[0];
-    
-    // Expandir cada medicamento en sus horarios
-    const items = [];
-    for (const m of meds) {
-      const horarios = m.horario ? m.horario.split(',').map(h => h.trim()).filter(Boolean) : [];
-      for (const hora of horarios) {
-        items.push({
-          recordatorio_id: `${m.id}_${hora}`,
-          paciente_id: pacienteId,
-          medicamento_id: m.id,
-          medicamento_nombre: m.nombre,
-          dosis: m.dosis,
-          hora_recordatorio: hora,
-          fecha_inicio: m.fecha_inicio,
-          tomado: false,
-          observaciones: '',
-        });
+    setErrorPanel('');
+    if (!pacienteId) { setErrorPanel('Selecciona un paciente primero.'); return; }
+    setCargandoPanel(true);
+    setRecordatorios(null);
+    setTomasLocales({});
+    try {
+      const res = await api.obtenerMedicamentos(pacienteId);
+      if (!res.ok) throw new Error('Error al cargar medicamentos.');
+      const meds = Array.isArray(res.body) ? res.body : [];
+      const items = [];
+      for (const m of meds) {
+        const horarios = m.horario ? m.horario.split(',').map(h => h.trim()).filter(Boolean) : [];
+        for (const hora of horarios) {
+          items.push({
+            recordatorio_id: `${m.id}_${hora}`,
+            paciente_id: pacienteId,
+            medicamento_id: m.id,
+            medicamento_nombre: m.nombre,
+            dosis: m.dosis,
+            hora_recordatorio: hora,
+            fecha_inicio: m.fecha_inicio,
+            tomado: false,
+            observaciones: '',
+          });
+        }
       }
+      setRecordatorios(items);
+    } catch (e) {
+      setErrorPanel(e.message || 'Error de conexión.');
+      setRecordatorios([]);
+    } finally {
+      setCargandoPanel(false);
     }
-    setRecordatorios(items);
-  } catch (e) {
-    setErrorPanel(e.message || 'Error de conexión.');
-    setRecordatorios([]);
-  } finally {
-    setCargandoPanel(false);
   }
-}
 
   async function marcarTomada(r) {
     setTomasGuardando(prev => ({ ...prev, [r.recordatorio_id]: true }));
     const ahora = new Date();
-    const fechaHoraToma = `${ahora.getFullYear()}-${pad(ahora.getMonth()+1)}-${pad(ahora.getDate())} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}:${pad(ahora.getSeconds())}`;
+    const fechaLocal = `${ahora.getFullYear()}-${pad(ahora.getMonth()+1)}-${pad(ahora.getDate())}`;
+    const fechaHoraToma = `${fechaLocal} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}:${pad(ahora.getSeconds())}`;
     const datos = {
       paciente_id: r.paciente_id,
       medicamento_id: r.medicamento_id,
       recordatorio_id: r.recordatorio_id.includes('_') ? null : r.recordatorio_id,
-      fecha_programada: new Date().toISOString().split('T')[0] + ' ' + r.hora_recordatorio + ':00',
+      fecha_programada: `${fechaLocal} ${r.hora_recordatorio}:00`,
       fecha_hora_toma: fechaHoraToma,
       estado: 'tomada',
       observaciones: 'Marcada'
@@ -217,7 +207,7 @@ export default function Tomas() {
         mostrarNotif(res.body?.detail || 'Error al registrar la toma.', true);
         return;
       }
-      mostrarNotif('Toma registrada correctamente ✓');
+      mostrarNotif('Toma registrada correctamente');
       setTomasLocales(prev => ({ ...prev, [r.recordatorio_id]: true }));
     } catch {
       mostrarNotif('Error de conexión con el servidor.', true);
@@ -246,7 +236,7 @@ export default function Tomas() {
           <td>{r.hora_recordatorio || '—'}</td>
           <td>
             {tomada
-              ? <span className="tm-badge tm-badge-verde">Tomada ✓</span>
+              ? <span className="tm-badge tm-badge-verde">Tomada</span>
               : <span className="tm-badge tm-badge-amarillo">Pendiente</span>}
           </td>
           <td>{r.observaciones || <span style={{ color: 'var(--suave)' }}>—</span>}</td>
@@ -285,7 +275,6 @@ export default function Tomas() {
           </div>
           <span className="tm-marca-nombre">MedTrack</span>
         </div>
-        <a href="dashboard.html" className="tm-btn-volver">← Volver al dashboard</a>
       </div>
 
       <div className="tm-tarjeta">
@@ -317,7 +306,7 @@ export default function Tomas() {
                 <th>Hora programada</th>
                 <th>Estado</th>
                 <th>Observaciones</th>
-                <th>Acción</th>
+                <th>Accion</th>
               </tr>
             </thead>
             <tbody>

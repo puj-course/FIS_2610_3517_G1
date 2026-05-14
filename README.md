@@ -1,62 +1,189 @@
-# 🩺 MedTrack
-## Descripción
+## 🩺 MedTrack
+## 📌 Descripción
 
-MedTrack es un proyecto de software orientado a apoyar el seguimiento y control de la administración de medicamentos, con un enfoque especial en cuidadores novatos, es decir, personas que asumen el cuidado de un paciente sin formación médica previa.
+MedTrack es una solución de software orientada al seguimiento y control de la administración de medicamentos, diseñada especialmente para cuidadores novatos, es decir, personas que asumen el cuidado de pacientes sin formación médica previa.
 
-En muchos contextos, el control de medicamentos se realiza de forma manual mediante notas, alarmas genéricas o la memoria del cuidador, lo que puede provocar olvidos, confusión de horarios, duplicación de dosis o falta de información clara sobre si un medicamento ya fue administrado. Estas situaciones incrementan el riesgo de errores y afectan directamente la efectividad del tratamiento.
+En muchos contextos de cuidado informal, el control de medicamentos se realiza mediante notas manuales, alarmas genéricas o la memoria del cuidador, aumentando el riesgo de olvidos, errores de dosificación y falta de trazabilidad del tratamiento.
 
-MedTrack busca centralizar y organizar la información del paciente y su medicación en un solo lugar, facilitando el seguimiento diario y reduciendo la carga cognitiva del cuidador, permitiéndole cumplir sus responsabilidades de forma más segura y confiable.
+MedTrack busca centralizar y organizar toda la información relacionada con pacientes, medicamentos, recordatorios e historial de tomas en una sola plataforma, permitiendo reducir la carga cognitiva del cuidador y mejorar el seguimiento del tratamiento de forma segura y estructurada.
 
-Este proyecto se desarrolla como una iniciativa académica y evolutiva dentro de la asignatura Fundamentos de Ingeniería de Software.
+Este proyecto fue desarrollado como iniciativa académica dentro de la asignatura Fundamentos de Ingeniería de Software de la Pontificia Universidad Javeriana.
 
 ## 💭 Idea del proyecto
 
-La administración de medicamentos es una tarea crítica dentro del cuidado de pacientes, especialmente en tratamientos prolongados. Cuando esta labor recae en cuidadores sin experiencia médica, el riesgo de errores aumenta significativamente.
-MedTrack surge como una propuesta para acompañar al cuidador, ofreciendo una herramienta clara, intuitiva y adaptable que permita llevar un registro estructurado del tratamiento, facilitando el cumplimiento de horarios, dosis y observaciones relevantes. En especial, cuando el cuidador tiene más de un paciente bajo su cuidado.
+La administración de medicamentos es una tarea crítica dentro del cuidado de pacientes, especialmente en tratamientos prolongados o complejos. Cuando esta responsabilidad recae sobre personas sin experiencia médica, la probabilidad de errores aumenta significativamente.
 
-## ❓ ¿Qué problema resuelve?
+MedTrack surge como una propuesta para acompañar al cuidador mediante una herramienta clara, intuitiva y adaptable, permitiendo:
 
-- Falta de seguimiento estructurado en la administración de medicamentos.
+Llevar un registro estructurado de tratamientos.
+Controlar horarios y dosis.
+Evitar duplicación de medicamentos.
+Generar recordatorios automáticos.
+Registrar historial de tomas.
+Obtener métricas de adherencia al tratamiento.
+## ❓ Problemática identificada
 
-- Olvidos o confusión en horarios y dosis.
+MedTrack busca resolver:
 
-- Dificultad para saber si un medicamento ya fue administrado.
+Falta de seguimiento estructurado en tratamientos médicos.
+Olvidos en horarios de administración.
+Confusión entre medicamentos y dosis.
+Ausencia de historial de tomas.
+Dificultad para validar cumplimiento del tratamiento.
+Riesgo de errores por parte de cuidadores sin experiencia médica.
+## 👥 Público objetivo
 
-- Ausencia de un historial claro de tomas que permita identificar fallos en la adherencia al tratamiento.
+La solución está orientada principalmente a:
 
-- Riesgo de errores por parte de cuidadores sin formación médica.
-
-## 👥 ¿A quién afecta?
-
-Este problema impacta principalmente a:
-
-- Personas cuidadoras sin experiencia médica.
-
-- Familias a cargo del cuidado de pacientes.
-
-- Pacientes con tratamientos prolongados o complejos.
-
+Cuidadores sin formación médica.
+Familias encargadas del cuidado de pacientes.
+Personas con múltiples pacientes bajo supervisión.
+Pacientes con tratamientos prolongados.
 ## 🎯 Propuesta de valor
 
-MedTrack ofrece valor al enfocarse en un problema específico que suele ser ignorado por muchas aplicaciones de seguimiento de medicamentos: la experiencia del cuidador novato en contextos reales de cuidado no clínico.
+MedTrack se diferencia de aplicaciones genéricas de recordatorios al enfocarse específicamente en el contexto real del cuidador novato.
 
-A diferencia de soluciones genéricas orientadas a pacientes autónomos o personal médico, MedTrack está diseñada para personas sin formación médica que asumen la responsabilidad del cuidado diario, muchas veces de manera repentina y sin acompañamiento técnico.
+La plataforma prioriza:
 
-El proyecto prioriza:
+Claridad y simplicidad visual.
+Prevención de errores comunes.
+Historial trazable de administración.
+Seguimiento estructurado del tratamiento.
+Alertas inteligentes y automatizadas.
+Organización centralizada de la información médica.
+## 🧩 Características principales
+# 👤 Gestión de pacientes
+Registro y administración de pacientes.
+Información médica y observaciones relevantes.
+Historial individual por paciente.
+# 💊 Gestión de medicamentos
+Registro de medicamentos y dosis.
+Configuración de horarios y frecuencias.
+Validación de duplicados y conflictos.
+# ⏰ Recordatorios automáticos
+Programación de recordatorios.
+Seguimiento de tomas pendientes.
+Notificaciones automáticas mediante Telegram.
+# 📋 Historial de tomas
+Registro de adherencia al tratamiento.
+Clasificación de tomas:
+A tiempo
+Tarde
+Pendiente
+Omitida
+# 📊 Resumen y métricas
+Porcentaje de cumplimiento.
+Historial consolidado.
+Alertas relevantes del tratamiento.
+# 🔐 Seguridad
+Autenticación JWT.
+Middleware de protección de rutas.
+Roles de usuario.
+# 🛠️ Tecnologías utilizadas
+*Frontend
+React
+JavaScript
+CSS
+*Backend
+FastAPI
+Python 3.11
+PyJWT
+Pydantic
+*Base de datos
+MongoDB Atlas
+*Testing y Calidad
+Pytest
+GitHub Actions
+SonarQube Cloud
+*DevOps
+Docker
+Docker Compose
+*CI/CD automatizado
+Integraciones
+Telegram Bot API
+## 🏗️ Arquitectura del sistema
 
-- Claridad y simplicidad en la presentación de la información, reduciendo la carga cognitiva del cuidador.
-- Prevención de errores comunes en contextos reales de uso (olvidos, duplicación de dosis, confusión entre medicamentos).
-- Registro trazable del tratamiento, no solo como recordatorio, sino como evidencia del cumplimiento.
-- Apoyo al proceso de toma de decisiones cotidianas en el cuidado, más allá de simples alertas.
+La arquitectura de MedTrack está basada en una separación cliente-servidor:
 
-MedTrack no busca reemplazar sistemas clínicos, sino cubrir el vacío existente entre el cuidado informal y las herramientas médicas especializadas.
+Frontend React/Vite
+        ↓
+Backend FastAPI
+        ↓
+MongoDB Atlas
 
+El sistema utiliza autenticación JWT para proteger endpoints y GitHub Actions para automatizar pruebas y procesos de integración continua.
 
-## 🧩 ¿Qué lo hace diferente?
+## 📁 Estructura del proyecto
+MedTrack/
+│
+├── .github/
+│   └── workflows/
+│
+├── backend/
+│   ├── alertas/
+│   ├── commands/
+│   ├── decorators/
+│   ├── factories/
+│   ├── middleware/
+│   ├── routes/
+│   ├── services/
+│   ├── states/
+│   ├── auth.py
+│   ├── database.py
+│   ├── historial_toma.py
+│   ├── main.py
+│   ├── models.py
+│   ├── scheduler.py
+│   ├── toma_repository.py
+│   ├── validaciones.py
+│   └── requirements.txt
+│
+├── medtrack-app/
+│   ├── public/
+│   ├── src/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── vite.config.js
+│
+├── tests/
+│
+├── docs/
+│
+├── Dockerfile
+├── docker-compose.yml
+├── README.md
+└── requirements.txt
 
-A diferencia de alarmas genéricas o aplicaciones ya existentes enfocadas en usuarios expertos, MedTrack se centra en el cuidador novato, priorizando la claridad, la simplicidad y la personalización de la información.
+## 📋 Requisitos
+Python 3.11+
+Node.js 18+
+MongoDB Atlas
+Docker (opcional)
 
-La aplicación no solo recuerda qué medicamento tomar, sino que construye un historial comprensible del tratamiento, permitiendo identificar patrones de cumplimiento y facilitando la comunicación futura con profesionales de la salud si es necesario.
+## 🧪 Ejecución de pruebas
+Ejecutar todos los tests
+python -m pytest -v tests/
+Generar reportes HTML/XML
+pytest tests/ --junitxml=report.xml --html=report.html --self-contained-html
+## 🔄 CI/CD
+
+El proyecto implementa pipelines automáticos mediante GitHub Actions para:
+
+Ejecución automática de pruebas.
+Validación de dependencias.
+Reportes HTML/XML.
+Integración continua.
+Análisis de calidad.
+Notificaciones automáticas mediante Telegram.
+## 📊 Calidad del software
+
+El proyecto utiliza:
+
+SonarQube Cloud
+Métricas de mantenibilidad
+Pruebas automatizadas
+Validaciones backend
+Cobertura funcional
 
 ## 🤝 Equipo del proyecto
 ## Equipo del Proyecto
@@ -82,94 +209,6 @@ La aplicación no solo recuerda qué medicamento tomar, sino que construye un hi
 - **Quality Assurance Lead (QA Lead)**: Verifica el cumplimiento de criterios de evaluación, revisa calidad funcional, técnica y documental, y reporta defectos.
 - **DevOps Engineer**: Diseña y mantiene pipelines CI/CD, automatiza pruebas, gestiona despliegues con Docker y configura entornos.
 
-## 🚀 Enfoque del proyecto
-
-- Proyecto basado en un problema real del cuidado de pacientes.
-- Coherencia entre el problema identificado, la solución propuesta y el valor ofrecido.
-- Desarrollo guiado por metodologías ágiles (Scrum).
-- Uso de GitHub para la gestión del proyecto, issues, sprints y seguimiento.
-- Proyecto evolutivo, susceptible a ajustes durante el curso.
-
-
-## Tecnologías Utilizadas
-- **Frontend:** HTML, CSS, Bootstrap
-- **Backend:** Python , Flask
-- **Base de Datos:** SQLite
-- **Control de versiones:** Git / GitHub
-- **DevOps / CI:** GitHub Actions (si aplica)
-
----
-
-# MedTrack — Estructura del Proyecto
-
-```
-MedTrack/
-├── conf/
-│   └── .gitkeep
-├── backend/                        // BACKEND
-│   ├── routes/
-│   │   ├── auth_route.py           // Endpoints de autenticación (signin, signup)
-│   │   └── patient_route.py        // Endpoints de registro y consulta de pacientes
-│   ├── _init_.py                   // Inicialización del módulo backend
-│   ├── auth.py                     // Lógica de encriptación de contraseñas y JWT
-│   ├── main.py                     // Punto de entrada de la aplicación FastAPI
-│   ├── models.py                   // Conexión a la base de datos e inicialización de tablas
-│   ├── seed.py                     // Script para crear usuario de prueba inicial
-│   ├── validaciones.py             // Validaciones y manejo de errores del registro de paciente
-│   ├── database.db                 // Base de datos SQLite
-│   └── requirements.txt            // Dependencias del backend
-├── frontend/                       // FRONTEND
-│   ├── login.html                  // Interfaz de inicio de sesión
-│   ├── dashboard.html              // Panel principal
-│   ├── patients.html               // Listado de pacientes
-│   └── RegistrarPaciente.html      // Formulario de registro de paciente
-├── tests/                          // PRUEBAS
-│   ├── test_auth.py                // Pruebas funcionales de autenticación
-│   └── test_paciente.py            // Pruebas funcionales de registro de paciente
-├── .gitignore
-├── BOILERPLATE.md                  // Estructura del proyecto
-├── LICENSE
-├── README.md
-└── requirements.txt                // Dependencias generales
-```
-
-## Instalación y Ejecución
-### Requisitos
-- Git
-- Python 3.10+
----
-
-### Clonar el repositorio
-
-```bash
-git clone https://github.com/puj-course/FIS_2610_3517_G1.git
-cd FIS_2610_3517_G1 
-```
-
-### Instalar dependencias
-
-```bash
-python -m pip install -r src/main/backend/requirements.txt
-```
-
-## Ejecución del proyecto
-
-
-```bash
-cd backend
-python models.py
-uvicorn routes.auth_route:app --reload
-HEAD
-
- 159b153 (Update README for project execution instructions)
-```
-## Ejecución de pruebas
-
-
-```bash
-cd tests
-pytest test_auth.py
-pytest test_paciente.py
 ```
 
 ## 📌 Contexto académico

@@ -7,10 +7,12 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 
+
+
 from backend.models import init_db
 from backend.middleware.auth_middleware import BearerAuthBackend, auth_error_handler
 from backend.scheduler import iniciar_scheduler
-
+from backend.routes.quality_metrics_route import router as quality_metrics_router
 from backend.routes.auth_route import router as auth_router
 from backend.routes.patient_route import router as patient_router
 from backend.routes.medication_route import router as medication_router
@@ -60,3 +62,4 @@ app.include_router(reminder_router)
 app.include_router(toma_router)
 app.include_router(historial_router)
 app.include_router(resumen_router)
+app.include_router(quality_metrics_router)

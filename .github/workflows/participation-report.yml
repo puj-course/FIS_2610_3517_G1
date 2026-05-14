@@ -1,0 +1,50 @@
+﻿name: Generar reporte de participacion tecnica
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  participation-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generar reporte de participacion tecnica
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python scripts/generate_participation_report.py
+
+      - name: Subir reporte como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-participacion-tecnica
+          path: reports/agile/participation_report.md
+
+      - name: Guardar reporte en el repositorio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add reports/agile/participation_report.md
+
+          if git diff --cached --quiet; then
+            echo "No hay cambios en el reporte."
+          else
+            git commit -m "docs: actualizar reporte de participacion tecnica"
+            git push
+          fi

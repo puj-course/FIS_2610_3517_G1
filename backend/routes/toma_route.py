@@ -1,5 +1,4 @@
-﻿# toma_route.py
-from datetime import date
+﻿from datetime import date
 
 from fastapi import APIRouter, HTTPException
 
@@ -20,8 +19,8 @@ toma_service = TomaService()
     status_code=201,
     responses={
         400: {"description": "Datos inválidos para registrar la toma"},
-        404: {"description": "Paciente, medicamento o recordatorio no encontrado"},
-        409: {"description": "Ya existe una toma registrada para ese recordatorio y fecha"},
+        404: {"description": "Paciente o medicamento no encontrado"},
+        409: {"description": "Ya existe una toma registrada para esa fecha"},
         500: {"description": "Error interno al registrar la toma"},
     },
 )
@@ -32,14 +31,12 @@ def registrar_toma(datos: dict):
     if not fecha_programada:
         fecha = datos.get("fecha", str(date.today()))
         hora_programada = datos.get("hora_programada")
-
         if hora_programada:
             fecha_programada = f"{fecha} {hora_programada}:00" if len(hora_programada) == 5 else f"{fecha} {hora_programada}"
 
     if not fecha_hora_toma:
         fecha = datos.get("fecha", str(date.today()))
         hora_tomada = datos.get("hora_tomada")
-
         if hora_tomada:
             fecha_hora_toma = f"{fecha} {hora_tomada}:00" if len(hora_tomada) == 5 else f"{fecha} {hora_tomada}"
 
@@ -47,7 +44,6 @@ def registrar_toma(datos: dict):
         return toma_service.registrar_toma(
             paciente_id=datos.get("paciente_id"),
             medicamento_id=datos.get("medicamento_id"),
-            recordatorio_id=datos.get("recordatorio_id"),
             fecha_programada=fecha_programada,
             fecha_hora_toma=fecha_hora_toma,
             estado=datos.get("estado", "tomada"),
@@ -77,12 +73,8 @@ def registrar_toma(datos: dict):
 def obtener_tomas(paciente_id: str, fecha: str = None):
     if not fecha:
         fecha = str(date.today())
-
     tomas = toma_service.obtener_tomas_del_dia(paciente_id, fecha)
-
-    return {
-        "tomas": tomas
-    }
+    return {"tomas": tomas}
 
 
 @router.get("/historial/{paciente_id}")

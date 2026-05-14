@@ -14,7 +14,6 @@ issues = [i for i in issues if "pull_request" not in i]
 
 # Contamos HU cerradas por sprint
 conteo       = {n: 0 for n in range(1, NUM_SPRINTS + 1)}
-sin_etiqueta = 0
 
 for issue in issues:
     sprint_encontrado = None
@@ -26,8 +25,6 @@ for issue in issues:
                 pass
     if sprint_encontrado and sprint_encontrado in conteo:
         conteo[sprint_encontrado] += 1
-    else:
-        sin_etiqueta += 1
 
 total_cerradas      = sum(conteo.values())
 sprints_con_hu      = [n for n in conteo if conteo[n] > 0]
@@ -44,13 +41,6 @@ for n in range(1, NUM_SPRINTS + 1):
             <td>Sprint {n}</td>
             <td>{conteo[n]}</td>
         </tr>"""
-
-advertencia = ""
-if sin_etiqueta:
-    advertencia = f"""
-    <div class="warning">
-        ⚠️ {sin_etiqueta} HU cerradas no tienen etiqueta de sprint y no fueron contadas.
-    </div>"""
 
 html = f"""<!DOCTYPE html>
 <html lang="es">
@@ -163,7 +153,6 @@ html = f"""<!DOCTYPE html>
         {filas_html}
       </tbody>
     </table>
-    {advertencia}
     <div class="footer">
       Generado automáticamente por GitHub Actions
     </div>

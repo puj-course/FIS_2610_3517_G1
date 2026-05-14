@@ -80,25 +80,25 @@ Autenticación JWT.
 Middleware de protección de rutas.
 Roles de usuario.
 ## 🛠️ Tecnologías utilizadas
-*Frontend
+* Frontend
 React
 JavaScript
 CSS
-*Backend
+* Backend
 FastAPI
 Python 3.11
 PyJWT
 Pydantic
-*Base de datos
+* Base de datos
 MongoDB Atlas
-*Testing y Calidad
+* Testing y Calidad
 Pytest
 GitHub Actions
 SonarQube Cloud
-*DevOps
+* DevOps
 Docker
 Docker Compose
-*CI/CD automatizado
+* CI/CD automatizado
 Integraciones
 Telegram Bot API
 ## 🏗️ Arquitectura del sistema

@@ -114,11 +114,12 @@ MongoDB Atlas
 El sistema utiliza autenticación JWT para proteger endpoints y GitHub Actions para automatizar pruebas y procesos de integración continua.
 
 ## 📁 Estructura del proyecto
+## Estructura del proyecto
+
+```text
 MedTrack/
-│
 ├── .github/
 │   └── workflows/
-│
 ├── backend/
 │   ├── alertas/
 │   ├── commands/
@@ -137,22 +138,19 @@ MedTrack/
 │   ├── toma_repository.py
 │   ├── validaciones.py
 │   └── requirements.txt
-│
 ├── medtrack-app/
 │   ├── public/
 │   ├── src/
 │   ├── Dockerfile
 │   ├── package.json
 │   └── vite.config.js
-│
 ├── tests/
-│
 ├── docs/
-│
 ├── Dockerfile
 ├── docker-compose.yml
 ├── README.md
 └── requirements.txt
+```
 
 ## 📋 Requisitos
 Python 3.11+

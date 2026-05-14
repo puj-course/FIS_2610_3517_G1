@@ -2,6 +2,8 @@ name: Reporte HU por Sprint
 
 on:
   workflow_dispatch:
+  issues:
+    types: [closed]
 
 jobs:
   reporte:

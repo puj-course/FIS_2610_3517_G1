@@ -36,3 +36,5 @@ tzlocal==5.3.1
 urllib3==2.7.0
 uvicorn==0.46.0
 yarl==1.23.0
+APScheduler
+twilio

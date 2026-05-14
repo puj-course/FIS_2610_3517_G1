@@ -33,13 +33,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build y push - Backend (con build-args)
+      - name: Build y push - Backend
         if: matrix.is_backend == true
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.context }}/Dockerfile
-          push: ${{ github.event_name == 'push' }}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:latest
           build-args: |
             TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
@@ -54,7 +53,6 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.context }}/Dockerfile
-          push: ${{ github.event_name == 'push' }}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:latest
 
       - name: Verificar imágenes construidas

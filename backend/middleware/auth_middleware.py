@@ -1,4 +1,3 @@
-# auth_middleware.py
 import os
 import jwt
 
@@ -12,7 +11,6 @@ from starlette.authentication import (
     SimpleUser,
     UnauthenticatedUser,
 )
-
 
 unauthenticated_endpoints = [
     "/signup",
@@ -40,10 +38,7 @@ class CustomUser(BaseUser):
 
 
 def auth_error_handler(conn: Request, exc: AuthenticationError):
-    return JSONResponse(
-        status_code=403,
-        content={"detail": str(exc)}
-    )
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
 class BearerAuthBackend(AuthenticationBackend):
@@ -54,7 +49,11 @@ class BearerAuthBackend(AuthenticationBackend):
         if os.getenv("TESTING") == "1":
             return AuthCredentials(["test"]), SimpleUser("test")
 
-        if route in unauthenticated_endpoints or method == "OPTIONS":
+        if (
+            route in unauthenticated_endpoints
+            or route.startswith("/metricas-calidad")
+            or method == "OPTIONS"
+        ):
             return AuthCredentials(["public"]), SimpleUser("public")
 
         auth_header = conn.headers.get("Authorization")
@@ -78,13 +77,9 @@ class BearerAuthBackend(AuthenticationBackend):
         try:
             secret = os.getenv("SECRET_KEY")
             if not secret:
-                raise AuthenticationError("SECRET_KEY no configurada en el servidor")
-            decoded = jwt.decode(
-                token,
-                secret,
-                algorithms=["HS256"]
-            )
-            return decoded
+                raise AuthenticationError("SECRET_KEY no configurada")
+
+            return jwt.decode(token, secret, algorithms=["HS256"])
 
         except (jwt.InvalidSignatureError, jwt.exceptions.DecodeError):
             raise AuthenticationError("Token Invalido")

@@ -104,16 +104,18 @@ Telegram Bot API
 
 La arquitectura de MedTrack está basada en una separación cliente-servidor:
 
+```text
 Frontend React/Vite
-        ↓
+        │
+        ▼
 Backend FastAPI
-        ↓
+        │
+        ▼
 MongoDB Atlas
+```
 
 El sistema utiliza autenticación JWT para proteger endpoints y GitHub Actions para automatizar pruebas y procesos de integración continua.
-
 ## 📁 Estructura del proyecto
-## Estructura del proyecto
 
 ```text
 MedTrack/

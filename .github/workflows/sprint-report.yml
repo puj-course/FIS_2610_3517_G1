@@ -1,0 +1,41 @@
+name: Reporte HU por Sprint
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [closed]
+
+jobs:
+  reporte:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Descargar issues cerrados
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPO/issues?state=closed&per_page=100" --paginate > /tmp/issues.json
+          echo "Issues descargados"
+
+      - name: Calcular HU por sprint
+        env:
+          REPO: ${{ github.repository }}
+        run: python3 .github/scripts/calcular_sprints.py
+
+      - name: Publicar reporte como Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh issue create \
+            --repo "$REPO" \
+            --title "HU por Sprint - $(date +%d/%m/%Y)" \
+            --body-file /tmp/reporte.md \
+            --label "documentation"

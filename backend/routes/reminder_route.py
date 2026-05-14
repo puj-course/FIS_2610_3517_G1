@@ -189,10 +189,20 @@ def _obtener_horarios(medicamento: dict) -> list[str]:
 
 
 def _buscar_toma(medicamento_id: str, hoy_iso: str, hora: str):
-    return tomas_col.find_one({
+    toma = tomas_col.find_one({
         "medicamento_id": medicamento_id,
-        "fecha_programada": {"$regex": f"^{hoy_iso}.*{hora}"},
+        "estado": {"$in": list(ESTADOS_TOMADO)}
     })
+    if toma:
+        return toma
+    try:
+        toma = tomas_col.find_one({
+            "medicamento_id": ObjectId(medicamento_id),
+            "estado": {"$in": list(ESTADOS_TOMADO)}
+        })
+    except Exception:
+        pass
+    return toma
 
 
 def _esta_tomado(toma: Optional[dict]) -> bool:

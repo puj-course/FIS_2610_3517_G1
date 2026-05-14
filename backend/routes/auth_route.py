@@ -1,5 +1,6 @@
 from fastapi import APIRouter, status, HTTPException
 from pydantic import BaseModel
+from typing import Optional
 
 from backend.auth import hash_password, verify_password_hash, generate_jwt
 from backend.database import usuarios_col
@@ -17,6 +18,7 @@ class UserRegister(BaseModel):
     username: str
     password: str
     rol: str
+    telefono: Optional[str] = None
 
 
 @router.post("/signin")
@@ -63,11 +65,15 @@ async def create_user(user_data: UserRegister):
 
     hashed = hash_password(user_data.password)
 
+    telefono_raw = (user_data.telefono or "").strip().replace(" ", "")
+    telefono = f"+57{telefono_raw}" if telefono_raw and not telefono_raw.startswith("+") else telefono_raw
+
     usuarios_col.insert_one({
         "nombre": user_data.nombre,
         "correo": user_data.username,
         "contrasena": hashed,
-        "rol": user_data.rol
+        "rol": user_data.rol,
+        "telefono": telefono
     })
 
     return {"detail": "Usuario creado exitosamente"}

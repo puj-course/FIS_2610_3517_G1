@@ -351,7 +351,7 @@ export default function RegistroMedicamento() {
 
             <div className="rm-col">
               <label className="rm-label">Fecha de inicio <span className="obligatorio">*</span></label>
-              <input type="date" className={`rm-input${errores.fechaInicio ? ' error' : form.fechaInicio ? ' correcto' : ''}`} name="fechaInicio" value={form.fechaInicio} min={fechaHoy} onChange={handleChange} onBlur={handleBlur} />
+              <input type="date" className={`rm-input${errores.fechaInicio ? ' error' : form.fechaInicio ? ' correcto' : ''}`} name="fechaInicio" value={form.fechaInicio} onChange={handleChange} onBlur={handleBlur} />
               {errores.fechaInicio && <div className="rm-error-msg">{errores.fechaInicio}</div>}
             </div>
             <div className="rm-col">

@@ -54,6 +54,7 @@ const estilos = `
   .rg-invalido { border-color: var(--color-error) !important; box-shadow: none !important; }
   .rg-valido   { border-color: var(--color-exito) !important; box-shadow: none !important; }
   .rg-msg-error { font-size: .78rem; color: var(--color-error); margin-top: .3rem; }
+  .rg-hint { font-size: .76rem; color: var(--color-texto-suave); margin-top: .25rem; }
   .rg-alerta-error {
     background: rgba(244,114,106,.12); border: 1px solid rgba(244,114,106,.4);
     color: var(--color-error); border-radius: 10px;
@@ -87,13 +88,14 @@ const estilos = `
 const esEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 export default function Registro({ onIrALogin }) {
-  const [form, setForm] = useState({ nombre: "", correo: "", contrasena: "", confirmar: "", rol: "" });
+  const [form, setForm] = useState({ nombre: "", correo: "", telefono: "", contrasena: "", confirmar: "", rol: "" });
   const [tocados, setTocados] = useState({});
   const [alertaError, setAlertaError] = useState("");
   const [alertaExito, setAlertaExito] = useState("");
   const [cargando, setCargando] = useState(false);
 
   const validarCampo = (campo, valor, todos = form) => {
+    if (campo === "telefono") return false; // opcional
     if (!valor.trim()) return true;
     if (campo === "correo" && !esEmail(valor.trim())) return true;
     if (campo === "contrasena" && valor.length < 6) return true;
@@ -102,11 +104,12 @@ export default function Registro({ onIrALogin }) {
   };
 
   const errores = {
-    nombre:    validarCampo("nombre",    form.nombre),
-    correo:    validarCampo("correo",    form.correo),
+    nombre:     validarCampo("nombre",     form.nombre),
+    correo:     validarCampo("correo",     form.correo),
+    telefono:   validarCampo("telefono",   form.telefono),
     contrasena: validarCampo("contrasena", form.contrasena),
-    confirmar: validarCampo("confirmar", form.confirmar),
-    rol:       !form.rol,
+    confirmar:  validarCampo("confirmar",  form.confirmar),
+    rol:        !form.rol,
   };
 
   const cls = (campo) => {
@@ -124,16 +127,21 @@ export default function Registro({ onIrALogin }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAlertaError(""); setAlertaExito("");
-    const allTocados = { nombre: true, correo: true, contrasena: true, confirmar: true, rol: true };
+    const allTocados = { nombre: true, correo: true, telefono: true, contrasena: true, confirmar: true, rol: true };
     setTocados(allTocados);
     if (Object.values(errores).some(Boolean)) return;
     setCargando(true);
     try {
-      // ✅ usa api.registrarUsuario — sin fetch directo ni URL hardcoded
-      const res = await api.registrarUsuario({ nombre: form.nombre.trim(), username: form.correo.trim(), password: form.contrasena, rol: form.rol });
+      const res = await api.registrarUsuario({
+        nombre: form.nombre.trim(),
+        username: form.correo.trim(),
+        password: form.contrasena,
+        rol: form.rol,
+        telefono: form.telefono.trim() || ""
+      });
       const datos = res.body;
       if (!res.ok) { setAlertaError(datos.detail || "Error al crear la cuenta."); return; }
-      setAlertaExito("¡Cuenta creada exitosamente! Redirigiendo al login...");
+      setAlertaExito("Cuenta creada exitosamente. Redirigiendo al login...");
       setTimeout(() => onIrALogin?.(), 2000);
     } catch {
       setAlertaError("No se pudo conectar al servidor.");
@@ -160,10 +168,10 @@ export default function Registro({ onIrALogin }) {
 
           <form onSubmit={handleSubmit} noValidate>
             {[
-              { id: "nombre",    label: "Nombre completo",       type: "text",     ph: "Tu nombre completo" },
-              { id: "correo",    label: "Correo electrónico",    type: "email",    ph: "tu@correo.com" },
-              { id: "contrasena",label: "Contraseña",            type: "password", ph: "Mínimo 6 caracteres" },
-              { id: "confirmar", label: "Confirmar contraseña",  type: "password", ph: "Repite tu contraseña" },
+              { id: "nombre",     label: "Nombre completo",      type: "text",     ph: "Tu nombre completo" },
+              { id: "correo",     label: "Correo electronico",   type: "email",    ph: "tu@correo.com" },
+              { id: "contrasena", label: "Contrasena",           type: "password", ph: "Minimo 6 caracteres" },
+              { id: "confirmar",  label: "Confirmar contrasena", type: "password", ph: "Repite tu contrasena" },
             ].map(({ id, label, type, ph }) => (
               <div key={id} className="mb-3">
                 <label className="rg-etiqueta" htmlFor={id}>{label} <span className="obligatorio">*</span></label>
@@ -175,14 +183,30 @@ export default function Registro({ onIrALogin }) {
                 />
                 {tocados[id] && errores[id] && (
                   <div className="rg-msg-error">
-                    {id === "nombre" && "Ingresa tu nombre completo."}
-                    {id === "correo" && "Ingresa un correo válido."}
-                    {id === "contrasena" && "La contraseña debe tener mínimo 6 caracteres."}
-                    {id === "confirmar" && "Las contraseñas no coinciden."}
+                    {id === "nombre"     && "Ingresa tu nombre completo."}
+                    {id === "correo"     && "Ingresa un correo valido."}
+                    {id === "contrasena" && "La contrasena debe tener minimo 6 caracteres."}
+                    {id === "confirmar"  && "Las contraenas no coinciden."}
                   </div>
                 )}
               </div>
             ))}
+
+            <div className="mb-3">
+                <label className="rg-etiqueta" htmlFor="telefono">
+                  Telefono <span style={{ color: 'var(--color-texto-suave)', fontWeight: 400 }}>(opcional)</span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                  <span style={{ background: 'var(--color-campo)', border: '1.5px solid var(--color-borde)', borderRadius: 10, padding: '.65rem .9rem', fontSize: '.92rem', color: 'var(--color-texto-suave)', whiteSpace: 'nowrap' }}>+57</span>
+                  <input
+                    id="telefono" type="tel" className="rg-input" placeholder="3001234567"
+                    value={form.telefono}
+                    onChange={e => set("telefono", e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    onBlur={() => touch("telefono")}
+                  />
+                </div>
+                <div className="rg-hint">Solo el numero, sin codigo de pais. Se usa para alertas SMS.</div>
+              </div>
 
             <div className="mb-3">
               <label className="rg-etiqueta" htmlFor="rol">Rol <span className="obligatorio">*</span></label>
@@ -204,8 +228,8 @@ export default function Registro({ onIrALogin }) {
           </form>
 
           <p className="rg-pie">
-            ¿Ya tienes cuenta?{" "}
-            <button className="rg-enlace" onClick={onIrALogin}>Inicia sesión aquí</button>
+            Ya tienes cuenta?{" "}
+            <button className="rg-enlace" onClick={onIrALogin}>Inicia sesion aqui</button>
           </p>
         </div>
       </div>

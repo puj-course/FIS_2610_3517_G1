@@ -13,7 +13,6 @@ on:
 jobs:
   docker-push:
     runs-on: ubuntu-latest
-    needs: docker-build
     strategy:
       matrix:
         include:

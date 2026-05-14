@@ -1,4 +1,4 @@
-name: SonarQube Analysis
+name: SonarQube Anal
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
     branches:
       - main
       - develop
-  workflow_dispatch:
+ workflow_dispatch:
 
 jobs:
   sonarqube:
@@ -48,7 +48,7 @@ jobs:
           PYTHONPATH=. python -m pytest -v tests \
             --cov=backend \
             --cov-report=xml:coverage.xml
-
+            --cov-report=term-missing \
       - name: Verificar reporte de cobertura
         run: |
           ls -la coverage.xml

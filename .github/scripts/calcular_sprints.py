@@ -125,7 +125,7 @@ html = f"""<!DOCTYPE html>
     </div>
 
     <h1>HU Cerradas por Sprint</h1>
-    <p class="subtitulo">Generado el {fecha} — Repositorio: {repo}</p>
+    <p class="subtitulo">Repositorio: {repo}</p>
 
     <div class="resumen">
       <div class="card">
@@ -154,7 +154,6 @@ html = f"""<!DOCTYPE html>
       </tbody>
     </table>
     <div class="footer">
-      Generado automáticamente por GitHub Actions
     </div>
   </div>
 </body>

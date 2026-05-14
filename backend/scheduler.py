@@ -86,7 +86,7 @@ def verificar_tomas():
                 "estado": {"$in": ["tomada", "a_tiempo", "tarde"]}
             })
 
-            if 13 <= diff <= 16 and clave_rec not in ya_enviados:
+            if 10 <= diff <= 20 and clave_rec not in ya_enviados:
                 ya_enviados.add(clave_rec)
                 print(f"[Scheduler] Enviando recordatorio SMS a {telefono}")
                 enviar_sms(
@@ -94,7 +94,7 @@ def verificar_tomas():
                     f"MedTrack: Recordatorio - {nombre_paciente} debe tomar {nombre_med} en 15 minutos (a las {hora})."
                 )
 
-            if -6 <= diff <= -5 and not toma_hoy and clave_per not in ya_enviados:
+            if -10 <= diff <= -4 and not toma_hoy and clave_per not in ya_enviados:
                 ya_enviados.add(clave_per)
                 print(f"[Scheduler] Enviando alerta SMS a {telefono}")
                 enviar_sms(
@@ -104,7 +104,12 @@ def verificar_tomas():
 
 def iniciar_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(verificar_tomas, 'interval', minutes=1)
+    scheduler.add_job(
+        verificar_tomas,
+        'interval',
+        minutes=1,
+        misfire_grace_time=30
+    )
     scheduler.start()
     print("Scheduler de alertas SMS iniciado.")
     return scheduler

@@ -1,6 +1,6 @@
 # Diagrama de Despliegue
 
-![Diagrama de Despliegue](./imagenes/Despliegue Actualizado.png)
+![Diagrama de Despliegue](./imagenes/Despliegue%20Actualizado.png)
 
 ## Descripción
 El diagrama representa cómo se despliega MedTrack usando Docker. Hay tres componentes principales: dos contenedores orquestados por Docker Compose y una base de datos en la nube.

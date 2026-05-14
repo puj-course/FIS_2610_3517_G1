@@ -209,7 +209,7 @@ def test_iniciar_scheduler(monkeypatch):
     jobs = []
 
     class SchedulerFalso:
-        def add_job(self, funcion, trigger, minutes):
+        def add_job(self, funcion, trigger, minutes=1, misfire_grace_time=None, **kwargs):
             jobs.append({
                 "funcion": funcion,
                 "trigger": trigger,

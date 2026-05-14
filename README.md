@@ -15,91 +15,90 @@ La administración de medicamentos es una tarea crítica dentro del cuidado de p
 
 MedTrack surge como una propuesta para acompañar al cuidador mediante una herramienta clara, intuitiva y adaptable, permitiendo:
 
-Llevar un registro estructurado de tratamientos.
-Controlar horarios y dosis.
-Evitar duplicación de medicamentos.
-Generar recordatorios automáticos.
-Registrar historial de tomas.
-Obtener métricas de adherencia al tratamiento.
+- Llevar un registro estructurado de tratamientos.
+- Controlar horarios y dosis.
+- Evitar duplicación de medicamentos.
+- Generar recordatorios automáticos.
+- Registrar historial de tomas.
+- Obtener métricas de adherencia al tratamiento.
 ## ❓ Problemática identificada
 
 MedTrack busca resolver:
 
-Falta de seguimiento estructurado en tratamientos médicos.
-Olvidos en horarios de administración.
-Confusión entre medicamentos y dosis.
-Ausencia de historial de tomas.
-Dificultad para validar cumplimiento del tratamiento.
-Riesgo de errores por parte de cuidadores sin experiencia médica.
+- Falta de seguimiento estructurado en tratamientos médicos.
+- Olvidos en horarios de administración.
+- Confusión entre medicamentos y dosis.
+- Ausencia de historial de tomas.
+- Dificultad para validar cumplimiento del tratamiento.
+- Riesgo de errores por parte de cuidadores sin experiencia médica.
 ## 👥 Público objetivo
 
 La solución está orientada principalmente a:
 
-Cuidadores sin formación médica.
-Familias encargadas del cuidado de pacientes.
-Personas con múltiples pacientes bajo supervisión.
-Pacientes con tratamientos prolongados.
+- Cuidadores sin formación médica.
+- Familias encargadas del cuidado de pacientes.
+- Personas con múltiples pacientes bajo supervisión.
+- Pacientes con tratamientos prolongados.
 ## 🎯 Propuesta de valor
 
 MedTrack se diferencia de aplicaciones genéricas de recordatorios al enfocarse específicamente en el contexto real del cuidador novato.
 
 La plataforma prioriza:
 
-Claridad y simplicidad visual.
-Prevención de errores comunes.
-Historial trazable de administración.
-Seguimiento estructurado del tratamiento.
-Alertas inteligentes y automatizadas.
-Organización centralizada de la información médica.
+- Claridad y simplicidad visual.
+- Prevención de errores comunes.
+- Historial trazable de administración.
+- Seguimiento estructurado del tratamiento.
+- Alertas inteligentes y automatizadas.
+- Organización centralizada de la información médica.
 # 🧩 Características principales
 ## 👤 Gestión de pacientes
-Registro y administración de pacientes.
-Información médica y observaciones relevantes.
-Historial individual por paciente.
+- Registro y administración de pacientes.
+- Información médica y observaciones relevantes.
+- Historial individual por paciente.
 ## 💊 Gestión de medicamentos
-Registro de medicamentos y dosis.
-Configuración de horarios y frecuencias.
-Validación de duplicados y conflictos.
+- Registro de medicamentos y dosis.
+- Configuración de horarios y frecuencias.
+- Validación de duplicados y conflictos.
 ## ⏰ Recordatorios automáticos
-Programación de recordatorios.
-Seguimiento de tomas pendientes.
-Notificaciones automáticas mediante Telegram.
+- Programación de recordatorios.
+- Seguimiento de tomas pendientes.
+- Notificaciones automáticas mediante Telegram.
 ## 📋 Historial de tomas
 Registro de adherencia al tratamiento.
 Clasificación de tomas:
-A tiempo
-Tarde
-Pendiente
-Omitida
+- A tiempo
+- Tarde
+- Pendiente
+- Omitida
 ## 📊 Resumen y métricas
-Porcentaje de cumplimiento.
-Historial consolidado.
-Alertas relevantes del tratamiento.
+- Porcentaje de cumplimiento.
+- Historial consolidado.
+- Alertas relevantes del tratamiento.
 ## 🔐 Seguridad
-Autenticación JWT.
-Middleware de protección de rutas.
-Roles de usuario.
+- Autenticación JWT.
+- Middleware de protección de rutas.
+- Roles de usuario.
 ## 🛠️ Tecnologías utilizadas
 * Frontend
-React
-JavaScript
-CSS
+- React
+- JavaScript
+- CSS
 * Backend
-FastAPI
-Python 3.11
-PyJWT
-Pydantic
+- FastAPI
+- Python 3.11
+- PyJWT
 * Base de datos
-MongoDB Atlas
+MongoDB 
 * Testing y Calidad
-Pytest
-GitHub Actions
-SonarQube Cloud
+- Pytest
+- GitHub Actions
+- SonarQube Cloud
 * DevOps
-Docker
-Docker Compose
-* CI/CD automatizado
-Integraciones
+- Docker
+- Docker Compose
+- CI/CD automatizado
+* Integraciones
 Telegram Bot API
 ## 🏗️ Arquitectura del sistema
 
@@ -153,35 +152,34 @@ MedTrack/
 ```
 
 ## 📋 Requisitos
-Python 3.11+
-Node.js 18+
-MongoDB Atlas
-Docker (opcional)
+- Python 3.11+
+- Node.js 18+
+- MongoDB 
 
 ## 🧪 Ejecución de pruebas
-Ejecutar todos los tests
+- Ejecutar todos los tests
 python -m pytest -v tests/
-Generar reportes HTML/XML
+- Generar reportes HTML/XML
 pytest tests/ --junitxml=report.xml --html=report.html --self-contained-html
 ## 🔄 CI/CD
 
 El proyecto implementa pipelines automáticos mediante GitHub Actions para:
 
-Ejecución automática de pruebas.
-Validación de dependencias.
-Reportes HTML/XML.
-Integración continua.
-Análisis de calidad.
-Notificaciones automáticas mediante Telegram.
+- Ejecución automática de pruebas.
+- Validación de dependencias.
+- Reportes HTML/XML.
+- Integración continua.
+- Análisis de calidad.
+- Notificaciones automáticas mediante Telegram.
 ## 📊 Calidad del software
 
 El proyecto utiliza:
 
-SonarQube Cloud
-Métricas de mantenibilidad
-Pruebas automatizadas
-Validaciones backend
-Cobertura funcional
+- SonarQube Cloud
+- Métricas de mantenibilidad
+- Pruebas automatizadas
+- Validaciones backend
+- Cobertura funcional
 
 ## 🤝 Equipo del proyecto
 ## Equipo del Proyecto
@@ -207,7 +205,7 @@ Cobertura funcional
 - **Quality Assurance Lead (QA Lead)**: Verifica el cumplimiento de criterios de evaluación, revisa calidad funcional, técnica y documental, y reporta defectos.
 - **DevOps Engineer**: Diseña y mantiene pipelines CI/CD, automatiza pruebas, gestiona despliegues con Docker y configura entornos.
 
-```
+
 
 ## 📌 Contexto académico
 

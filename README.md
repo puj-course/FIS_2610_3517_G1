@@ -51,35 +51,35 @@ Historial trazable de administración.
 Seguimiento estructurado del tratamiento.
 Alertas inteligentes y automatizadas.
 Organización centralizada de la información médica.
-## 🧩 Características principales
-# 👤 Gestión de pacientes
+# 🧩 Características principales
+## 👤 Gestión de pacientes
 Registro y administración de pacientes.
 Información médica y observaciones relevantes.
 Historial individual por paciente.
-# 💊 Gestión de medicamentos
+## 💊 Gestión de medicamentos
 Registro de medicamentos y dosis.
 Configuración de horarios y frecuencias.
 Validación de duplicados y conflictos.
-# ⏰ Recordatorios automáticos
+## ⏰ Recordatorios automáticos
 Programación de recordatorios.
 Seguimiento de tomas pendientes.
 Notificaciones automáticas mediante Telegram.
-# 📋 Historial de tomas
+## 📋 Historial de tomas
 Registro de adherencia al tratamiento.
 Clasificación de tomas:
 A tiempo
 Tarde
 Pendiente
 Omitida
-# 📊 Resumen y métricas
+## 📊 Resumen y métricas
 Porcentaje de cumplimiento.
 Historial consolidado.
 Alertas relevantes del tratamiento.
-# 🔐 Seguridad
+## 🔐 Seguridad
 Autenticación JWT.
 Middleware de protección de rutas.
 Roles de usuario.
-# 🛠️ Tecnologías utilizadas
+## 🛠️ Tecnologías utilizadas
 *Frontend
 React
 JavaScript

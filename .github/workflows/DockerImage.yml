@@ -11,57 +11,18 @@ on:
       - main
 
 jobs:
-  docker-build:
+  docker-build-push:
     runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout del código
-        uses: actions/checkout@v4
-
-      - name: Build de imagenes Docker
-        env:
-          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-          TWILIO_FROM: ${{ secrets.TWHILIO_FROM }}
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          SECRET_KEY: ${{secrets.SECRET_KEY}}
-        run: docker-compose build
-
-      - name: Verificar que las imágenes se construyeron
-        run: docker images
-
-      # - name: Levantar contenedor de prueba
-      #   run: |
-      #     docker run --rm -d \
-      #       --name test-container \
-      #       -p 8000:8000 \
-      #       -e MONGO_URI="${{ secrets.MONGO_URI }}" \
-      #       -e SECRET_KEY="test-secret-key-for-docker" \
-      #       medtrack:latest
-
-      # - name: Verificar que la aplicación responde
-      #   run: |
-      #     sleep 15
-      #     curl --fail http://localhost:8000/docs
-
-      # - name: Detener contenedor
-      #   if: always()
-      #   run: docker stop test-container || true
-
-  docker-push:
-    runs-on: ubuntu-latest
-    needs: docker-build
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
-
     strategy:
       matrix:
         include:
-          - image: fis_2610_3517_g1-backend-1
-            tag: latest
+          - image: fis_2610_3517_g1-backend
             context: .
-          - image: fis_2610_3517_g1-frontend:latest
-            tag: latest
+            is_backend: true
+          - image: fis_2610_3517_g1-frontend
             context: ./medtrack-app
+            is_backend: false
+
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -72,11 +33,29 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build y push a DockerHub
+      - name: Build y push - Backend (con build-args)
+        if: matrix.is_backend == true
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.context }}/Dockerfile
-          push: true
-          tags: |
-            ${{ matrix.image }}:${{ matrix.tag }}
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:latest
+          build-args: |
+            TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
+            TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}
+            TWILIO_FROM=${{ secrets.TWHILIO_FROM }}
+            MONGO_URI=${{ secrets.MONGO_URI }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+
+      - name: Build y push - Frontend
+        if: matrix.is_backend == false
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:latest
+
+      - name: Verificar imágenes construidas
+        run: docker images

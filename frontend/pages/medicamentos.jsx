@@ -146,7 +146,7 @@ export default function Medicamentos() {
           <div className="med-paciente-flecha"><IconChevronRight /></div>
         </button>
       ))}
-      ))}
+      
     </div>
   );
 

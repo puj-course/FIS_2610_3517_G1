@@ -4,7 +4,7 @@
 
 Este documento presenta las métricas de calidad usadas para evaluar el backend de MedTrack.
 
-Se diferencian dos grupos:
+Se diferencian dos gruposs:
 
 1. Métricas automáticas de SonarQube/SonarCloud.
 2. Métricas propias implementadas por el equipo.

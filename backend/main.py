@@ -9,7 +9,6 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 
 
 
-from backend.models import init_db
 from backend.middleware.auth_middleware import BearerAuthBackend, auth_error_handler
 from backend.scheduler import iniciar_scheduler
 from backend.routes.quality_metrics_route import router as quality_metrics_router
@@ -21,7 +20,6 @@ from backend.routes.toma_route import router as toma_router
 from backend.routes.historial_route import router as historial_router
 from backend.routes.resumen_route import router as resumen_router
 
-init_db()
 
 @asynccontextmanager
 async def lifespan(app):

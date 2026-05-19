@@ -1,0 +1,172 @@
+{
+  "estado_general": "Aprobado",
+  "quality_gate_aprobado": true,
+  "notificacion": {
+    "tipo": "APROBADO",
+    "mensaje": "Todas las metricas propias cumplen el umbral minimo de calidad.",
+    "metricas_afectadas": []
+  },
+  "resumen_metricas": {
+    "completitud_datos": {
+      "metrica": "completitud_datos",
+      "porcentaje": 100.0,
+      "nivel": "Bueno",
+      "lectura": "100.0% - Bueno",
+      "que_mide": "Porcentaje de campos obligatorios completos.",
+      "que_hace_que_cambie": "Baja cuando faltan campos requeridos en pacientes, medicamentos o recordatorios.",
+      "campos_totales": 11,
+      "campos_completos": 11,
+      "campos_incompletos": 0,
+      "entidades": {
+        "pacientes": {
+          "registros": 1,
+          "campos_totales": 2,
+          "campos_completos": 2,
+          "campos_incompletos": 0,
+          "porcentaje": 100.0,
+          "nivel": "Bueno",
+          "lectura": "100.0% - Bueno",
+          "detalle": [
+            {
+              "id": "pac-1",
+              "campos_faltantes": [],
+              "porcentaje": 100.0,
+              "nivel": "Bueno"
+            }
+          ]
+        },
+        "medicamentos": {
+          "registros": 1,
+          "campos_totales": 4,
+          "campos_completos": 4,
+          "campos_incompletos": 0,
+          "porcentaje": 100.0,
+          "nivel": "Bueno",
+          "lectura": "100.0% - Bueno",
+          "detalle": [
+            {
+              "id": "med-1",
+              "campos_faltantes": [],
+              "porcentaje": 100.0,
+              "nivel": "Bueno"
+            }
+          ]
+        },
+        "recordatorios": {
+          "registros": 1,
+          "campos_totales": 5,
+          "campos_completos": 5,
+          "campos_incompletos": 0,
+          "porcentaje": 100.0,
+          "nivel": "Bueno",
+          "lectura": "100.0% - Bueno",
+          "detalle": [
+            {
+              "id": "rec-1",
+              "campos_faltantes": [],
+              "porcentaje": 100.0,
+              "nivel": "Bueno"
+            }
+          ]
+        }
+      }
+    },
+    "cumplimiento_reglas_negocio": {
+      "metrica": "cumplimiento_reglas_negocio",
+      "porcentaje": 100.0,
+      "nivel": "Bueno",
+      "lectura": "100.0% - Bueno",
+      "que_mide": "Porcentaje de reglas de negocio cumplidas.",
+      "que_hace_que_cambie": "Baja cuando los IDs no existen o no son coherentes entre paciente, medicamento, recordatorio y toma.",
+      "reglas_totales": 9,
+      "reglas_cumplidas": 9,
+      "reglas_incumplidas": 0,
+      "detalle": [
+        {
+          "entidad": "medicamento",
+          "referencia": "med-1",
+          "regla": "Medicamento asociado a paciente existente",
+          "cumple": true,
+          "esperado": "paciente_id registrado en pacientes",
+          "obtenido": "pac-1"
+        },
+        {
+          "entidad": "recordatorio",
+          "referencia": "rec-1",
+          "regla": "Recordatorio asociado a medicamento existente",
+          "cumple": true,
+          "esperado": "medicamento_id registrado en medicamentos",
+          "obtenido": "med-1"
+        },
+        {
+          "entidad": "recordatorio",
+          "referencia": "rec-1",
+          "regla": "Recordatorio asociado a paciente existente",
+          "cumple": true,
+          "esperado": "paciente_id registrado en pacientes",
+          "obtenido": "pac-1"
+        },
+        {
+          "entidad": "recordatorio",
+          "referencia": "rec-1",
+          "regla": "Paciente del recordatorio coincide con paciente del medicamento",
+          "cumple": true,
+          "esperado": "pac-1",
+          "obtenido": "pac-1"
+        },
+        {
+          "entidad": "toma",
+          "referencia": "toma-1",
+          "regla": "Toma asociada a paciente existente",
+          "cumple": true,
+          "esperado": "paciente_id registrado en pacientes",
+          "obtenido": "pac-1"
+        },
+        {
+          "entidad": "toma",
+          "referencia": "toma-1",
+          "regla": "Toma asociada a medicamento existente",
+          "cumple": true,
+          "esperado": "medicamento_id registrado en medicamentos",
+          "obtenido": "med-1"
+        },
+        {
+          "entidad": "toma",
+          "referencia": "toma-1",
+          "regla": "Toma asociada a recordatorio existente",
+          "cumple": true,
+          "esperado": "recordatorio_id registrado en recordatorios",
+          "obtenido": "rec-1"
+        },
+        {
+          "entidad": "toma",
+          "referencia": "toma-1",
+          "regla": "Paciente de la toma coincide con paciente del medicamento",
+          "cumple": true,
+          "esperado": "pac-1",
+          "obtenido": "pac-1"
+        },
+        {
+          "entidad": "toma",
+          "referencia": "toma-1",
+          "regla": "Toma coincide con paciente y medicamento del recordatorio",
+          "cumple": true,
+          "esperado": "paciente_id=pac-1, medicamento_id=med-1",
+          "obtenido": "paciente_id=pac-1, medicamento_id=med-1"
+        }
+      ],
+      "reglas_fallidas": []
+    },
+    "rendimiento_latencia": {
+      "metrica": "rendimiento_latencia",
+      "porcentaje": 100.0,
+      "nivel": "Bueno",
+      "lectura": "100.0% - Bueno",
+      "latencia_ms": 0.17,
+      "objetivo_ms": 300.0,
+      "exitoso": true,
+      "que_mide": "Porcentaje de cumplimiento del objetivo de rendimiento.",
+      "que_hace_que_cambie": "Baja si el calculo tarda mas que el objetivo definido."
+    }
+  }
+}

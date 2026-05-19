@@ -201,9 +201,21 @@ const api = {
       headers: headersAuth(),
     }),
 
-    obtenerPanelCompleto: () =>
+  obtenerPanelCompleto: () =>
     fetchJson(API_URL + '/recordatorios/panel-completo', {
       headers: headersAuth(),
+    }),
+
+  obtenerMetricasCalidad: () =>
+    fetchJson(API_URL + '/metricas-calidad/resumen?incluir_detalle=true', {
+      headers: headersAuth(),
+    }),
+
+  evaluarMetricasCalidad: (payload) =>
+    fetchJson(API_URL + '/metricas-calidad/evaluar?incluir_detalle=true', {
+      method: 'POST',
+      headers: headersAuth(),
+      body: JSON.stringify(payload),
     }),
 };
 

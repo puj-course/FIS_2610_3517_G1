@@ -1,33 +1,48 @@
-version: '3.8'
 services:
   frontend:
-    build:
-      context: ./medtrack-app
-      dockerfile: Dockerfile
+    image: naqz05/fis_2610_3517_g1-frontend:latest
     ports:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000
+      - TZ=America/Bogota
     depends_on:
       - backend
     networks:
       - app-network
 
   backend:
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    image: naqz05/fis_2610_3517_g1-backend:latest
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
-      - TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-      - TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-      - TWILIO_FROM: ${{ secrets.TWHILIO_FROM }}
-      - MONGO_URI: ${{ secrets.MONGO_URI }}
-      - SECRET_KEY: ${{secrets.SECRET_KEY}}
+      - TZ=America/Bogota
+    depends_on:
+      - mongo
     networks:
       - app-network
 
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    environment:
+      - TZ=America/Bogota
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app-network
+
+volumes:
+  mongo_data:
+    name: fis_2610_3517_g1_mongo_data
+
 networks:
   app-network:
+    name: fis_2610_3517_g1-net
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -183,6 +183,30 @@ El proyecto utiliza:
 - Validaciones backend
 - Cobertura funcional
 
+## Panel de metricas de calidad
+
+La app incluye una pantalla integrada para evaluar metricas propias de calidad:
+
+- Ruta frontend: `/metricas-calidad`.
+- Endpoints: `GET /metricas-calidad/resumen` y `POST /metricas-calidad/evaluar`.
+- Las metricas se muestran principalmente como porcentajes.
+- El usuario puede cargar un escenario valido o un escenario invalido editable en JSON.
+- El quality gate cambia entre aprobado y requiere mejora segun los porcentajes.
+- Pipeline dedicado: `Quality Metrics`.
+
+Metricas incluidas:
+
+- Completitud de datos: porcentaje de campos obligatorios completos en pacientes, medicamentos y recordatorios.
+- Cumplimiento de reglas de negocio: porcentaje de relaciones coherentes entre paciente, medicamento, recordatorio y toma.
+- Rendimiento / latencia: porcentaje de cumplimiento del objetivo de rendimiento, con latencia real en milisegundos como detalle.
+
+Comandos utiles:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -v tests/test_quality_metrics.py tests/test_quality_metrics_route.py
+.\.venv\Scripts\python.exe scripts\run_quality_metrics_scenarios.py
+```
+
 ## 🤝 Equipo del proyecto
 ## Equipo del Proyecto
 

@@ -6,11 +6,11 @@ Nota: este reporte no calcula historias de usuario cerradas, ya que esa métrica
 
 ## Resumen general
 
-- Total de commits registrados: **492**
-- Total de PRs integrados: **118**
+- Total de commits registrados: **510**
+- Total de PRs integrados: **125**
 - Total de revisiones registradas: **0**
-- Promedio de commits por sprint: **54.67**
-- Promedio de PRs integrados por sprint: **13.11**
+- Promedio de commits por sprint: **56.67**
+- Promedio de PRs integrados por sprint: **13.89**
 - Promedio de revisiones por sprint: **0.0**
 
 ## Resumen por sprint
@@ -25,31 +25,33 @@ Nota: este reporte no calcula historias de usuario cerradas, ya que esa métrica
 | Sprint 11 | 2026-04-20 a 2026-04-24 | 33 | 12 | 0 |
 | Sprint 12 | 2026-04-27 a 2026-05-01 | 31 | 7 | 0 |
 | Sprint 13 | 2026-05-04 a 2026-05-08 | 51 | 15 | 0 |
-| Sprint 14 | 2026-05-11 a 2026-05-21 | 112 | 35 | 0 |
+| Sprint 14 | 2026-05-11 a 2026-05-21 | 130 | 42 | 0 |
 
 ## Distribución global de commits por integrante
 
 | Integrante | Commits |
 |---|---:|
-| vanexalram | 185 |
-| Naqz05 | 75 |
+| vanexalram | 189 |
+| Naqz05 | 79 |
 | vanesa | 60 |
 | Torres Vides | 44 |
+| sofia-sierra2 | 32 |
 | Sofía Sierra | 30 |
-| sofia-sierra2 | 29 |
 | rodriguezdiazandres8 | 26 |
 | Valentina Cano | 19 |
-| Valentina866 | 14 |
+| Valentina866 | 16 |
 | TorresVides | 8 |
+| Aulas Ingenieria | 4 |
 | Juan Pablo Arias Buitrago | 2 |
+| github-actions[bot] | 1 |
 
 ## Distribución global de PRs integrados por integrante
 
 | Integrante | PRs integrados |
 |---|---:|
-| vanexalram | 31 |
-| sofia-sierra2 | 30 |
-| Naqz05 | 20 |
+| sofia-sierra2 | 33 |
+| vanexalram | 33 |
+| Naqz05 | 22 |
 | Valentina866 | 17 |
 | TorresVides | 11 |
 | rodriguezdiazandres8 | 9 |
@@ -729,17 +731,38 @@ Nota: este reporte no calcula historias de usuario cerradas, ya que esa métrica
 
 ## Commits por integrante
 
-- vanexalram: 32
+- vanexalram: 36
 - vanesa: 21
+- Naqz05: 16
 - Torres Vides: 15
-- Naqz05: 12
+- sofia-sierra2: 11
 - rodriguezdiazandres8: 11
-- sofia-sierra2: 8
 - Sofía Sierra: 7
 - Valentina Cano: 6
+- Aulas Ingenieria: 4
+- Valentina866: 2
+- github-actions[bot]: 1
 
 ## Commits registrados
 
+- `722d56a` — vanexalram — Merge pull request #735 from puj-course/develop
+- `e137087` — sofia-sierra2 — Merge pull request #734 from puj-course/features-sofia
+- `61a56ea` — Aulas Ingenieria — fix: hora para el mensaje sms
+- `3afca11` — sofia-sierra2 — Merge pull request #733 from puj-course/features-sofia
+- `0bc0b5b` — Aulas Ingenieria — fix: arreglar redes de docker compose
+- `362bf54` — sofia-sierra2 — Merge pull request #732 from puj-course/features-sofia
+- `1e41de3` — Aulas Ingenieria — arreglar docker compose
+- `e15a023` — Aulas Ingenieria — arreglar docker compose
+- `91b1340` — vanexalram — Merge pull request #730 from puj-course/features-vanesa
+- `9e078fe` — Valentina866 — Add files via upload
+- `9ac6224` — Valentina866 — Merge pull request #729 from puj-course/features-Natalia
+- `3c0176a` — Naqz05 — fix: docker compose using docker networks and local DB mongo
+- `4cd9eab` — Naqz05 — fix: Se define ruta para el volumen de la DB
+- `b46b124` — Naqz05 — Merge pull request #727 from puj-course/features-Natalia
+- `10b04a0` — Naqz05 — fix: Usar docker network en el compose
+- `63c94fe` — vanexalram — Refactorizar backend y agregarle fix con sonar. Closes #669
+- `7c05f37` — vanexalram — actualizar rama
+- `6e30b0a` — github-actions[bot] — docs: actualizar reporte de participacion tecnica
 - `6be61ba` — vanexalram — Merge pull request #723 from puj-course/develop
 - `e806e39` — vanexalram — Merge pull request #722 from puj-course/features-vanesa
 - `a1c876a` — vanesa — feat(quality): integrate custom backend quality metrics. Closes #682. Closes #683. Closes #684.
@@ -855,6 +878,13 @@ Nota: este reporte no calcula historias de usuario cerradas, ya que esa métrica
 
 ## PRs integrados
 
+- PR #735 — Develop — vanexalram
+- PR #734 — fix: hora para el mensaje sms — sofia-sierra2
+- PR #733 — fix: arreglar redes de docker compose — sofia-sierra2
+- PR #732 — Features sofia — sofia-sierra2
+- PR #730 — Features vanesa — vanexalram
+- PR #729 — Features natalia — Naqz05
+- PR #727 — fix: Usar docker network en el compose — Naqz05
 - PR #723 — Develop — vanexalram
 - PR #722 — feat(quality): integrate custom backend quality metrics. Closes #682.… — vanexalram
 - PR #721 — fix: arreglar time de scheduler.py — sofia-sierra2

@@ -5,6 +5,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000
+      - TZ=America/Bogota
     depends_on:
       - backend
     networks:
@@ -16,6 +17,8 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - TZ=America/Bogota
     depends_on:
       - mongo
     networks:
@@ -25,6 +28,8 @@ services:
     image: mongo:7
     ports:
       - "27017:27017"
+    environment:
+      - TZ=America/Bogota
     volumes:
       - mongo_data:/data/db
     networks:

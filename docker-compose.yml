@@ -1,9 +1,10 @@
 version: '3.8'
 services:
   frontend:
-    build:
-      context: ./medtrack-app
-      dockerfile: Dockerfile
+    # build:
+    #   context: ./medtrack-app
+    #   dockerfile: Dockerfile
+    image: naqz05/fis_2610_3517_g1-frontend:latest
     ports:
       - "5173:5173"
     environment:
@@ -11,23 +12,45 @@ services:
     depends_on:
       - backend
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.2
+
 
   backend:
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    # build:
+    #   context: ./
+    #   dockerfile: Dockerfile
+    image: naqz05/fis_2610_3517_g1-backend:latest
     ports:
       - "8000:8000"
     environment:
-      - TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-      - TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-      - TWILIO_FROM: ${{ secrets.TWHILIO_FROM }}
-      - MONGO_URI: ${{ secrets.MONGO_URI }}
-      - SECRET_KEY: ${{secrets.SECRET_KEY}}
+      - MONGO_URI=mongodb://mongo:27017/MEDTRACK
+      - SECRET_KEY=${SECRET_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_FROM=${TWILIO_FROM}
+    depends_on:
+      - mongo
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.3
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      app-network:
+        ipv4_address: 172.20.0.4
 
 networks:
   app-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  mongo_data:

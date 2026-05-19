@@ -1,9 +1,7 @@
 version: '3.8'
 services:
   frontend:
-    build:
-      context: ./medtrack-app
-      dockerfile: Dockerfile
+    image: naqz05/fis_2610_3517_g1-frontend:latest
     ports:
       - "5173:5173"
     environment:
@@ -11,12 +9,11 @@ services:
     depends_on:
       - backend
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.2
 
   backend:
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    image: naqz05/fis_2610_3517_g1-backend:latest
     ports:
       - "8000:8000"
     env_file:
@@ -24,7 +21,8 @@ services:
     depends_on:
       - mongo
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.3
 
   mongo:
     image: mongo:7
@@ -37,7 +35,11 @@ services:
 
 volumes:
   mongo_data:
+    name: fis_2610_3517_g1_mongo_data
 
 networks:
   app-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

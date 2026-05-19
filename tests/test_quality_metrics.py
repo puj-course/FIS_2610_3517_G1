@@ -1,235 +1,193 @@
+from __future__ import annotations
+
+import copy
 import time
 
 from backend.quality_metrics import (
-    calcular_completitud_datos,
-    calcular_completitud_registro,
     calcular_cumplimiento_reglas_negocio,
-    clasificar_latencia,
-    medir_latencia_operacion,
+    calcular_rendimiento_latencia,
+    construir_reporte_metricas,
 )
 
 
-def test_completitud_registro_completo():
-    registro = {
-        "nombres": "Valentina",
-        "apellidos": "Ramirez",
-        "fecha_nacimiento": "2000-01-01",
+def escenario_valido():
+    return {
+        "pacientes": [
+            {
+                "id": "pac-1",
+                "paciente_id": "pac-1",
+                "nombres": "Ana",
+                "numero_documento": "100200300",
+            }
+        ],
+        "medicamentos": [
+            {
+                "id": "med-1",
+                "medicamento_id": "med-1",
+                "nombre": "Losartan",
+                "dosis": "50 mg",
+                "frecuencia": "Diaria",
+                "paciente_id": "pac-1",
+            }
+        ],
+        "recordatorios": [
+            {
+                "id": "rec-1",
+                "recordatorio_id": "rec-1",
+                "paciente_id": "pac-1",
+                "medicamento_id": "med-1",
+                "hora_programada": "08:00",
+                "frecuencia": "Diaria",
+            }
+        ],
+        "tomas": [
+            {
+                "id": "toma-1",
+                "toma_id": "toma-1",
+                "paciente_id": "pac-1",
+                "medicamento_id": "med-1",
+                "recordatorio_id": "rec-1",
+                "estado": "tomada",
+            }
+        ],
     }
 
-    resultado = calcular_completitud_registro(
-        registro,
-        ["nombres", "apellidos", "fecha_nacimiento"],
+
+def construir(payload):
+    return construir_reporte_metricas(
+        pacientes=payload["pacientes"],
+        medicamentos=payload["medicamentos"],
+        recordatorios=payload["recordatorios"],
+        tomas=payload["tomas"],
     )
 
-    assert resultado["campos_totales"] == 3
-    assert resultado["campos_completos"] == 3
-    assert resultado["porcentaje"] == 100.0
-    assert resultado["interpretacion"] == "alto"
+
+def test_escenario_valido_devuelve_porcentajes_y_quality_gate_aprobado():
+    reporte = construir(escenario_valido())
+    metricas = reporte["resumen_metricas"]
+
+    assert reporte["quality_gate_aprobado"] is True
+    assert reporte["estado_general"] == "Aprobado"
+    assert metricas["completitud_datos"]["porcentaje"] == 100.0
+    assert metricas["cumplimiento_reglas_negocio"]["porcentaje"] == 100.0
+    assert metricas["rendimiento_latencia"]["porcentaje"] == 100.0
+    assert metricas["rendimiento_latencia"]["nivel"] == "Bueno"
+
+    for metrica in metricas.values():
+        assert "porcentaje" in metrica
+        assert metrica["lectura"].endswith(metrica["nivel"])
 
 
-def test_completitud_registro_incompleto():
-    registro = {
-        "nombres": "Valentina",
-        "apellidos": "",
-        "fecha_nacimiento": None,
-    }
+def test_escenario_invalido_por_campos_faltantes_baja_completitud_y_falla_gate():
+    payload = escenario_valido()
+    payload["pacientes"][0]["nombres"] = ""
+    payload["medicamentos"][0]["nombre"] = ""
+    payload["medicamentos"][0]["dosis"] = ""
+    payload["recordatorios"][0]["hora_programada"] = ""
+    payload["recordatorios"][0]["frecuencia"] = ""
 
-    resultado = calcular_completitud_registro(
-        registro,
-        ["nombres", "apellidos", "fecha_nacimiento"],
+    reporte = construir(payload)
+    completitud = reporte["resumen_metricas"]["completitud_datos"]
+
+    assert completitud["porcentaje"] < 70
+    assert completitud["nivel"] == "Deficiente"
+    assert reporte["quality_gate_aprobado"] is False
+    assert "completitud_datos" in reporte["notificacion"]["metricas_afectadas"]
+
+
+def test_escenario_invalido_por_ids_incoherentes_baja_reglas_y_falla_gate():
+    payload = escenario_valido()
+    payload["recordatorios"][0]["paciente_id"] = "m1"
+    payload["recordatorios"][0]["medicamento_id"] = "0"
+    payload["tomas"][0]["paciente_id"] = "pac-2"
+
+    reporte = construir(payload)
+    reglas = reporte["resumen_metricas"]["cumplimiento_reglas_negocio"]
+
+    assert reglas["porcentaje"] < 70
+    assert reglas["nivel"] == "Deficiente"
+    assert reglas["reglas_incumplidas"] > 0
+    assert reporte["quality_gate_aprobado"] is False
+    assert "cumplimiento_reglas_negocio" in reporte["notificacion"]["metricas_afectadas"]
+    assert any(
+        "Recordatorio asociado a medicamento existente" == regla["regla"]
+        for regla in reglas["reglas_fallidas"]
     )
 
-    assert resultado["campos_totales"] == 3
-    assert resultado["campos_completos"] == 1
-    assert resultado["porcentaje"] == 33.3
-    assert resultado["interpretacion"] == "deficiente"
+
+def test_cambiar_un_dato_modifica_el_porcentaje_de_reglas_de_negocio():
+    valido = construir(escenario_valido())
+    invalido_payload = copy.deepcopy(escenario_valido())
+    invalido_payload["recordatorios"][0]["paciente_id"] = "paciente-inexistente"
+    invalido = construir(invalido_payload)
+
+    porcentaje_valido = valido["resumen_metricas"]["cumplimiento_reglas_negocio"]["porcentaje"]
+    porcentaje_invalido = invalido["resumen_metricas"]["cumplimiento_reglas_negocio"]["porcentaje"]
+
+    assert porcentaje_valido == 100.0
+    assert porcentaje_invalido < porcentaje_valido
 
 
-def test_completitud_datos_general():
-    pacientes = [
-        {
-            "id": "pac-1",
-            "nombres": "Valentina",
-            "apellidos": "Ramirez",
-            "fecha_nacimiento": "2000-01-01",
-            "tipo_documento": "CC",
-            "numero_documento": "123",
-            "telefono_contacto": "3001234567",
-            "diagnostico_principal": "Hipertensión",
-        }
-    ]
+def test_calcular_cumplimiento_reglas_negocio_valida_relaciones_reales():
+    payload = escenario_valido()
+    payload["tomas"][0]["medicamento_id"] = "0"
 
-    medicamentos = [
-        {
-            "id": "med-1",
-            "nombre": "Losartán",
-            "dosis": "50 mg",
-            "frecuencia": "Diaria",
-            "horario": "08:00",
-            "fecha_inicio": "05/01/2026",
-            "paciente_id": "pac-1",
-        }
-    ]
-
-    recordatorios = [
-        {
-            "id": "rec-1",
-            "medicamento_id": "med-1",
-            "paciente_id": "pac-1",
-            "hora_recordatorio": "08:00",
-            "fecha_inicio": "05/01/2026",
-        }
-    ]
-
-    resultado = calcular_completitud_datos(
-        pacientes,
-        medicamentos,
-        recordatorios,
+    resultado = calcular_cumplimiento_reglas_negocio(
+        payload["pacientes"],
+        payload["medicamentos"],
+        payload["recordatorios"],
+        payload["tomas"],
     )
 
-    assert resultado["porcentaje"] == 100.0
-    assert resultado["interpretacion"] == "alto"
-    assert resultado["entidades"]["pacientes"]["registros"] == 1
-
-
-def test_completitud_datos_con_registros_incompletos():
-    pacientes = [
-        {
-            "id": "pac-1",
-            "nombres": "Valentina",
-            "apellidos": "",
-            "fecha_nacimiento": "",
-            "tipo_documento": "CC",
-            "numero_documento": "",
-            "telefono_contacto": "",
-            "diagnostico_principal": "",
-        }
-    ]
-
-    resultado = calcular_completitud_datos(
-        pacientes=pacientes,
-        medicamentos=[],
-        recordatorios=[],
+    assert resultado["porcentaje"] < 100
+    assert any(
+        regla["regla"] == "Toma asociada a medicamento existente"
+        and regla["cumple"] is False
+        for regla in resultado["detalle"]
     )
 
-    assert resultado["porcentaje"] < 70
-    assert resultado["interpretacion"] == "deficiente"
+
+def test_latencia_devuelve_porcentaje_ms_objetivo_y_nivel():
+    def operacion_lenta():
+        time.sleep(0.02)
+        return "ok"
+
+    resultado = calcular_rendimiento_latencia(
+        operacion_lenta,
+        objetivo_ms=1,
+    )
+
+    assert resultado["porcentaje"] < 100
+    assert resultado["latencia_ms"] >= 1
+    assert resultado["objetivo_ms"] == 1
+    assert resultado["nivel"] in {"Bueno", "Aceptable", "Deficiente"}
+    assert resultado["resultado"] == "ok"
 
 
-def test_cumplimiento_reglas_negocio_correcto():
-    pacientes = [{"id": "pac-1"}]
-    medicamentos = [{"id": "med-1", "paciente_id": "pac-1"}]
-    recordatorios = [
+def test_quality_gate_falla_si_latencia_supera_objetivo():
+    payload = escenario_valido()
+    payload["tomas"] = [
         {
-            "id": "rec-1",
-            "paciente_id": "pac-1",
-            "medicamento_id": "med-1",
-        }
-    ]
-    tomas = [
-        {
-            "id": "toma-1",
+            "id": f"toma-{indice}",
+            "toma_id": f"toma-{indice}",
             "paciente_id": "pac-1",
             "medicamento_id": "med-1",
             "recordatorio_id": "rec-1",
+            "estado": "tomada",
         }
+        for indice in range(300)
     ]
 
-    resultado = calcular_cumplimiento_reglas_negocio(
-        pacientes,
-        medicamentos,
-        recordatorios,
-        tomas,
+    reporte = construir_reporte_metricas(
+        pacientes=payload["pacientes"],
+        medicamentos=payload["medicamentos"],
+        recordatorios=payload["recordatorios"],
+        tomas=payload["tomas"],
+        objetivo_ms=0.001,
     )
+    rendimiento = reporte["resumen_metricas"]["rendimiento_latencia"]
 
-    assert resultado["porcentaje"] == 100.0
-    assert resultado["reglas_incumplidas"] == 0
-    assert resultado["interpretacion"] == "alto"
-
-
-def test_cumplimiento_reglas_negocio_con_inconsistencias():
-    pacientes = [{"id": "pac-1"}]
-    medicamentos = [{"id": "med-1", "paciente_id": "pac-inexistente"}]
-    recordatorios = [
-        {
-            "id": "rec-1",
-            "paciente_id": "pac-1",
-            "medicamento_id": "med-inexistente",
-        }
-    ]
-    tomas = [
-        {
-            "id": "toma-1",
-            "paciente_id": "pac-1",
-            "medicamento_id": "med-1",
-            "recordatorio_id": "rec-inexistente",
-        }
-    ]
-
-    resultado = calcular_cumplimiento_reglas_negocio(
-        pacientes,
-        medicamentos,
-        recordatorios,
-        tomas,
-    )
-
-    assert resultado["reglas_totales"] == 6
-    assert resultado["reglas_incumplidas"] == 3
-    assert resultado["porcentaje"] == 50.0
-    assert resultado["interpretacion"] == "deficiente"
-
-
-def test_cumplimiento_reglas_negocio_sin_datos():
-    resultado = calcular_cumplimiento_reglas_negocio([], [], [], [])
-
-    assert resultado["reglas_totales"] == 0
-    assert resultado["porcentaje"] == 100.0
-    assert resultado["interpretacion"] == "alto"
-
-
-def test_clasificar_latencia():
-    assert clasificar_latencia(100) == "buena"
-    assert clasificar_latencia(500) == "aceptable"
-    assert clasificar_latencia(1200) == "deficiente"
-
-
-def test_medir_latencia_operacion_exitosa():
-    resultado = medir_latencia_operacion(lambda: "ok")
-
-    assert resultado["metrica"] == "latencia_operacion"
-    assert resultado["exitoso"] is True
-    assert resultado["resultado"] == "ok"
-    assert resultado["latencia_ms"] >= 0
-
-
-def test_medir_latencia_operacion_lenta():
-    def operacion_lenta():
-        time.sleep(0.01)
-        return "ok"
-
-    resultado = medir_latencia_operacion(operacion_lenta)
-
-    assert resultado["exitoso"] is True
-    assert resultado["resultado"] == "ok"
-    assert resultado["latencia_ms"] >= 10
-
-
-def test_medir_latencia_operacion_con_error_value_error():
-    def operacion_con_error():
-        raise ValueError("fallo controlado")
-
-    resultado = medir_latencia_operacion(operacion_con_error)
-
-    assert resultado["exitoso"] is False
-    assert resultado["error"] == "fallo controlado"
-    assert resultado["latencia_ms"] >= 0
-
-
-def test_medir_latencia_operacion_con_error_runtime_error():
-    def operacion_con_error():
-        raise RuntimeError("fallo runtime")
-
-    resultado = medir_latencia_operacion(operacion_con_error)
-
-    assert resultado["exitoso"] is False
-    assert resultado["error"] == "fallo runtime"
+    assert rendimiento["porcentaje"] < 70
+    assert rendimiento["nivel"] == "Deficiente"
+    assert reporte["quality_gate_aprobado"] is False
+    assert "rendimiento_latencia" in reporte["notificacion"]["metricas_afectadas"]

@@ -1,0 +1,41 @@
+{
+  "objetivo_ms": 300,
+  "pacientes": [
+    {
+      "id": "pac-1",
+      "paciente_id": "pac-1",
+      "nombres": "Ana",
+      "numero_documento": "100200300"
+    }
+  ],
+  "medicamentos": [
+    {
+      "id": "med-1",
+      "medicamento_id": "med-1",
+      "nombre": "Losartan",
+      "dosis": "50 mg",
+      "frecuencia": "Diaria",
+      "paciente_id": "pac-1"
+    }
+  ],
+  "recordatorios": [
+    {
+      "id": "rec-1",
+      "recordatorio_id": "rec-1",
+      "paciente_id": "m1",
+      "medicamento_id": "0",
+      "hora_programada": "08:00",
+      "frecuencia": "Diaria"
+    }
+  ],
+  "tomas": [
+    {
+      "id": "toma-1",
+      "toma_id": "toma-1",
+      "paciente_id": "pac-2",
+      "medicamento_id": "med-1",
+      "recordatorio_id": "rec-1",
+      "estado": "tomada"
+    }
+  ]
+}

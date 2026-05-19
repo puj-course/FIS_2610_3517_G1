@@ -15,6 +15,7 @@ import HistorialTomas   from './pages/HistorialTomas';
 import Tomas            from './pages/Tomas';
 import PanelDia         from './pages/PanelDia';
 import ListaTomas       from './pages/ListaTomas';
+import MetricasCalidad  from './pages/MetricasCalidad';
 
 function RutaProtegida({ usuario, onCerrarSesion, children }) {
   if (!usuario) return <Navigate to="/login" replace />;
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="/tomas" element={<RutaProtegida usuario={usuario} onCerrarSesion={handleCerrarSesion}><Tomas /></RutaProtegida>} />
         <Route path="/panel-dia" element={<RutaProtegida usuario={usuario} onCerrarSesion={handleCerrarSesion}><PanelDia /></RutaProtegida>} />
         <Route path="/lista-tomas" element={<RutaProtegida usuario={usuario} onCerrarSesion={handleCerrarSesion}><ListaTomas pacienteId={pacienteActivo} nombrePaciente={nombrePacienteActivo} /></RutaProtegida>} />
+        <Route path="/metricas-calidad" element={<RutaProtegida usuario={usuario} onCerrarSesion={handleCerrarSesion}><MetricasCalidad /></RutaProtegida>} />
         <Route path="/dashboard" element={<Navigate to="/pacientes" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -9,7 +9,7 @@ jobs:
   reporte:
     runs-on: ubuntu-latest
     permissions:
-      issues: write
+      issues: read
       contents: read
 
     steps:
@@ -24,18 +24,14 @@ jobs:
           gh api "repos/$REPO/issues?state=closed&per_page=100" --paginate > /tmp/issues.json
           echo "Issues descargados"
 
-      - name: Calcular HU por sprint
+      - name: Calcular HU por sprint y generar HTML
         env:
           REPO: ${{ github.repository }}
         run: python3 .github/scripts/calcular_sprints.py
 
-      - name: Publicar reporte como Issue
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          gh issue create \
-            --repo "$REPO" \
-            --title "HU por Sprint - $(date +%d/%m/%Y)" \
-            --body-file /tmp/reporte.md \
-            --label "documentation"
+      - name: Subir reporte como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-hu-sprints
+          path: /tmp/reporte.html
+          retention-days: 30

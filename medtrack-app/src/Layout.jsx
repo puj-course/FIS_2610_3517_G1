@@ -73,6 +73,12 @@ const NAV = [
       { label: 'Historial de tomas', ruta: '/historial', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
     ]
   },
+  {
+    seccion: 'CALIDAD',
+    items: [
+      { label: 'Métricas de calidad', ruta: '/metricas-calidad', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-7"/><path d="M7 19v-4"/><path d="M12 19v-8"/><path d="M17 19v-6"/></svg> },
+    ]
+  },
 ];
 
 export default function Layout({ usuario, onCerrarSesion, children }) {

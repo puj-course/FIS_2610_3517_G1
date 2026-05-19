@@ -44,6 +44,10 @@ services:
     networks:
       app-network:
         ipv4_address: 172.20.0.4
+  
+  volumes:
+    mongo_data:
+      name: fis_2610_3517_g1_mongo_data
 
 networks:
   app-network:

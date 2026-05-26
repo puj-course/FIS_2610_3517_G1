@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   frontend:
     image: naqz05/fis_2610_3517_g1-frontend:latest
@@ -9,7 +10,8 @@ services:
     depends_on:
       - backend
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.2
 
   backend:
     image: naqz05/fis_2610_3517_g1-backend:latest
@@ -22,18 +24,18 @@ services:
     depends_on:
       - mongo
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.3
 
   mongo:
     image: mongo:7
     ports:
       - "27017:27017"
-    environment:
-      - TZ=America/Bogota
     volumes:
       - mongo_data:/data/db
     networks:
-      - app-network
+      app-network:  
+        ipv4_address: 172.20.0.4
 
 volumes:
   mongo_data:
@@ -41,7 +43,6 @@ volumes:
 
 networks:
   app-network:
-    name: fis_2610_3517_g1-net
     driver: bridge
     ipam:
       config:
